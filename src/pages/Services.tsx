@@ -2,18 +2,22 @@ import { useState, useEffect } from 'react';
 import { db } from '../services/db';
 import { ServiceItem } from '../types';
 import LucideIcon from '../components/LucideIcon';
-import { Layers, Image, Eye, X, Send } from 'lucide-react';
+import { Layers, Image, Eye, X, Send, ArrowLeft, CheckCircle2, Star, Sparkles, MessageSquareCode, ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function Services() {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
   const [activeGallery, setActiveGallery] = useState<string[] | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
     db.getServices().then((data) => {
-      setServices(data);
+      // Show active services only (if is_active/isActive is defined, default to active)
+      const activeOnly = data.filter(s => s.isActive !== false);
+      setServices(activeOnly);
       setLoading(false);
     });
   }, []);
@@ -38,106 +42,257 @@ export default function Services() {
     );
   }
 
+  // DETAILED SERVICE VIEW
+  if (selectedService) {
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="bg-slate-50 dark:bg-slate-950 min-h-screen pb-24"
+        >
+          {/* Hero Banner with Cover Image */}
+          <div className="relative h-[280px] sm:h-[400px] bg-slate-950 overflow-hidden flex items-end">
+            <img 
+              src={selectedService.imageUrl} 
+              alt={selectedService.title} 
+              className="absolute inset-0 w-full h-full object-cover opacity-50 scale-105 filter blur-[2px]"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-transparent to-slate-950/80" />
+            
+            <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 relative z-10 pb-8 sm:pb-12">
+              <button 
+                onClick={() => setSelectedService(null)}
+                className="inline-flex items-center gap-2 text-slate-300 hover:text-white text-xs bg-slate-900/85 backdrop-blur-md px-4 py-2.5 rounded-xl border border-slate-800 transition-all mb-6 group hover:-translate-x-1"
+              >
+                <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
+                Back to Services Brochure
+              </button>
+              
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 mt-2">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-blue-500/20">
+                  <LucideIcon name={selectedService.icon} size={28} />
+                </div>
+                <div>
+                  <span className="text-blue-400 font-extrabold tracking-widest text-[9px] uppercase block mb-1">
+                    Corporate Profile Services
+                  </span>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
+                    {selectedService.title}
+                  </h1>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Content Column (Detailed description) */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-850/60 p-6 sm:p-8 rounded-3xl shadow-xs space-y-6">
+                <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-850 pb-4">
+                  <Sparkles className="text-blue-500" size={18} />
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white tracking-wider uppercase">
+                    Service Overview & Delivery Model
+                  </h3>
+                </div>
+                
+                <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed font-light whitespace-pre-line">
+                  {selectedService.detailedDescription || selectedService.description}
+                </p>
+
+                {/* Sub Cover image display */}
+                <div className="rounded-2xl overflow-hidden h-48 sm:h-64 border border-slate-200 dark:border-slate-800 shadow-sm mt-4">
+                  <img src={selectedService.imageUrl} alt={selectedService.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                </div>
+
+                {selectedService.galleryUrls && selectedService.galleryUrls.length > 0 && (
+                  <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-slate-800/60">
+                    <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 tracking-wider uppercase">Project Representations</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedService.galleryUrls.map((url, idx) => (
+                        <div key={idx} className="group relative rounded-xl overflow-hidden h-32 cursor-pointer border border-slate-100 dark:border-slate-800" onClick={() => openGallery(selectedService.galleryUrls)}>
+                          <img src={url} alt={`Representation ${idx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" referrerPolicy="no-referrer" />
+                          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <Eye className="text-white" size={18} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column (Features, Benefits, CTA) */}
+            <div className="space-y-6">
+              {/* Features Box */}
+              {selectedService.features && selectedService.features.length > 0 && (
+                <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-850/60 p-6 rounded-3xl shadow-xs space-y-4">
+                  <h4 className="text-xs font-black text-slate-900 dark:text-white tracking-wider uppercase flex items-center gap-2 border-b border-slate-50 dark:border-slate-850 pb-2">
+                    <CheckCircle2 className="text-emerald-500" size={16} />
+                    Core Features
+                  </h4>
+                  <ul className="space-y-3">
+                    {selectedService.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-snug">
+                        <span className="text-emerald-500 font-extrabold shrink-0 mt-0.5">•</span>
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Benefits Box */}
+              {selectedService.benefits && selectedService.benefits.length > 0 && (
+                <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-850/60 p-6 rounded-3xl shadow-xs space-y-4">
+                  <h4 className="text-xs font-black text-slate-900 dark:text-white tracking-wider uppercase flex items-center gap-2 border-b border-slate-50 dark:border-slate-850 pb-2">
+                    <Star className="text-blue-500 fill-blue-500/10" size={15} />
+                    Corporate Benefits
+                  </h4>
+                  <ul className="space-y-3">
+                    {selectedService.benefits.map((benefit, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-snug">
+                        <span className="text-blue-500 font-bold shrink-0 mt-0.5">✓</span>
+                        <span>{benefit}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Action Box */}
+              <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white p-7 rounded-3xl border border-slate-850 shadow-xl space-y-5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="space-y-2 relative z-10">
+                  <h4 className="text-base font-bold">Inquire & Consult</h4>
+                  <p className="text-[11px] text-slate-400 leading-relaxed font-light">
+                    Submit a query regarding our <strong>{selectedService.title}</strong> model, and our technical advisory team will provide detailed consultation timelines and resources.
+                  </p>
+                </div>
+                <Link 
+                  to={`/contact?subject=Query on ${encodeURIComponent(selectedService.title)}`}
+                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl flex items-center justify-center gap-1.5 shadow-lg shadow-blue-500/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <MessageSquareCode size={15} />
+                  Book A Consult Now
+                </Link>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
+
+  // BROCHURE DIRECTORY GRID VIEW
   return (
-    <div id="services-page-root" className="bg-slate-50 dark:bg-slate-950 min-h-screen pb-20">
+    <div id="services-page-root" className="bg-slate-50 dark:bg-slate-950 min-h-screen pb-24">
       
       {/* Header banner */}
-      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white py-16 sm:py-20 text-center relative border-b border-slate-800">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent)]" />
-        <div className="max-w-4xl mx-auto px-4 relative z-10 space-y-4 animate-fade-in">
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 font-bold tracking-widest text-xs uppercase block">
-            Technology Sectors & Capability
+      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white py-16 sm:py-20 text-center relative border-b border-slate-800 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_70%)] animate-pulse" />
+        <div className="max-w-4xl mx-auto px-4 relative z-10 space-y-4">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 font-bold tracking-widest text-[10px] uppercase block">
+            Official Capability Brochure
           </span>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-none text-white font-display">
-            Custom Software Consulting & Training Solutions
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-none text-white font-display">
+            Our Enterprise Services & Sectors
           </h1>
-          <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto font-light leading-relaxed">
-            We architect robust microservices, provision highly isolated Kubernetes partitions, compile serverless routers, and lead placement bootcamps.
+          <p className="text-slate-400 text-xs sm:text-sm max-w-2xl mx-auto font-light leading-relaxed">
+            Delivering industry-grade custom software, state-of-the-art corporate upskilling programs, placement-backed internships, and high-performance consulting blueprints.
           </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 space-y-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16">
         
-        {/* Services List Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {services.map((serv) => (
-            <div 
-              id={`service-item-card-${serv.id}`}
+        {/* Services List Section with Staggered Scroll Reveals */}
+        <motion.div 
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1
+              }
+            }
+          }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+        >
+          {services.map((serv, index) => (
+            <motion.div 
               key={serv.id}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all flex flex-col justify-between"
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
+              }}
+              whileHover={{ y: -6, scale: 1.01 }}
+              onClick={() => setSelectedService(serv)}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group"
             >
               <div className="space-y-6">
                 
-                {/* Header Image */}
-                <div className="h-48 bg-slate-900 relative overflow-hidden group">
+                {/* Cover Image */}
+                <div className="h-44 bg-slate-950 relative overflow-hidden">
                   <img 
                     src={serv.imageUrl} 
                     alt={serv.title} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="absolute inset-0 bg-slate-950/20" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent" />
+                  
+                  {/* Decorative Icon inside Image */}
+                  <div className="absolute bottom-4 left-4 w-10 h-10 rounded-xl bg-slate-900/95 backdrop-blur-md text-blue-400 flex items-center justify-center border border-slate-800 shadow-lg">
+                    <LucideIcon name={serv.icon} size={18} />
+                  </div>
                 </div>
 
-                <div className="px-6 space-y-3">
-                  
-                  {/* Icon Block */}
-                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                    <LucideIcon name={serv.icon} size={20} />
-                  </div>
-
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight font-display">
+                <div className="px-6 space-y-2.5">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug group-hover:text-blue-500 transition-colors">
                     {serv.title}
                   </h3>
 
-                  <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-relaxed">
+                  <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-relaxed line-clamp-3">
                     {serv.description}
                   </p>
-
                 </div>
 
               </div>
 
-              {/* Footer Actions */}
-              <div className="px-6 pb-6 pt-4 border-t border-slate-100 dark:border-slate-800/60 mt-6 flex items-center justify-between gap-2">
+              {/* Card Footer Actions */}
+              <div className="px-6 pb-6 pt-4 border-t border-slate-50 dark:border-slate-850/50 mt-6 flex items-center justify-between">
                 
-                {serv.galleryUrls && serv.galleryUrls.length > 0 ? (
-                  <button 
-                    onClick={() => openGallery(serv.galleryUrls)}
-                    className="flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-emerald-500"
-                  >
-                    <Image size={14} />
-                    View Gallery ({serv.galleryUrls.length})
-                  </button>
-                ) : (
-                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest flex items-center gap-1.5">
-                    <Layers size={11} />
-                    Verified Service
-                  </span>
-                )}
+                <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                  <Layers size={11} />
+                  Brochure Service
+                </span>
 
-                <Link 
-                  to="/contact" 
-                  className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 transition-all"
-                >
-                  Inquire
-                  <Send size={11} />
-                </Link>
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                  View Brochure Details
+                  <ArrowUpRight size={13} />
+                </span>
 
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
       </div>
 
-      {/* Dynamic Lightbox for Service Gallery */}
+      {/* Dynamic Lightbox for Service Representation */}
       {activeGallery && lightboxIndex !== null && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
           <button 
             onClick={closeGallery}
-            className="absolute top-6 right-6 p-2 bg-slate-900/80 hover:bg-blue-600 text-white rounded-lg border border-slate-700 transition-colors"
+            className="absolute top-6 right-6 p-2 bg-slate-900/80 hover:bg-red-600 text-white rounded-lg border border-slate-800 transition-colors"
           >
             <X size={20} />
           </button>
@@ -146,7 +301,7 @@ export default function Services() {
             <div className="relative max-h-[70vh] w-full flex items-center justify-center">
               <img 
                 src={activeGallery[lightboxIndex]} 
-                alt="Service Representation" 
+                alt="Representation representation" 
                 className="max-h-[70vh] max-w-full rounded-xl object-contain border border-slate-800 shadow-2xl"
                 referrerPolicy="no-referrer"
               />

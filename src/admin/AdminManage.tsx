@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { db } from '../services/db';
 import { auth } from '../services/auth';
+import LucideIcon from '../components/LucideIcon';
 import { 
   WebsiteSettings, HeroSlide, AboutSection, ServiceItem, 
   InternshipProgram, CourseItem, GalleryItem, 
   TeamMember, TestimonialItem, JobListing, JobApplication, 
-  ContactMessage, BlogPost, FaqItem 
+  ContactMessage, BlogPost, FaqItem, WhyChooseUsItem 
 } from '../types';
 import { 
   Save, Plus, Trash, Edit, Check, Settings, Image, 
   FileText, Layers, GraduationCap, Users, MessageSquare, Briefcase, 
   HelpCircle, ShieldAlert, RefreshCw, Star, ArrowUpRight,
-  ExternalLink, Globe, Search, Filter, ChevronLeft, ChevronRight, Eye, X, Send, PlayCircle, PlusCircle
+  ExternalLink, Globe, Search, Filter, ChevronLeft, ChevronRight, Eye, X, Send, PlayCircle, PlusCircle,
+  ArrowUp, ArrowDown, GripVertical
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 
@@ -133,6 +135,7 @@ export default function AdminManage() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
+  const [whyChooseUs, setWhyChooseUs] = useState<WhyChooseUsItem[]>([]);
 
   // Search, Filter, Pagination
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,6 +151,7 @@ export default function AdminManage() {
   const [uploadedFaviconUrl, setUploadedFaviconUrl] = useState('');
   const [replyText, setReplyText] = useState('');
   const [replyingMessage, setReplyingMessage] = useState<ContactMessage | null>(null);
+  const [draggedServiceIndex, setDraggedServiceIndex] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -205,6 +209,9 @@ export default function AdminManage() {
           break;
         case 'faqs':
           setFaqs(await db.getFaqs());
+          break;
+        case 'why_choose_us':
+          setWhyChooseUs(await db.getWhyChooseUs());
           break;
         default:
           break;
@@ -387,24 +394,22 @@ export default function AdminManage() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-slate-400">WhatsApp Helpdesk Line</label>
+                      <label className="text-[10px] font-bold uppercase text-slate-400">WhatsApp Helpdesk Line (Locked)</label>
                       <input 
                         type="text" 
-                        value={settings.whatsappNumber}
-                        onChange={(e) => setSettings({ ...settings, whatsappNumber: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 p-2.5 rounded-xl text-xs text-slate-900 dark:text-slate-100"
-                        required
+                        value="+91 7989270174"
+                        disabled
+                        className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed font-mono"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-slate-400">Primary Contact Email</label>
+                      <label className="text-[10px] font-bold uppercase text-slate-400">Primary Contact Email (Locked)</label>
                       <input 
                         type="email" 
-                        value={settings.contactEmail}
-                        onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 p-2.5 rounded-xl text-xs text-slate-900 dark:text-slate-100"
-                        required
+                        value="info.zentriya@gmail.com"
+                        disabled
+                        className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed font-mono"
                       />
                     </div>
 
@@ -452,15 +457,20 @@ export default function AdminManage() {
                   <div className="space-y-4">
                     <h3 className="text-sm font-bold text-slate-850 dark:text-slate-100 border-b pb-2">Footer & SEO Configurations</h3>
                     
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block">Official Helpline Phone Numbers (Locked)</label>
+                      <div className="space-y-1">
+                        <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 px-3 rounded-xl text-xs text-slate-500 font-mono">+91 7989270174</div>
+                        <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 px-3 rounded-xl text-xs text-slate-500 font-mono">+91 95509 50705</div>
+                        <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 px-3 rounded-xl text-xs text-slate-500 font-mono">+91 6301550330</div>
+                      </div>
+                    </div>
+
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-slate-400">Registered Office Address</label>
-                      <textarea 
-                        rows={3}
-                        value={settings.address}
-                        onChange={(e) => setSettings({ ...settings, address: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 p-2.5 rounded-xl text-xs text-slate-900 dark:text-slate-100"
-                        required
-                      />
+                      <label className="text-[10px] font-bold uppercase text-slate-400">Official Website URL (Locked)</label>
+                      <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-xs text-slate-500 font-mono">
+                        https://zentriya.com
+                      </div>
                     </div>
 
                     <div className="space-y-1">
@@ -505,7 +515,12 @@ export default function AdminManage() {
                       const updated = {
                         ...settings,
                         logoUrl: uploadedImageUrl,
-                        faviconUrl: uploadedFaviconUrl
+                        faviconUrl: uploadedFaviconUrl,
+                        contactEmail: 'info.zentriya@gmail.com',
+                        contactPhones: ['+91 7989270174', '+91 95509 50705', '+91 6301550330'],
+                        whatsappNumber: '+917989270174',
+                        address: '',
+                        googleMapEmbedUrl: ''
                       };
                       await db.updateSettings(updated);
                       toast('Website configurations overwritten successfully!', 'success');
@@ -670,17 +685,33 @@ export default function AdminManage() {
                           }
 
                           case 'about': {
-                            // Timeline & values remain, we edit company details
-                            const companyOverview = fd.get('companyOverview') as string;
-                            const vision = fd.get('vision') as string;
-                            const mission = fd.get('mission') as string;
-                            const currentAbout = about || { companyOverview: '', vision: '', mission: '', coreValues: [], timeline: [], whyChooseUs: [] };
-                            await db.updateAbout({
-                              ...currentAbout,
-                              companyOverview,
-                              vision,
-                              mission
-                            });
+                            const title = fd.get('title') as string;
+                            const description = fd.get('description') as string;
+                            const is_active = fd.get('is_active') === 'true';
+                            const item: AboutSection = {
+                              id: editingItem?.id || about?.id || 'about_1',
+                              title,
+                              description,
+                              image: uploadedImageUrl || editingItem?.image || about?.image || '',
+                              is_active,
+                              created_at: editingItem?.created_at || about?.created_at || new Date().toISOString(),
+                              updated_at: new Date().toISOString()
+                            };
+                            await db.updateAbout(item);
+                            break;
+                          }
+
+                          case 'why_choose_us': {
+                            const item: WhyChooseUsItem = {
+                              id,
+                              title: fd.get('title') as string,
+                              icon: fd.get('icon') as string || 'Lightbulb',
+                              display_order: Number(fd.get('display_order')) || whyChooseUs.length + 1,
+                              is_active: fd.get('is_active') === 'true',
+                              created_at: editingItem?.created_at || new Date().toISOString(),
+                              updated_at: new Date().toISOString()
+                            };
+                            await db.saveWhyChooseUsItem(item);
                             break;
                           }
 
@@ -689,6 +720,11 @@ export default function AdminManage() {
                               id,
                               title: fd.get('title') as string,
                               description: fd.get('description') as string,
+                              detailedDescription: fd.get('detailedDescription') as string || '',
+                              features: (fd.get('features') as string || '').split('\n').map(f => f.trim()).filter(Boolean),
+                              benefits: (fd.get('benefits') as string || '').split('\n').map(b => b.trim()).filter(Boolean),
+                              order: Number(fd.get('order')) || 1,
+                              isActive: fd.get('isActive') === 'true',
                               icon: fd.get('icon') as string || 'Layers',
                               imageUrl: uploadedImageUrl || editingItem?.imageUrl || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800',
                               galleryUrls: []
@@ -880,20 +916,46 @@ export default function AdminManage() {
 
                     {/* ABOUT FORM */}
                     {activeTab === 'about' && (
-                      <div className="space-y-4">
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Company Overview Summary *</label>
-                          <textarea rows={4} name="companyOverview" defaultValue={about?.companyOverview || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Brochure Section Title *</label>
+                            <input 
+                              type="text" 
+                              name="title" 
+                              defaultValue={editingItem?.title || about?.title || 'ABOUT US'} 
+                              required 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Brochure Description / Content *</label>
+                            <textarea 
+                              rows={10} 
+                              name="description" 
+                              defaultValue={editingItem?.description || about?.description || ''} 
+                              required 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Status</label>
+                            <select 
+                              name="is_active" 
+                              defaultValue={editingItem ? String(editingItem.is_active) : (about ? String(about.is_active) : 'true')} 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
+                            >
+                              <option value="true">Enabled / Active</option>
+                              <option value="false">Disabled / Hidden</option>
+                            </select>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Our Corporate Vision *</label>
-                            <textarea rows={4} name="vision" defaultValue={about?.vision || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Our Corporate Mission *</label>
-                            <textarea rows={4} name="mission" defaultValue={about?.mission || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
-                          </div>
+                        <div className="space-y-4">
+                          <ImageDropzone 
+                            label="Corporate Brochure Image" 
+                            value={uploadedImageUrl || editingItem?.image || about?.image || ''} 
+                            onChange={setUploadedImageUrl} 
+                          />
                         </div>
                       </div>
                     )}
@@ -907,20 +969,45 @@ export default function AdminManage() {
                             <input type="text" name="title" defaultValue={editingItem?.title || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Description Overview *</label>
-                            <textarea rows={4} name="description" defaultValue={editingItem?.description || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Short Description Overview *</label>
+                            <textarea rows={2} name="description" defaultValue={editingItem?.description || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Lucide Vector Icon Name (e.g., Cpu, Layers, Code) *</label>
-                            <input type="text" name="icon" defaultValue={editingItem?.icon || 'Layers'} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Detailed Description *</label>
+                            <textarea rows={4} name="detailedDescription" defaultValue={editingItem?.detailedDescription || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" placeholder="Comprehensive service descriptions, insights and workflow outlines..." />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Lucide Icon Name *</label>
+                              <input type="text" name="icon" defaultValue={editingItem?.icon || 'Layers'} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Sort Order Index</label>
+                              <input type="number" name="order" defaultValue={editingItem?.order || 1} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Service Status *</label>
+                            <select name="isActive" defaultValue={editingItem?.isActive !== false ? 'true' : 'false'} className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-white">
+                              <option value="true">Active (Enabled)</option>
+                              <option value="false">Inactive (Disabled)</option>
+                            </select>
                           </div>
                         </div>
                         <div className="space-y-4">
                           <ImageDropzone 
-                            label="Service Portfolio Image" 
+                            label="Service Cover Image" 
                             value={uploadedImageUrl || editingItem?.imageUrl || ''} 
                             onChange={setUploadedImageUrl} 
                           />
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Service Features (one per line) *</label>
+                            <textarea rows={3} name="features" defaultValue={editingItem?.features?.join('\n') || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white font-mono" placeholder="Live Project Collaboration&#10;Professional Code Reviews&#10;Resume Audit" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Service Benefits (one per line) *</label>
+                            <textarea rows={3} name="benefits" defaultValue={editingItem?.benefits?.join('\n') || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white font-mono" placeholder="Corporate Certificate&#10;Direct Referral Networks" />
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1286,6 +1373,61 @@ export default function AdminManage() {
                       </div>
                     )}
 
+                    {/* WHY CHOOSE US FORM */}
+                    {activeTab === 'why_choose_us' && (
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Feature Title *</label>
+                          <input 
+                            type="text" 
+                            name="title" 
+                            defaultValue={editingItem?.title || ''} 
+                            required 
+                            className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Lucide Icon Name *</label>
+                          <select 
+                            name="icon" 
+                            defaultValue={editingItem?.icon || 'Lightbulb'} 
+                            className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
+                          >
+                            <option value="Lightbulb">💡 Lightbulb (Innovation)</option>
+                            <option value="Target">🎯 Target (Placement)</option>
+                            <option value="TrendingUp">📈 Trending Up (Growth / Success)</option>
+                            <option value="Award">🏆 Award (Excellence)</option>
+                            <option value="GraduationCap">🎓 Graduation Cap (Education)</option>
+                            <option value="Briefcase">💼 Briefcase (MNCs)</option>
+                            <option value="Users">👥 Users (Collaboration)</option>
+                            <option value="Code">💻 Code (Practical Exposure)</option>
+                            <option value="Zap">⚡ Zap (Innovation-Driven)</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Display Order (Sorting)</label>
+                          <input 
+                            type="number" 
+                            name="display_order" 
+                            defaultValue={editingItem ? editingItem.display_order : whyChooseUs.length + 1} 
+                            required 
+                            className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Status</label>
+                          <select 
+                            name="is_active" 
+                            defaultValue={editingItem ? String(editingItem.is_active) : 'true'} 
+                            className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
+                          >
+                            <option value="true">Enabled / Active</option>
+                            <option value="false">Disabled / Hidden</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex gap-3 justify-end pt-4 border-t dark:border-slate-850">
                       <button 
                         type="button" 
@@ -1357,27 +1499,47 @@ export default function AdminManage() {
                     <div className="p-6 sm:p-8 space-y-6">
                       <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border dark:border-slate-850 space-y-4">
                         <div className="flex justify-between items-center">
-                          <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">Active Company Coordinates</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">Active Company Brochure Overview</h4>
+                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                              about.is_active 
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
+                                : 'bg-slate-100 text-slate-600 dark:bg-slate-850 dark:text-slate-400'
+                            }`}>
+                              {about.is_active ? 'Active' : 'Disabled'}
+                            </span>
+                          </div>
                           <button 
-                            onClick={() => setEditingItem(about)}
-                            className="bg-emerald-600 text-white font-bold p-1 px-3 rounded text-[10px] flex items-center gap-1"
+                            onClick={() => { setEditingItem(about); setUploadedImageUrl(about.image); }}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-1.5 px-3 rounded text-[10px] flex items-center gap-1 transition-colors"
                           >
                             <Edit size={12} />
                             Edit Details
                           </button>
                         </div>
-                        <div className="space-y-1.5 text-xs">
-                          <p className="font-extrabold text-slate-700 dark:text-slate-300">Overview:</p>
-                          <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{about.companyOverview}</p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                          <div className="space-y-1 text-xs">
-                            <p className="font-extrabold text-emerald-600">Our Vision:</p>
-                            <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{about.vision}</p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                          <div className="md:col-span-1 space-y-1">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase font-mono">Brochure Cover Image</p>
+                            <div className="border dark:border-slate-800 p-1.5 rounded-xl bg-white dark:bg-slate-900 shadow-sm">
+                              <img src={about.image} alt="Brochure preview" referrerPolicy="no-referrer" className="w-full h-44 object-cover rounded-lg" />
+                            </div>
                           </div>
-                          <div className="space-y-1 text-xs">
-                            <p className="font-extrabold text-blue-600">Our Mission:</p>
-                            <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{about.mission}</p>
+                          <div className="md:col-span-2 space-y-4">
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase font-mono">Section Title</p>
+                              <div className="flex items-center gap-3">
+                                <span className="h-[2px] w-6 bg-emerald-500 rounded-full" />
+                                <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 tracking-widest uppercase">{about.title}</p>
+                                <span className="h-[2px] w-6 bg-emerald-500 rounded-full" />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase font-mono">Official Brochure Text</p>
+                              <div className="text-xs text-slate-600 dark:text-slate-300 space-y-2 whitespace-pre-line leading-relaxed text-justify max-h-56 overflow-y-auto bg-white dark:bg-slate-900/60 p-3 rounded-xl border dark:border-slate-800/80">
+                                {about.description}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1385,43 +1547,174 @@ export default function AdminManage() {
                   )}
 
                   {activeTab === 'services' && (
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {services.length === 0 ? (
-                        <div className="p-16 text-center text-slate-400">No Services found. Click "Add New" to list.</div>
-                      ) : (
-                        paginate(services).map((srv) => (
-                          <div key={srv.id} className="p-6 flex flex-col sm:flex-row items-center gap-6 justify-between">
-                            <div className="flex items-center gap-4 flex-1">
-                              <img src={srv.imageUrl} alt={srv.title} className="w-16 h-16 object-cover rounded-xl border" referrerPolicy="no-referrer" />
-                              <div className="space-y-1">
-                                <span className="text-[8px] bg-emerald-500/15 text-emerald-600 font-bold px-2 py-0.5 rounded">Icon: {srv.icon}</span>
-                                <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{srv.title}</h4>
-                                <p className="text-xs text-slate-400 line-clamp-1">{srv.description}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => { setEditingItem(srv); setUploadedImageUrl(srv.imageUrl); }}
-                                className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button 
-                                onClick={async () => {
-                                  if (confirm(`Are you sure you want to delete service "${srv.title}"?`)) {
-                                    await db.deleteService(srv.id);
-                                    toast('Service listing deleted.', 'info');
-                                    loadData();
-                                  }
+                    <div className="space-y-4">
+                      <div className="p-4 bg-blue-50/50 dark:bg-blue-950/10 text-blue-700 dark:text-blue-300 text-xs rounded-xl flex items-center gap-2 border border-blue-100 dark:border-blue-900/30">
+                        <span className="text-sm">💡</span>
+                        <span>Drag and drop any service item below, or use the <strong>Up/Down arrows</strong> to change their layout order. Click the status badge to quickly enable or disable any service.</span>
+                      </div>
+                      
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+                        {services.length === 0 ? (
+                          <div className="p-16 text-center text-slate-400">No Services found. Click "Add New" to list.</div>
+                        ) : (
+                          [...services].sort((a, b) => (a.order || 0) - (b.order || 0)).map((srv, idx) => {
+                            const isFirst = idx === 0;
+                            const isLast = idx === services.length - 1;
+                            
+                            return (
+                              <div 
+                                key={srv.id} 
+                                draggable
+                                onDragStart={(e) => {
+                                  setDraggedServiceIndex(idx);
+                                  e.dataTransfer.effectAllowed = 'move';
                                 }}
-                                className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500"
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                }}
+                                onDrop={async (e) => {
+                                  e.preventDefault();
+                                  if (draggedServiceIndex === null || draggedServiceIndex === idx) return;
+                                  
+                                  const list = [...services].sort((a, b) => (a.order || 0) - (b.order || 0));
+                                  const [removed] = list.splice(draggedServiceIndex, 1);
+                                  list.splice(idx, 0, removed);
+                                  
+                                  const updated = list.map((item, index) => ({
+                                    ...item,
+                                    order: index + 1
+                                  }));
+                                  
+                                  setServices(updated);
+                                  setDraggedServiceIndex(null);
+                                  
+                                  for (const item of updated) {
+                                    await db.saveService(item);
+                                  }
+                                  toast('Services order updated.', 'success');
+                                }}
+                                className={`p-5 flex flex-col sm:flex-row items-center gap-4 justify-between transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-950/20 ${draggedServiceIndex === idx ? 'opacity-40 bg-slate-100 dark:bg-slate-950' : ''}`}
                               >
-                                <Trash size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                      )}
+                                <div className="flex items-center gap-4 flex-1 w-full">
+                                  {/* Drag Handle */}
+                                  <div className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+                                    <GripVertical size={16} />
+                                  </div>
+                                  
+                                  <img src={srv.imageUrl} alt={srv.title} className="w-14 h-14 object-cover rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm" referrerPolicy="no-referrer" />
+                                  
+                                  <div className="space-y-1 flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate leading-tight">{srv.title}</h4>
+                                      <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded font-mono">Order: {srv.order || idx + 1}</span>
+                                      
+                                      {/* Quick Toggle Status Badge */}
+                                      <button
+                                        onClick={async () => {
+                                          const updatedSrv = { ...srv, isActive: srv.isActive === false ? true : false };
+                                          const updatedList = services.map(s => s.id === srv.id ? updatedSrv : s);
+                                          setServices(updatedList);
+                                          await db.saveService(updatedSrv);
+                                          toast(`Service "${srv.title}" ${updatedSrv.isActive ? 'enabled' : 'disabled'}.`, 'success');
+                                        }}
+                                        className={`text-[9px] font-bold px-2 py-0.5 rounded transition-all hover:scale-105 active:scale-95 ${srv.isActive !== false ? 'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25' : 'bg-rose-500/15 text-rose-600 hover:bg-rose-500/25'}`}
+                                        title="Click to toggle status"
+                                      >
+                                        {srv.isActive !== false ? '● Active' : '○ Disabled'}
+                                      </button>
+                                    </div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{srv.description}</p>
+                                    <div className="flex gap-2 text-[10px] text-slate-400">
+                                      <span>Icon: {srv.icon}</span>
+                                      <span>•</span>
+                                      <span>Features: {srv.features?.length || 0}</span>
+                                      <span>•</span>
+                                      <span>Benefits: {srv.benefits?.length || 0}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-2 self-end sm:self-center">
+                                  {/* Manual Reordering Arrows */}
+                                  <div className="flex items-center bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200/60 dark:border-slate-800 p-0.5">
+                                    <button
+                                      disabled={isFirst}
+                                      onClick={async () => {
+                                        if (isFirst) return;
+                                        const list = [...services].sort((a, b) => (a.order || 0) - (b.order || 0));
+                                        const temp = list[idx - 1];
+                                        list[idx - 1] = list[idx];
+                                        list[idx] = temp;
+                                        
+                                        const updated = list.map((item, index) => ({
+                                          ...item,
+                                          order: index + 1
+                                        }));
+                                        
+                                        setServices(updated);
+                                        for (const item of updated) {
+                                          await db.saveService(item);
+                                        }
+                                        toast('Service moved up.', 'success');
+                                      }}
+                                      className={`p-1.5 rounded-lg transition-colors ${isFirst ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                      title="Move Up"
+                                    >
+                                      <ArrowUp size={12} />
+                                    </button>
+                                    <button
+                                      disabled={isLast}
+                                      onClick={async () => {
+                                        if (isLast) return;
+                                        const list = [...services].sort((a, b) => (a.order || 0) - (b.order || 0));
+                                        const temp = list[idx + 1];
+                                        list[idx + 1] = list[idx];
+                                        list[idx] = temp;
+                                        
+                                        const updated = list.map((item, index) => ({
+                                          ...item,
+                                          order: index + 1
+                                        }));
+                                        
+                                        setServices(updated);
+                                        for (const item of updated) {
+                                          await db.saveService(item);
+                                        }
+                                        toast('Service moved down.', 'success');
+                                      }}
+                                      className={`p-1.5 rounded-lg transition-colors ${isLast ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                      title="Move Down"
+                                    >
+                                      <ArrowDown size={12} />
+                                    </button>
+                                  </div>
+                                  
+                                  <button 
+                                    onClick={() => { setEditingItem(srv); setUploadedImageUrl(srv.imageUrl); }}
+                                    className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300 transition-colors border border-slate-200/60 dark:border-slate-800"
+                                    title="Edit Service"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  <button 
+                                    onClick={async () => {
+                                      if (confirm(`Are you sure you want to delete service "${srv.title}"?`)) {
+                                        await db.deleteService(srv.id);
+                                        toast('Service listing deleted.', 'info');
+                                        loadData();
+                                      }
+                                    }}
+                                    className="p-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 rounded-xl text-red-500 transition-colors border border-red-100 dark:border-red-900/30"
+                                    title="Delete Service"
+                                  >
+                                    <Trash size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -1885,6 +2178,135 @@ export default function AdminManage() {
                     </div>
                   )}
 
+                  {activeTab === 'why_choose_us' && (
+                    <div className="space-y-6">
+                      {/* Section Title Customizer */}
+                      <div className="p-6 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800/85 space-y-3">
+                        <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                          Section Configuration
+                        </h4>
+                        <div className="flex flex-col sm:flex-row gap-3 items-end">
+                          <div className="flex-1 space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Section Title</label>
+                            <input 
+                              type="text" 
+                              value={settings?.whyChooseUsTitle || 'Why Choose Us?'} 
+                              onChange={async (e) => {
+                                const newTitle = e.target.value;
+                                if (settings) {
+                                  const updatedSettings = { ...settings, whyChooseUsTitle: newTitle };
+                                  setSettings(updatedSettings);
+                                  await db.updateSettings(updatedSettings);
+                                }
+                              }}
+                              className="w-full bg-white dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
+                            />
+                          </div>
+                          <div className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 flex items-center gap-1.5 shadow-sm">
+                            <Check size={14} />
+                            Saved Instantly
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Features List */}
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {whyChooseUs.length === 0 ? (
+                          <div className="p-16 text-center text-slate-400">"Why Choose Us" is empty. Add new features.</div>
+                        ) : (
+                          [...whyChooseUs].sort((a, b) => a.display_order - b.display_order).map((item, index, arr) => (
+                            <div key={item.id} className="p-6 flex flex-col sm:flex-row items-center gap-6 justify-between">
+                              <div className="flex items-center gap-4 flex-1">
+                                <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center shrink-0 border dark:border-slate-800">
+                                  <LucideIcon name={item.icon} size={20} className="text-blue-500" />
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                                      {item.title}
+                                    </h4>
+                                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                      item.is_active 
+                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
+                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-850 dark:text-slate-400'
+                                    }`}>
+                                      {item.is_active ? 'Active' : 'Disabled'}
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-slate-400 font-mono">
+                                    Display Order: {item.display_order} • Icon: {item.icon}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                {/* Order up / down buttons */}
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={async () => {
+                                      if (index === 0) return;
+                                      const prevItem = arr[index - 1];
+                                      const oldOrder = item.display_order;
+                                      item.display_order = prevItem.display_order;
+                                      prevItem.display_order = oldOrder;
+                                      await db.saveWhyChooseUsOrder([...whyChooseUs]);
+                                      loadData();
+                                    }}
+                                    disabled={index === 0}
+                                    className="p-1.5 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30"
+                                    title="Move Up"
+                                  >
+                                    <ArrowUp size={12} />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (index === arr.length - 1) return;
+                                      const nextItem = arr[index + 1];
+                                      const oldOrder = item.display_order;
+                                      item.display_order = nextItem.display_order;
+                                      nextItem.display_order = oldOrder;
+                                      await db.saveWhyChooseUsOrder([...whyChooseUs]);
+                                      loadData();
+                                    }}
+                                    disabled={index === arr.length - 1}
+                                    className="p-1.5 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30"
+                                    title="Move Down"
+                                  >
+                                    <ArrowDown size={12} />
+                                  </button>
+                                </div>
+
+                                <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-800" />
+
+                                {/* Edit and Delete */}
+                                <button 
+                                  onClick={() => { setEditingItem(item); }}
+                                  className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300"
+                                  title="Edit"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    if (confirm(`Remove dynamic "Why Choose Us" feature: "${item.title}"?`)) {
+                                      await db.deleteWhyChooseUsItem(item.id);
+                                      toast('Feature deleted successfully.', 'info');
+                                      loadData();
+                                    }
+                                  }}
+                                  className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500"
+                                  title="Delete"
+                                >
+                                  <Trash size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Dynamic Simple Pagination controls */}
                   <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/20 text-xs">
                     <span className="text-slate-500">Page {currentPage} of records list</span>
@@ -1910,7 +2332,8 @@ export default function AdminManage() {
                           (activeTab === 'careers' && jobs.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'applications' && applications.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'contacts' && messages.length <= currentPage * itemsPerPage) ||
-                          (activeTab === 'faqs' && faqs.length <= currentPage * itemsPerPage)
+                          (activeTab === 'faqs' && faqs.length <= currentPage * itemsPerPage) ||
+                          (activeTab === 'why_choose_us' && whyChooseUs.length <= currentPage * itemsPerPage)
                         }
                         className="p-2 px-3 bg-white dark:bg-slate-900 rounded-xl border dark:border-slate-800 disabled:opacity-50"
                       >

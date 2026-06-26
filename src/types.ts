@@ -24,6 +24,7 @@ export interface WebsiteSettings {
   popupBannerActive: boolean;
   announcementText?: string;
   announcementActive: boolean;
+  whyChooseUsTitle?: string;
   socialLinks: {
     facebook?: string;
     twitter?: string;
@@ -50,18 +51,24 @@ export interface HeroSlide {
 }
 
 export interface AboutSection {
-  companyOverview: string;
-  vision: string;
-  mission: string;
-  coreValues: { title: string; description: string; icon: string }[];
-  timeline: { year: string; title: string; description: string }[];
-  whyChooseUs: { title: string; description: string }[];
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ServiceItem {
   id: string;
   title: string;
   description: string;
+  detailedDescription?: string;
+  features?: string[];
+  benefits?: string[];
+  order?: number;
+  isActive?: boolean;
   icon: string;
   imageUrl: string;
   galleryUrls: string[];
@@ -245,3 +252,14 @@ export interface SystemNotification {
   isRead: boolean;
   createdAt: string;
 }
+
+export interface WhyChooseUsItem {
+  id: string;
+  title: string;
+  icon: string;
+  display_order: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Sun, Moon, LogIn, Send, PhoneCall, Sparkles } from 'lucide-react';
+import { Menu, X, Sun, Moon, LogIn, Send, PhoneCall, Sparkles, Mail, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../services/db';
 import { WebsiteSettings } from '../types';
@@ -53,6 +53,40 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
 
   return (
     <>
+      {/* Corporate Top Bar */}
+      <div id="corporate-top-bar" className="bg-slate-900 text-slate-300 text-[11px] sm:text-xs py-2 px-4 border-b border-slate-800 relative z-50">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
+          {/* Official Helplines */}
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <span className="text-slate-400 font-medium">Official Helplines:</span>
+            <a href="tel:+917989270174" className="hover:text-emerald-400 transition-colors font-semibold">
+              +91 7989270174
+            </a>
+            <span className="text-slate-700 hidden sm:inline">|</span>
+            <a href="tel:+919550950705" className="hover:text-emerald-400 transition-colors font-semibold">
+              +91 95509 50705
+            </a>
+            <span className="text-slate-700 hidden sm:inline">|</span>
+            <a href="tel:+916301550330" className="hover:text-emerald-400 transition-colors font-semibold">
+              +91 6301550330
+            </a>
+          </div>
+
+          {/* Email & Website */}
+          <div className="flex items-center gap-3">
+            <a href="mailto:info.zentriya@gmail.com" className="hover:text-emerald-400 transition-colors flex items-center gap-1 font-semibold">
+              <Mail size={12} className="text-emerald-500" />
+              info.zentriya@gmail.com
+            </a>
+            <span className="text-slate-700">|</span>
+            <a href="https://zentriya.com" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors flex items-center gap-1 font-semibold">
+              <Globe size={12} className="text-emerald-500" />
+              zentriya.com
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Announcement Bar */}
       {settings?.announcementActive && settings.announcementText && (
         <div id="announcement-bar" className="bg-gradient-to-r from-blue-600 to-emerald-500 text-white text-xs sm:text-sm py-2 px-4 text-center font-bold relative z-50">

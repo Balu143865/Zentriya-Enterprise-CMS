@@ -4,7 +4,8 @@ import {
   InternshipProgram, CourseItem, GalleryAlbum, GalleryItem, 
   TeamMember, TestimonialItem, JobListing, JobApplication, 
   ContactMessage, BlogPost, FaqItem, DownloadItem, 
-  ClientPartnerLogo, PlacementStat, ActivityLog, SystemNotification, UserProfile, UserRole 
+  ClientPartnerLogo, PlacementStat, ActivityLog, SystemNotification, UserProfile, UserRole,
+  WhyChooseUsItem
 } from '../types';
 
 // Supabase configuration storage keys
@@ -69,15 +70,16 @@ const defaultSettings: WebsiteSettings = {
   faviconUrl: '/logo.png',
   primaryColor: '#059669', // Emerald Green (company brochure)
   secondaryColor: '#1e3a8a', // Deep Blue
-  whatsappNumber: '+919876543210',
-  contactEmail: 'info@zentriya.com',
-  contactPhones: ['+91 98765 43210', '+91 80 4321 0987'],
-  address: 'Zentriya Towers, 4th Floor, Tech Park Layout, Outer Ring Road, Bangalore, KA, 560103',
-  googleMapEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3887.9265261353244!2d77.6953282!3d12.9272314!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae13bcbebc3e89%3A0xbcf055b3ff75dfc6!2sOuter%20Ring%20Rd%2C%20Bengaluru%2C%20Karnataka!5e0!3m2!1sen!2sin!4v1689230000000!5m2!1sen!2sin',
+  whatsappNumber: '+917989270174',
+  contactEmail: 'info.zentriya@gmail.com',
+  contactPhones: ['+91 7989270174', '+91 95509 50705', '+91 6301550330'],
+  address: '', // Removed as per instructions
+  googleMapEmbedUrl: '', // Removed as per instructions to not display additional contact info
   popupBannerUrl: 'https://images.unsplash.com/photo-1542744094-3a31f103e35f?w=800&h=400&fit=crop&q=80',
   popupBannerActive: true,
   announcementText: '🚀 Admissions open for Fall 2026 Enterprise Internship Programs! Apply today to secure a seat.',
   announcementActive: true,
+  whyChooseUsTitle: 'Why Choose Us?',
   socialLinks: {
     facebook: 'https://facebook.com/zentriyait',
     twitter: 'https://twitter.com/zentriyait',
@@ -124,96 +126,106 @@ const defaultHeroSlides: HeroSlide[] = [
 ];
 
 const defaultAbout: AboutSection = {
-  companyOverview: 'Zentriya IT Solutions Private Limited is an elite software consulting and technical enablement enterprise headquartered in Bangalore. Founded by principal IT veterans and corporate instructors, we operate on dual core pillars: engineering top-tier digital products for global businesses, and mentoring the next generation of software professionals through intensive, placement-backed internships and certification bootcamps.',
-  vision: 'To be the global benchmark of technical excellence, where business problems find high-integrity digital answers and aspiring engineers evolve into high-performing industry leaders.',
-  mission: 'To craft scalable, reliable, and innovative digital solutions for our partners, while simultaneously democratizing enterprise-grade technical training and real-world project experience for students and career-transitioners.',
-  coreValues: [
-    { title: 'Technical Integrity', description: 'We write clean, efficient, and robust code. We never compromise on technical standards or software design principles.', icon: 'Cpu' },
-    { title: 'Mentorship Culture', description: 'Every leader is an instructor. We foster growth, open inquiry, and hands-on code craftsmanship.', icon: 'Users' },
-    { title: 'Enterprise Excellence', description: 'From small web portals to high-traffic microservices, our engineering standards mimic global titans like IBM and Microsoft.', icon: 'Award' },
-    { title: 'Placement Accountability', description: 'We do not just hand out certificates; we build careers through mock interviews, corporate referrals, and live portfolio work.', icon: 'CheckCircle' }
-  ],
-  timeline: [
-    { year: '2019', title: 'The Genesis', description: 'Zentriya was incorporated as a bespoke IT consulting agency, building high-integrity ERPs and CRM platforms for enterprise partners.' },
-    { year: '2021', title: 'Launching Corporate Enablement', description: 'Recognizing a massive industry skill gap, we launched our first batch of corporate-sponsored training bootcamps and intensive hackathons.' },
-    { year: '2023', title: 'The Academic Bridge', description: 'Expanded into structured, placement-driven internship models, establishing tie-ups with 35+ premium engineering colleges.' },
-    { year: '2026', title: 'Global Certifications & Scale', description: 'Became an authorized training and certification partner for key cloud providers, with over 15,000 trainees mentored and placed globally.' }
-  ],
-  whyChooseUs: [
-    { title: 'Principal Architects as Mentors', description: 'Learn directly from seniors who have engineered systems at scale.' },
-    { title: 'Live Corporate Projects', description: 'Gain experience on production-grade systems, complete with code reviews and real team standups.' },
-    { title: 'Guaranteed Referral Networks', description: 'Our dedicated HR placement cell is partnered with 120+ software companies across major tech hubs.' },
-    { title: 'Enterprise-grade Curriculum', description: 'No outdated textbooks. Learn modern web, cloud, AI, DevOps, and cybersecurity.' }
-  ]
+  id: 'about_1',
+  title: 'ABOUT US',
+  description: 'Zentriya IT Solutions Private Limited is an innovation-driven EdTech powerhouse committed to transforming education into employability. We empower aspiring students and professionals through future-focused IT and Non-IT training, real-time internships, career acceleration programs, placement solutions and technology-driven learning experiences.\n\nBy fostering strong industry collaborations, academic alliances and skill-centric learning ecosystems, Zentriya is creating a new generation of confident, industry-ready professionals equipped for the evolving digital world.',
+  image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1600&h=900&fit=crop&q=80',
+  is_active: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
 };
 
 const defaultServices: ServiceItem[] = [
   {
     id: 'service_1',
-    title: 'Custom Software & Mobile Development',
-    description: 'Engineering resilient SaaS, custom business portals, CRM tools, and native iOS/Android applications built to withstand enterprise volume.',
-    icon: 'Terminal',
-    imageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&h=500&fit=crop&q=80',
-    galleryUrls: [
-      'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=600&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&fit=crop&q=80'
-    ],
-    seoTitle: 'Enterprise Software & Mobile App Development - Zentriya IT',
-    seoDescription: 'High-integrity custom software and high-traffic mobile application development by the principal engineers at Zentriya IT Solutions.'
+    title: 'Internships',
+    description: 'Placement-driven, industry-aligned internship programs designed to bridge the academic-industry gap.',
+    detailedDescription: 'Our internships provide high-performance tech exposure. Under the guidance of principal engineers and corporate architects, students collaborate on real enterprise-grade repositories, learn modern DevOps practices, participate in daily standups, and undergo strict code reviews. This intensive experiential environment ensures every candidate becomes fully productive.',
+    icon: 'GraduationCap',
+    imageUrl: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&h=500&fit=crop&q=80',
+    features: ['Live Project Collaboration', 'Professional Code Reviews', 'Resume & LinkedIn Optimisation', '100% Interview Referrals'],
+    benefits: ['Industry-Recognised Corporate Certification', 'Direct Placement Opportunities', 'Strong Alumni Network', 'Hands-on Git & CI/CD Exposure'],
+    order: 1,
+    isActive: true,
+    galleryUrls: []
   },
   {
     id: 'service_2',
-    title: 'Placement-Backed Internship Programs',
-    description: 'Providing intense hands-on internships on real corporate repos, backed by expert code-reviews, resume building, and placement coordination.',
-    icon: 'GraduationCap',
-    imageUrl: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&h=500&fit=crop&q=80',
-    galleryUrls: [
-      'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=600&fit=crop&q=80'
-    ],
-    seoTitle: 'Premium IT Internships in Bangalore with Placement - Zentriya IT',
-    seoDescription: 'Join industry-recognized technical internships. Learn web dev, cloud, and data science while working on actual enterprise client modules.'
+    title: 'Software Development',
+    description: 'Custom corporate SaaS engineering, robust mobile apps, and scalable web architectures.',
+    detailedDescription: 'Zentriya builds high-security, ultra-scalable software systems. From specialized multi-tenant ERP platforms and CRM tools to native mobile applications, our principal engineers construct clean, reliable, and highly performant architectures that drive business transformation and optimize user engagement.',
+    icon: 'Terminal',
+    imageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&h=500&fit=crop&q=80',
+    features: ['SaaS & Cloud Native Architecture', 'Custom CRM & ERP Portals', 'iOS & Android Apps', 'Microservices & API Integration'],
+    benefits: ['Optimised Performance at Scale', 'High-Security Code Standards', 'Post-Deployment Lifetime Support', 'Full Intellectual Property Ownership'],
+    order: 2,
+    isActive: true,
+    galleryUrls: []
   },
   {
     id: 'service_3',
-    title: 'Cloud Consulting & DevOps Architecting',
-    description: 'Migrating legacy monoliths to resilient cloud platforms. Specializing in AWS/Azure infrastructure, Terraform, Docker, and Kubernetes.',
-    icon: 'CloudLightning',
-    imageUrl: 'https://images.unsplash.com/photo-1484417894907-623942c8ee29?w=800&h=500&fit=crop&q=80',
-    galleryUrls: [
-      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&fit=crop&q=80'
-    ],
-    seoTitle: 'DevOps & AWS/Azure Cloud Migration Consulting - Zentriya IT',
-    seoDescription: 'Streamline software shipping with high-security CI/CD deployment pipelines, serverless consulting, and robust container orchestrations.'
+    title: 'Training & Skill Development',
+    description: 'Cutting-edge corporate and collegiate technical masterclasses to upskill talent.',
+    detailedDescription: 'We design custom-tailored curriculum blueprints in React, TypeScript, Cloud Architecture, DevOps pipelines, Generative AI, and full-stack engineering. Our instruction prioritizes active lab hours, project-focused portfolios, and real-world execution, preparing teams to ship production-grade code confidently.',
+    icon: 'CodeXml',
+    imageUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=500&fit=crop&q=80',
+    features: ['Principal Architect Instructors', 'Hands-on Sandbox Labs', 'Customised Corporate Blueprints', 'Continuous Assessments'],
+    benefits: ['Accelerated Tech Mastery', 'Bridged Technological Skill Gaps', 'Measurable Team Productivity Boost', 'Verifiable Learning Credentials'],
+    order: 3,
+    isActive: true,
+    galleryUrls: []
   },
   {
     id: 'service_4',
-    title: 'AI, Machine Learning & Analytics',
-    description: 'Building custom data pipelines, predictive models, and Gemini-based generative features to unlock maximum value from corporate databases.',
+    title: 'Bootcamps & Hackathons',
+    description: 'Immersive technical bootcamps and rapid-prototyping sprint hackathons.',
+    detailedDescription: 'Our high-energy bootcamps and rapid coding hackathons inspire collaborative innovation. We partner with elite academic and corporate institutions to lead multi-day coding sprints, testing real-world problem-solving abilities, product prototyping speeds, and technical agility.',
     icon: 'Brain',
-    imageUrl: 'https://images.unsplash.com/photo-1527474305487-b87b222841cc?w=800&h=500&fit=crop&q=80',
-    galleryUrls: [],
-    seoTitle: 'Generative AI & Data Analytics Services - Zentriya IT',
-    seoDescription: 'Unlock predictive business intelligence. Integrate intelligent neural models and data pipelines engineered by Zentriya.'
+    imageUrl: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&h=500&fit=crop&q=80',
+    features: ['36-Hour Coding Sprints', 'Real-World Hackathon Briefs', 'Active Mentor Evaluations', 'Cash Prizes & Referral Awards'],
+    benefits: ['Rapid Prototype Development', 'Collaborative Team Building', 'Instant Talent Discovery', 'Immersive Problem-Solving Experience'],
+    order: 4,
+    isActive: true,
+    galleryUrls: []
   },
   {
     id: 'service_5',
-    title: 'Elite Bootcamps & Technical Hackathons',
-    description: 'Partnering with premium academic institutes to deliver hyper-focused bootcamps, rapid prototyping sprint hackathons, and certifications.',
-    icon: 'CodeXml',
-    imageUrl: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&h=500&fit=crop&q=80',
-    galleryUrls: [],
-    seoTitle: 'College Bootcamps & Corporate Hackathons - Zentriya IT',
-    seoDescription: 'Accelerated tech learning bootcamps and rapid coding hackathons tailored for engineering students and working professionals.'
+    title: 'Consulting Services',
+    description: 'Enterprise cloud migrations, high-security infrastructure audits, and technology consulting.',
+    detailedDescription: 'Partner with our seasoned systems architects to design robust technology roadmaps. We specialize in migrating legacy monoliths to AWS, Azure, and Google Cloud, structuring robust CI/CD deployment pipelines, ensuring strict ISO compliance, and optimizing databases for high throughput.',
+    icon: 'CloudLightning',
+    imageUrl: 'https://images.unsplash.com/photo-1484417894907-623942c8ee29?w=800&h=500&fit=crop&q=80',
+    features: ['AWS / Azure Cloud Migrations', 'DevOps & IaC (Terraform) Audits', 'Relational Database Optimisation', 'IT Security Compliance Checks'],
+    benefits: ['Up to 40% Infrastructure Cost Reduction', 'Minimised System Downtime', 'Guaranteed Security Hardening', 'Scalable Enterprise Roadmaps'],
+    order: 5,
+    isActive: true,
+    galleryUrls: []
   },
   {
     id: 'service_6',
-    title: 'Global Certifications & Corporate Training',
-    description: 'Upskilling enterprise workforces in cloud computing, cybersecurity standards, and agile leadership frameworks under accredited guidance.',
-    icon: 'ShieldCheck',
-    imageUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=500&fit=crop&q=80',
-    galleryUrls: [],
-    seoTitle: 'Corporate Tech Upskilling & Certifications - Zentriya IT',
-    seoDescription: 'Empower your teams with certified masterclasses in AWS, Azure, ISO Security standards, and modern programming stacks.'
+    title: 'Projects & Placements',
+    description: 'End-to-end placement referrals, recruitment coordination, and portfolio reviews.',
+    detailedDescription: 'Our dedicated HR recruitment cell connects certified talent directly with a network of over 120 partner software corporations across major tech hubs. We conduct thorough resume auditing, LinkedIn branding workshops, and rigorous mock technical interviews to guarantee stellar placement conversion rates.',
+    icon: 'Briefcase',
+    imageUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=500&fit=crop&q=80',
+    features: ['Direct Hiring Referrals', 'Comprehensive Mock Interviews', 'Portfolio & Resume Styling', 'Placement Success Celebrations'],
+    benefits: ['Access to Exclusive Tech Roles', 'Substantial Interview Success Boost', 'Direct Connection to 120+ Recruiter Networks', 'Strong Placement-Oriented Training'],
+    order: 6,
+    isActive: true,
+    galleryUrls: []
+  },
+  {
+    id: 'service_7',
+    title: 'Global Certifications',
+    description: 'Accredited prep courses and corporate verification seals for global cloud, dev, and security credentials.',
+    detailedDescription: 'Prepare for globally recognized certificates with our accredited guidance. Zentriya is an authorized training partner, delivering aligned masterclasses for AWS Solutions Architect, Microsoft Azure Associate, ISO Security compliance, and Agile Scrum Master certifications with verifiable QR-coded badges.',
+    icon: 'Award',
+    imageUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=500&fit=crop&q=80',
+    features: ['AWS / Azure Aligned Training', 'ISO Standards Prep', 'Scrum Master Masterclasses', 'Verifiable QR-Coded Badges'],
+    benefits: ['Globally Credible Skills', 'Accelerated Career Trajectory', 'Enhanced Interview Call Volumes', 'Verified Expertise Standards'],
+    order: 7,
+    isActive: true,
+    galleryUrls: []
   }
 ];
 
@@ -327,7 +339,7 @@ const defaultGalleryItems: GalleryItem[] = [
   { id: 'gal_2', albumId: 'album_1', type: 'image', url: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=800&fit=crop&q=80', title: 'Interactive Developer Lab', category: 'Campus' },
   { id: 'gal_3', albumId: 'album_2', type: 'image', url: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800&fit=crop&q=80', title: 'Team Pitching to Judges', category: 'Events' },
   { id: 'gal_4', albumId: 'album_2', type: 'image', url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&fit=crop&q=80', title: 'Award Distribution Ceremony', category: 'Events' },
-  { id: 'gal_5', albumId: 'album_3', type: 'image', url: 'https://images.unsplash.com/photo-1521791136364-72861c39045b?w=800&fit=crop&q=80', title: 'Offer Letter Handover - IBM', category: 'Placements' },
+  { id: 'gal_5', albumId: 'album_3', type: 'image', url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&fit=crop&q=80', title: 'Offer Letter Handover - IBM', category: 'Placements' },
   { id: 'gal_6', albumId: 'album_3', type: 'image', url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&fit=crop&q=80', title: 'Selected Batch Group Portrait', category: 'Placements' }
 ];
 
@@ -478,6 +490,30 @@ const defaultFaqs: FaqItem[] = [
   { id: 'faq_4', question: 'Are the global certificates globally recognized?', answer: 'Yes. Zentriya provides training alignment with accredited global authorities (such as AWS, Azure, ISO, and Scrum Alliance). Certificates issued bear our registered corporate seals and specific verifiable QR-codes linked to student project repos.', category: 'Certifications' }
 ];
 
+const defaultWhyChooseUs: WhyChooseUsItem[] = [
+  {
+    id: 'wcu_01',
+    title: 'Industry-Oriented Training with Real-Time Practical Exposure',
+    icon: 'Lightbulb',
+    display_order: 1,
+    is_active: true
+  },
+  {
+    id: 'wcu_02',
+    title: 'Strong Placement Support through MNC & Academic Collaborations',
+    icon: 'Target',
+    display_order: 2,
+    is_active: true
+  },
+  {
+    id: 'wcu_03',
+    title: 'Innovation-Driven Learning with Internships, Workshops & Hackathons',
+    icon: 'TrendingUp',
+    display_order: 3,
+    is_active: true
+  }
+];
+
 const defaultDownloads: DownloadItem[] = [
   { id: 'dl_1', title: 'Zentriya Corporate Brochure 2026', fileUrl: '#', category: 'Brochure', downloadsCount: 2450 },
   { id: 'dl_2', title: 'MERN Full-Stack Internship Syllabus PDF', fileUrl: '#', category: 'Syllabus', downloadsCount: 4210 },
@@ -566,9 +602,34 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       const { data, error } = await supabase.from('settings').select('*').single();
-      if (!error && data) return data as WebsiteSettings;
+      if (!error && data) {
+        const dbSettings = data as WebsiteSettings;
+        if (dbSettings.contactEmail !== 'info.zentriya@gmail.com' || dbSettings.contactPhones?.length !== 3 || dbSettings.contactPhones?.[0] !== '+91 7989270174') {
+          dbSettings.contactEmail = 'info.zentriya@gmail.com';
+          dbSettings.contactPhones = ['+91 7989270174', '+91 95509 50705', '+91 6301550330'];
+          dbSettings.whatsappNumber = '+917989270174';
+          dbSettings.address = '';
+          dbSettings.googleMapEmbedUrl = '';
+        }
+        if (!dbSettings.whyChooseUsTitle) {
+          dbSettings.whyChooseUsTitle = 'Why Choose Us?';
+        }
+        return dbSettings;
+      }
     }
     const settings = getLocalData<WebsiteSettings>('zentriya_settings', defaultSettings);
+    if (settings.contactEmail !== 'info.zentriya@gmail.com' || settings.contactPhones?.length !== 3 || settings.contactPhones?.[0] !== '+91 7989270174' || settings.address !== '') {
+      settings.contactEmail = 'info.zentriya@gmail.com';
+      settings.contactPhones = ['+91 7989270174', '+91 95509 50705', '+91 6301550330'];
+      settings.whatsappNumber = '+917989270174';
+      settings.address = '';
+      settings.googleMapEmbedUrl = '';
+      setLocalData('zentriya_settings', settings);
+    }
+    if (!settings.whyChooseUsTitle) {
+      settings.whyChooseUsTitle = 'Why Choose Us?';
+      setLocalData('zentriya_settings', settings);
+    }
     if (settings.logoUrl.includes('unsplash.com') || settings.logoUrl === '') {
       settings.logoUrl = '/logo.png';
       settings.faviconUrl = '/logo.png';
@@ -617,9 +678,14 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       const { data, error } = await supabase.from('about').select('*').single();
-      if (!error && data) return data as AboutSection;
+      if (!error && data && data.title && data.description) return data as AboutSection;
     }
-    return getLocalData<AboutSection>('zentriya_about', defaultAbout);
+    const local = getLocalData<any>('zentriya_about', defaultAbout);
+    if (!local || typeof local !== 'object' || !local.title || !local.description) {
+      setLocalData('zentriya_about', defaultAbout);
+      return defaultAbout;
+    }
+    return local as AboutSection;
   },
 
   async updateAbout(about: AboutSection): Promise<AboutSection> {
@@ -638,10 +704,15 @@ export const db = {
   async getServices(): Promise<ServiceItem[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('services').select('*');
+      const { data, error } = await supabase.from('services').select('*').order('order', { ascending: true });
       if (!error && data) return data as ServiceItem[];
     }
-    return getLocalData<ServiceItem[]>('zentriya_services', defaultServices);
+    const list = getLocalData<ServiceItem[]>('zentriya_services', defaultServices);
+    if (list.length < 7 || !list.some(s => s.id === 'service_7')) {
+      setLocalData('zentriya_services', defaultServices);
+      return defaultServices;
+    }
+    return list.sort((a, b) => (a.order || 0) - (b.order || 0));
   },
 
   async saveService(service: ServiceItem): Promise<ServiceItem> {
@@ -798,7 +869,20 @@ export const db = {
       const { data, error } = await supabase.from('gallery').select('*');
       if (!error && data) return data as GalleryItem[];
     }
-    return getLocalData<GalleryItem[]>('zentriya_gallery', defaultGalleryItems);
+    const items = getLocalData<GalleryItem[]>('zentriya_gallery', defaultGalleryItems);
+    // Dynamically fix the broken image URL if it exists in local storage
+    let modified = false;
+    const updatedItems = items.map(item => {
+      if (item.url && item.url.includes('photo-1521791136364-72861c39045b')) {
+        modified = true;
+        return { ...item, url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&fit=crop&q=80' };
+      }
+      return item;
+    });
+    if (modified) {
+      setLocalData('zentriya_gallery', updatedItems);
+    }
+    return updatedItems;
   },
 
   async saveGalleryItem(item: GalleryItem): Promise<GalleryItem> {
@@ -1270,6 +1354,57 @@ export const db = {
       nots[index].isRead = true;
       setLocalData('zentriya_notifications', nots);
     }
+  },
+
+  // --------------------------------------------------------------------
+  // WHY CHOOSE US
+  // --------------------------------------------------------------------
+  async getWhyChooseUs(): Promise<WhyChooseUsItem[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      const { data, error } = await supabase.from('why_choose_us').select('*').order('display_order', { ascending: true });
+      if (!error && data) return data as WhyChooseUsItem[];
+    }
+    const local = getLocalData<WhyChooseUsItem[]>('zentriya_why_choose_us', defaultWhyChooseUs);
+    return local.sort((a, b) => a.display_order - b.display_order);
+  },
+
+  async saveWhyChooseUsItem(item: WhyChooseUsItem): Promise<WhyChooseUsItem> {
+    const items = await this.getWhyChooseUs();
+    const index = items.findIndex(i => i.id === item.id);
+    if (index >= 0) items[index] = item;
+    else items.push(item);
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('why_choose_us').upsert(item);
+    }
+    setLocalData('zentriya_why_choose_us', items);
+    return item;
+  },
+
+  async deleteWhyChooseUsItem(id: string): Promise<boolean> {
+    const items = await this.getWhyChooseUs();
+    const filtered = items.filter(i => i.id !== id);
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('why_choose_us').delete().eq('id', id);
+    }
+    setLocalData('zentriya_why_choose_us', filtered);
+    return true;
+  },
+
+  async saveWhyChooseUsOrder(items: WhyChooseUsItem[]): Promise<void> {
+    const updated = items.map((item, idx) => ({
+      ...item,
+      display_order: idx + 1
+    }));
+    const supabase = getSupabase();
+    if (supabase) {
+      for (const item of updated) {
+        await supabase.from('why_choose_us').upsert(item);
+      }
+    }
+    setLocalData('zentriya_why_choose_us', updated);
   },
 
   getDbConfig() {

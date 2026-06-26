@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Phone, Mail, MapPin, Facebook, Twitter, Linkedin, 
-  Instagram, Youtube, ArrowUp, Send, CheckCircle2 
+  Phone, Mail, Facebook, Twitter, Linkedin, 
+  Instagram, Youtube, ArrowUp, Send, CheckCircle2, Globe
 } from 'lucide-react';
 import { db } from '../services/db';
 import { WebsiteSettings } from '../types';
@@ -126,33 +126,35 @@ export default function Footer() {
           {/* Contact Details Column */}
           <div className="space-y-4">
             <h3 className="text-white font-bold text-base tracking-wide relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-8 after:h-0.5 after:bg-emerald-500 pb-2">
-              Corporate Office
+              Corporate Directory
             </h3>
             <ul className="space-y-3.5 text-sm">
               <li className="flex gap-3 items-start">
-                <MapPin className="text-emerald-500 shrink-0 mt-0.5" size={17} />
-                <span className="text-slate-400 leading-snug">
-                  {settings?.address || 'Outer Ring Road, Bangalore'}
-                </span>
+                <Phone className="text-emerald-500 shrink-0 mt-0.5" size={16} />
+                <div className="flex flex-col gap-1.5">
+                  <a href="tel:+917989270174" className="text-slate-400 hover:text-emerald-400 transition-colors">
+                    +91 7989270174
+                  </a>
+                  <a href="tel:+919550950705" className="text-slate-400 hover:text-emerald-400 transition-colors">
+                    +91 95509 50705
+                  </a>
+                  <a href="tel:+916301550330" className="text-slate-400 hover:text-emerald-400 transition-colors">
+                    +91 6301550330
+                  </a>
+                </div>
               </li>
               <li className="flex gap-3 items-center">
                 <Mail className="text-emerald-500 shrink-0" size={16} />
-                <a href={`mailto:${settings?.contactEmail}`} className="text-slate-400 hover:text-emerald-400 transition-colors">
-                  {settings?.contactEmail || 'info@zentriya.com'}
+                <a href="mailto:info.zentriya@gmail.com" className="text-slate-400 hover:text-emerald-400 transition-colors">
+                  info.zentriya@gmail.com
                 </a>
               </li>
-              {settings?.contactPhones && settings.contactPhones.length > 0 && (
-                <li className="flex gap-3 items-start">
-                  <Phone className="text-emerald-500 shrink-0 mt-0.5" size={16} />
-                  <div className="flex flex-col gap-1">
-                    {settings.contactPhones.map((ph, idx) => (
-                      <a href={`tel:${ph}`} key={idx} className="text-slate-400 hover:text-emerald-400 transition-colors">
-                        {ph}
-                      </a>
-                    ))}
-                  </div>
-                </li>
-              )}
+              <li className="flex gap-3 items-center">
+                <Globe className="text-emerald-500 shrink-0" size={16} />
+                <a href="https://zentriya.com" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-emerald-400 transition-colors">
+                  zentriya.com
+                </a>
+              </li>
             </ul>
           </div>
 

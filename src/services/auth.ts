@@ -94,6 +94,7 @@ export const auth = {
       case 'settings':
       case 'home':
       case 'about':
+      case 'why_choose_us':
       case 'partners':
       case 'faqs':
         return role === 'Admin';

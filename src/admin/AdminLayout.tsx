@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Settings, FileText, GraduationCap, 
   Layers, Image, Users, MessageSquare, Briefcase, 
   HelpCircle, LogOut, Moon, Sun, Bell, Terminal, Database,
-  ArrowLeft, Menu, X
+  ArrowLeft, Menu, X, Award
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 
@@ -54,6 +54,7 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
     { name: 'Dashboard Overview', key: 'dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Website Settings', key: 'settings', path: '/admin/manage?tab=settings', icon: Settings },
     { name: 'Hero Slides', key: 'home', path: '/admin/manage?tab=hero', icon: Image },
+    { name: 'Why Choose Us', key: 'why_choose_us', path: '/admin/manage?tab=why_choose_us', icon: Award },
     { name: 'About Us Section', key: 'about', path: '/admin/manage?tab=about', icon: FileText },
     { name: 'Services Portfolio', key: 'services', path: '/admin/manage?tab=services', icon: Layers },
     { name: 'Internship Programs', key: 'internships', path: '/admin/manage?tab=internships', icon: GraduationCap },

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/db';
 import { WebsiteSettings } from '../types';
-import { Mail, Phone, MapPin, Send, MessageSquare, ExternalLink } from 'lucide-react';
+import { Mail, Phone, Globe, Send, MessageSquare, ExternalLink } from 'lucide-react';
 import { useToast } from '../components/Toast';
 
 export default function Contact() {
@@ -67,7 +67,7 @@ export default function Contact() {
             Connect With Our Solution Architects
           </h1>
           <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto font-light leading-relaxed">
-            Have an enterprise product to scale, or need to discuss university training alliances? Drop us a line or visit our physical Bangalore labs.
+            Have an enterprise product to scale, or need to discuss university training alliances? Drop us a line or connect with our support desk.
           </p>
         </div>
       </div>
@@ -84,16 +84,24 @@ export default function Contact() {
               </h3>
 
               <div className="space-y-5">
-                
+
                 <div className="flex gap-4 items-start">
                   <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                    <MapPin size={18} />
+                    <Phone size={18} />
                   </div>
                   <div>
-                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block mb-1">Corporate Headquarters</span>
-                    <p className="text-sm text-slate-755 dark:text-slate-300 leading-snug">
-                      {settings?.address || 'Outer Ring Road, Bangalore, KA'}
-                    </p>
+                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block mb-1">Direct Helplines</span>
+                    <div className="flex flex-col gap-1.5">
+                      <a href="tel:+917989270174" className="text-sm text-slate-755 dark:text-slate-300 hover:text-blue-500 font-semibold transition-colors">
+                        +91 7989270174
+                      </a>
+                      <a href="tel:+919550950705" className="text-sm text-slate-755 dark:text-slate-300 hover:text-blue-500 font-semibold transition-colors">
+                        +91 95509 50705
+                      </a>
+                      <a href="tel:+916301550330" className="text-sm text-slate-755 dark:text-slate-300 hover:text-blue-500 font-semibold transition-colors">
+                        +91 6301550330
+                      </a>
+                    </div>
                   </div>
                 </div>
 
@@ -103,42 +111,27 @@ export default function Contact() {
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block mb-1">Contact Email</span>
-                    <a href={`mailto:${settings?.contactEmail}`} className="text-sm text-slate-755 dark:text-slate-300 hover:text-blue-500 font-semibold">
-                      {settings?.contactEmail || 'info@zentriya.com'}
+                    <a href="mailto:info.zentriya@gmail.com" className="text-sm text-slate-755 dark:text-slate-300 hover:text-blue-500 font-semibold transition-colors">
+                      info.zentriya@gmail.com
                     </a>
                   </div>
                 </div>
 
                 <div className="flex gap-4 items-start">
                   <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                    <Phone size={18} />
+                    <Globe size={18} />
                   </div>
                   <div>
-                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block mb-1">Direct Helplines</span>
-                    <div className="flex flex-col gap-1">
-                      {settings?.contactPhones.map((ph, idx) => (
-                        <a href={`tel:${ph}`} key={idx} className="text-sm text-slate-755 dark:text-slate-300 hover:text-blue-500 font-semibold">
-                          {ph}
-                        </a>
-                      ))}
-                    </div>
+                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block mb-1">Official Website</span>
+                    <a href="https://zentriya.com" target="_blank" rel="noopener noreferrer" className="text-sm text-slate-755 dark:text-slate-300 hover:text-blue-500 font-semibold flex items-center gap-1 transition-colors">
+                      zentriya.com
+                      <ExternalLink size={12} className="opacity-60" />
+                    </a>
                   </div>
                 </div>
 
               </div>
             </div>
-
-            {/* Google Map Embed Card */}
-            {settings?.googleMapEmbedUrl && (
-              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xl p-3">
-                <iframe 
-                  src={settings.googleMapEmbedUrl}
-                  className="w-full h-64 rounded-2xl"
-                  loading="lazy"
-                  title="Zentriya Bangalore Headquarters Map Locator"
-                />
-              </div>
-            )}
 
           </div>
 

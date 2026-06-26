@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { db } from '../services/db';
 import { AboutSection } from '../types';
-import LucideIcon from '../components/LucideIcon';
-import { ShieldCheck, History, Compass, Milestone, Users } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ShieldCheck, GraduationCap, Award, BookOpen } from 'lucide-react';
 
 export default function About() {
   const [about, setAbout] = useState<AboutSection | null>(null);
@@ -17,196 +17,137 @@ export default function About() {
 
   if (loading || !about) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-        <div className="w-12 h-12 rounded-full border-4 border-blue-500/10 border-t-blue-600 animate-spin" />
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center" id="about-loading-container">
+        <div className="w-12 h-12 rounded-full border-4 border-emerald-500/10 border-t-emerald-600 animate-spin" />
       </div>
     );
   }
 
+  // Split description by newlines to keep paragraph formatting and spacing exactly
+  const paragraphs = (about.description || '').split('\n\n').filter(p => p.trim() !== '');
+
   return (
-    <div id="about-page-root" className="bg-slate-50 dark:bg-slate-950 min-h-screen pb-20">
+    <div id="about-page-root" className="bg-slate-50 dark:bg-slate-950 min-h-screen pb-24 overflow-hidden">
       
-      {/* Page Header */}
-      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white py-16 sm:py-20 text-center relative border-b border-slate-800">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent)]" />
-        <div className="max-w-4xl mx-auto px-4 relative z-10 space-y-4 animate-fade-in">
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 font-bold tracking-widest text-xs uppercase block">
-            Corporate Integrity & Excellence
-          </span>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-none text-white font-display">
-            Our Mission, Vision & Timelines
-          </h1>
-          <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto font-light leading-relaxed">
-            Discover the founders, philosophy, core technical pillars, and historic milestones that define Zentriya IT Solutions.
-          </p>
+      {/* Decorative background glow elements */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/5 dark:bg-emerald-500/2 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-blue-500/5 dark:bg-blue-500/2 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Hero Banner Section */}
+      <div className="relative bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white py-20 sm:py-24 text-center border-b border-slate-800">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),transparent)]" />
+        <div className="max-w-5xl mx-auto px-4 relative z-10 space-y-4">
+          <motion.span 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-emerald-400 font-bold tracking-widest text-xs sm:text-sm uppercase block font-mono"
+          >
+            Empowering Employability & Innovation
+          </motion.span>
+          <motion.h1 
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1 }}
+            className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-none text-white font-display"
+          >
+            About Our Organization
+          </motion.h1>
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: "80px" }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="h-1 bg-gradient-to-r from-emerald-500 to-blue-600 mx-auto rounded-full" 
+          />
         </div>
       </div>
 
-      {/* Main Content Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 space-y-24">
-        
-        {/* 1. Overview */}
-        <section id="about-overview" className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-7 space-y-6">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              A Bespoke Software Consulting Agency & Technical Academy
-            </h2>
-            <p className="text-slate-600 dark:text-slate-300 text-base leading-relaxed whitespace-pre-line">
-              {about.companyOverview}
-            </p>
-          </div>
-          
-          <div className="lg:col-span-5 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl bg-white dark:bg-slate-900 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl" />
-            <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-4 flex items-center gap-2">
-              <ShieldCheck className="text-blue-500" size={20} />
-              Accredited Quality Seal
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-              Our engineering standards mimic global titans like IBM and Microsoft, with highly streamlined code deployment pipelines and verified secure multi-tenant cloud storage structures.
-            </p>
-            <div className="space-y-3.5">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span>ISO 9001:2015 Operations Certified</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span>Authorized Cloud Enablement Partner</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span>120+ Software Recruiter Associations</span>
+      {/* Main Brochure Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 sm:mt-24">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center"
+        >
+          {/* Visual Presentation (Left Side) */}
+          <div className="lg:col-span-5 relative" id="about-visual-pane">
+            <div className="absolute -inset-2 bg-gradient-to-tr from-emerald-500/20 to-blue-500/20 rounded-3xl blur-xl opacity-70" />
+            <div className="relative bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 p-3 sm:p-4 rounded-3xl shadow-2xl overflow-hidden group">
+              <img 
+                src={about.image} 
+                alt="Zentriya IT Solutions Corporate Brochure View" 
+                referrerPolicy="no-referrer"
+                className="w-full h-[320px] sm:h-[420px] object-cover rounded-2xl group-hover:scale-105 transition-transform duration-700 ease-out"
+              />
+              {/* Subtle Overlay Badge */}
+              <div className="absolute bottom-8 left-8 bg-slate-950/80 backdrop-blur-md border border-slate-700/50 text-white p-4 rounded-2xl shadow-lg flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-mono tracking-wider text-emerald-400 font-bold uppercase">ISO Certified</p>
+                  <p className="text-xs font-bold">Academic-Industry Alliance</p>
+                </div>
               </div>
             </div>
           </div>
-        </section>
 
-        {/* 2. Vision and Mission cards */}
-        <section id="about-vision-mission" className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10">
-          
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all space-y-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-              <Compass size={24} />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white font-display">Our Vision</h3>
-            <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
-              {about.vision}
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all space-y-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-              <Milestone size={24} />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white font-display">Our Mission</h3>
-            <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
-              {about.mission}
-            </p>
-          </div>
-
-        </section>
-
-        {/* 3. Core Values Grid */}
-        <section id="about-core-values">
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500 font-bold text-xs uppercase tracking-widest block font-mono">
-              Our Pillars
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
-              Values Driving Zentriya Coding Integrity
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-            {about.coreValues.map((val, idx) => (
-              <div 
-                key={idx}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-md space-y-3.5 hover:-translate-y-1 transition-transform"
-              >
-                <div className="text-blue-500">
-                  <LucideIcon name={val.icon} size={24} />
-                </div>
-                <h4 className="font-bold text-slate-950 dark:text-white text-base">
-                  {val.title}
-                </h4>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  {val.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 4. Timeline Tracker */}
-        <section id="about-timeline">
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500 font-bold text-xs uppercase tracking-widest block font-mono">
-              Historic Records
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
-              Zentriya Evolution Journey
-            </h2>
-          </div>
-
-          <div className="relative border-l-2 border-blue-500/20 max-w-4xl mx-auto pl-8 sm:pl-10 space-y-10 py-2">
-            {about.timeline.map((item, idx) => (
-              <div key={idx} className="relative group">
-                {/* Bullet point bubble */}
-                <div className="absolute -left-[45px] sm:-left-[49px] top-1 w-6 h-6 rounded-full bg-slate-900 border-4 border-blue-500 text-white flex items-center justify-center text-[10px] group-hover:scale-110 transition-transform">
-                  <History size={10} />
-                </div>
-                
-                <div className="space-y-1">
-                  <div className="inline-block bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs px-2.5 py-1 rounded-md font-bold tracking-wider font-mono">
-                    {item.year}
-                  </div>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-lg leading-tight pt-1">
-                    {item.title}
-                  </h4>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl">
-                    {item.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 5. Why Choose Us */}
-        <section id="about-why-choose" className="bg-slate-100 dark:bg-slate-900/40 p-8 sm:p-10 rounded-3xl border border-slate-200/50 dark:border-slate-800/80">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+          {/* Official Content Presentation (Right Side) */}
+          <div className="lg:col-span-7 space-y-8" id="about-content-pane">
             
-            <div className="lg:col-span-4 space-y-4">
-              <span className="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-widest block font-mono">
-                Decision Metrics
-              </span>
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight font-display">
-                Why IT Leaders & Trainees Partner With Us
+            {/* Brochure Header with Decorative Green Divider Lines */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <span className="h-[2px] w-12 bg-emerald-500 dark:bg-emerald-400 rounded-full" />
+                <h2 className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-widest font-display uppercase">
+                  {about.title}
+                </h2>
+                <span className="h-[2px] w-12 bg-emerald-500 dark:bg-emerald-400 rounded-full" />
+              </div>
+              
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-snug font-display">
+                Transforming Education <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-blue-600">Into Employability</span>
               </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Discover the specific structural mechanisms that ensure our delivery outclasses industry averages.
-              </p>
             </div>
 
-            <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {about.whyChooseUs.map((item, idx) => (
-                <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-md border border-slate-100 dark:border-slate-800 space-y-2">
-                  <h4 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
-                    <Users size={16} className="text-blue-500 shrink-0" />
-                    {item.title}
-                  </h4>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
+            {/* Official Brochure Paragraphs */}
+            <div className="space-y-6 text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed font-sans">
+              {paragraphs.map((p, idx) => (
+                <p key={idx} className="whitespace-pre-line text-justify">
+                  {p}
+                </p>
               ))}
             </div>
 
-          </div>
-        </section>
+            {/* Core Competencies Ribbon */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-200/50 dark:border-slate-800/50">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 dark:bg-emerald-400/5 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <GraduationCap size={18} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">IT & Non-IT Training</h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Future-focused industry-driven skill sets.</p>
+                </div>
+              </div>
 
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/10 dark:bg-blue-400/5 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                  <Award size={18} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">Real-time Internships</h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Practical exposure to global work standards.</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </motion.div>
       </div>
+
     </div>
   );
 }
