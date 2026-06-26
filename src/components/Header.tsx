@@ -54,8 +54,8 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
   return (
     <>
       {/* Corporate Top Bar */}
-      <div id="corporate-top-bar" className="bg-slate-900 text-slate-300 text-[11px] sm:text-xs py-2 px-4 border-b border-slate-800 relative z-50">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
+      <div id="corporate-top-bar" className="bg-slate-900 text-slate-300 text-[11px] sm:text-xs py-2 border-b border-slate-800 relative z-50">
+        <div className="w-full px-4 sm:px-6 md:px-10 xl:px-12 flex flex-col md:flex-row justify-between items-center gap-2">
           {/* Official Helplines */}
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <span className="text-slate-400 font-medium">Official Helplines:</span>
@@ -89,8 +89,10 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
 
       {/* Announcement Bar */}
       {settings?.announcementActive && settings.announcementText && (
-        <div id="announcement-bar" className="bg-gradient-to-r from-blue-600 to-emerald-500 text-white text-xs sm:text-sm py-2 px-4 text-center font-bold relative z-50">
-          {settings.announcementText}
+        <div id="announcement-bar" className="bg-gradient-to-r from-blue-600 to-emerald-500 text-white text-xs sm:text-sm py-2 text-center font-bold relative z-50">
+          <div className="w-full px-4 sm:px-6 md:px-10 xl:px-12 text-center">
+            {settings.announcementText}
+          </div>
         </div>
       )}
 
@@ -103,40 +105,40 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
             : 'bg-white/80 dark:bg-slate-950/80 border-b border-transparent backdrop-blur-md py-4'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 md:px-10 xl:px-12 flex xl:grid xl:grid-cols-[1fr_auto_1fr] items-center justify-between xl:justify-stretch">
           
           {/* Logo Brand */}
-          <Link id="logo-brand-link" to="/" className="flex items-center gap-3 group">
+          <Link id="logo-brand-link" to="/" className="flex items-center gap-3 group shrink-0 justify-self-start">
             {settings?.logoUrl ? (
               <img 
                 src={settings.logoUrl} 
                 alt={settings?.companyName || 'Zentriya Logo'} 
-                className="h-10 w-auto object-contain group-hover:scale-105 transition-transform"
+                className="h-10 w-auto object-contain group-hover:scale-105 transition-transform shrink-0"
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-black text-2xl">
+              <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-black text-2xl shrink-0">
                 Z
               </div>
             )}
-            <div className="flex flex-col">
-              <span className="font-bold text-base sm:text-lg leading-none tracking-tight text-slate-900 dark:text-white font-display">
+            <div className="flex flex-col shrink-0">
+              <span className="font-bold text-base sm:text-lg leading-none tracking-tight text-slate-900 dark:text-white font-display whitespace-nowrap">
                 ZENTRIYA
               </span>
-              <span className="text-[8px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">
+              <span className="text-[8px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1 whitespace-nowrap">
                 IT Solutions Private Limited
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation Link Cluster */}
-          <nav id="desktop-nav-cluster" className="hidden lg:flex items-center gap-6 xl:gap-8">
+          <nav id="desktop-nav-cluster" className="hidden xl:flex items-center xl:gap-2.5 min-[1400px]:gap-4 2xl:gap-6 justify-self-center">
             {navLinks.map((link) => (
               <Link 
                 id={`nav-${link.name.toLowerCase()}`}
                 key={link.path} 
                 to={link.path} 
-                className={`text-sm ${activeLinkStyle(link.path)}`}
+                className={`xl:text-xs min-[1400px]:text-[13px] 2xl:text-sm whitespace-nowrap transition-all duration-200 ${activeLinkStyle(link.path)}`}
               >
                 {link.name}
               </Link>
@@ -144,34 +146,61 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
           </nav>
 
           {/* Controls & Action Call */}
-          <div id="header-action-panel" className="flex items-center gap-2 sm:gap-4">
+          <div id="header-action-panel" className="flex items-center gap-2 sm:gap-4 xl:gap-2.5 min-[1400px]:gap-3.5 2xl:gap-5 shrink-0 justify-self-end">
             
-            {/* Dark Mode toggle */}
-            <button 
-              id="theme-toggle-btn"
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              aria-label="Toggle Theme"
-            >
-              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
+            {/* Elegant, Explicit sliding Theme Toggle Switch */}
+            <div id="theme-toggle-switch" className="relative flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-full border border-slate-200/50 dark:border-slate-700/50 shrink-0 select-none w-[66px] h-[34px]">
+              <button
+                id="theme-toggle-light"
+                onClick={() => setDarkMode(false)}
+                className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center transition-colors duration-200 ${
+                  !darkMode ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Light Mode"
+                aria-label="Light Mode"
+              >
+                <Sun size={14} className="shrink-0" />
+              </button>
+              
+              <button
+                id="theme-toggle-dark"
+                onClick={() => setDarkMode(true)}
+                className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center transition-colors duration-200 ${
+                  darkMode ? 'text-amber-400' : 'text-slate-400 hover:text-slate-800'
+                }`}
+                title="Dark Mode"
+                aria-label="Dark Mode"
+              >
+                <Moon size={14} className="shrink-0" />
+              </button>
+
+              <motion.div
+                layout
+                transition={{ type: "spring", stiffness: 380, damping: 26 }}
+                className="absolute inset-y-1 rounded-full bg-white dark:bg-slate-900 shadow-sm border border-slate-200/10 dark:border-slate-700/30"
+                style={{
+                  width: "26px",
+                  left: darkMode ? "34px" : "6px"
+                }}
+              />
+            </div>
 
             {/* Admin Console shortcut link */}
             <Link 
               id="admin-console-shortcut"
               to="/admin/login" 
-              className="px-3 py-2 sm:px-5 sm:py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full text-xs font-bold shadow-md hover:scale-105 transition-all duration-200 flex items-center gap-1.5 shrink-0"
+              className="p-2.5 sm:px-5 sm:py-2.5 xl:px-3 xl:py-2 min-[1400px]:px-4 min-[1400px]:py-2.5 2xl:px-5 2xl:py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full text-xs font-bold shadow-md hover:scale-105 transition-all duration-200 flex items-center justify-center gap-1.5 shrink-0"
               title="Super Admin Dashboard Console"
             >
-              <LogIn size={13} />
-              <span className="hidden sm:inline">Admin Portal</span>
+              <LogIn size={13} className="shrink-0" />
+              <span className="hidden sm:inline xl:hidden 2xl:inline">Admin Portal</span>
             </Link>
 
             {/* Mobile Nav Menu Toggler */}
             <button 
               id="mobile-nav-toggle"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 lg:hidden text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg shrink-0"
+              className="p-2 xl:hidden text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg shrink-0"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -181,10 +210,10 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
             <Link 
               id="header-cta-btn"
               to="/contact" 
-              className="hidden xl:flex items-center gap-2 bg-gradient-to-r from-blue-600 to-emerald-500 text-white text-sm px-6 py-2.5 rounded-full font-bold shadow-lg shadow-blue-500/15 hover:scale-105 hover:brightness-110 transition-all duration-300"
+              className="hidden xl:flex items-center gap-1 bg-gradient-to-r from-blue-600 to-emerald-500 text-white text-xs 2xl:text-sm px-3 py-2 min-[1400px]:px-4 min-[1400px]:py-2.5 2xl:px-6 2xl:py-2.5 rounded-full font-bold shadow-lg shadow-blue-500/15 hover:scale-105 hover:brightness-110 transition-all duration-300 shrink-0"
             >
-              <PhoneCall size={14} />
-              Connect Now
+              <PhoneCall size={13} className="shrink-0" />
+              <span className="hidden xl:inline">Connect Now</span>
             </Link>
           </div>
         </div>
@@ -201,7 +230,7 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.25 }}
                 onClick={() => setMobileMenuOpen(false)}
-                className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-30"
+                className="xl:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-30"
               />
 
               {/* Dropdown Menu Panel (Absolute to Header container) */}
@@ -211,7 +240,7 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-                className="lg:hidden absolute top-full left-0 right-0 w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800/80 shadow-2xl z-40 p-5 flex flex-col rounded-b-2xl max-h-[80vh] overflow-y-auto"
+                className="xl:hidden absolute top-full left-0 right-0 w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800/80 shadow-2xl z-40 p-5 flex flex-col rounded-b-2xl max-h-[80vh] overflow-y-auto"
                 id="mobile-navigation-dropdown"
               >
                 {/* Header inside Menu */}
