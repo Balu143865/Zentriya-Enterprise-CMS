@@ -1431,7 +1431,7 @@ export const db = {
   logActivity(action: string, details: string) {
     const logs = getLocalData<ActivityLog[]>('zentriya_activity_logs', defaultActivityLogs);
     const activeUser = localStorage.getItem('zentriya_active_user');
-    let user: UserProfile = { id: 'usr_admin', name: 'Admin Chief', email: 'admin@zentriya.com', role: 'OWNER' };
+    let user: UserProfile = { id: 'usr_admin', name: 'Admin Chief', email: 'admin@zentriya.com', role: 'Super Admin' as UserRole };
     if (activeUser) {
       try { user = JSON.parse(activeUser); } catch(e){}
     }

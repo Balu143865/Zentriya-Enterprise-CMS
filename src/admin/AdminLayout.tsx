@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Settings, FileText, GraduationCap, 
   Layers, Image, Users, MessageSquare, Briefcase, 
   HelpCircle, LogOut, Moon, Sun, Bell, Terminal, Database,
-  ArrowLeft, Menu, X, Award
+  ArrowLeft, Menu, X, Award, ShieldAlert
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 
