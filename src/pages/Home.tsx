@@ -4,14 +4,16 @@ import {
   ArrowRight, Award, GraduationCap, CheckCircle2, 
   ChevronLeft, ChevronRight, TrendingUp, Sparkles, Send, Building 
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../services/db';
 import { 
-  HeroSlide, WebsiteSettings, ServiceItem, InternshipProgram, 
+  HeroSlide, WebsiteSettings, ServiceItem, InternshipProgram, CourseItem,
   BlogPost, TestimonialItem, PlacementStat, ClientPartnerLogo,
   WhyChooseUsItem, AboutSection
 } from '../types';
 import LucideIcon from '../components/LucideIcon';
+import PremiumServices from '../components/PremiumServices';
+import { PremiumCourseCard, FloatingParticles } from './Courses';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -267,6 +269,11 @@ export default function Home() {
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [whyChooseUs, setWhyChooseUs] = useState<WhyChooseUsItem[]>([]);
   const [whyChooseUsTitle, setWhyChooseUsTitle] = useState('Why Choose Us?');
+  const [courses, setCourses] = useState<CourseItem[]>([]);
+  const [expandedSyllabus, setExpandedSyllabus] = useState<string | null>(null);
+  const toggleSyllabus = (id: string) => {
+    setExpandedSyllabus(prev => (prev === id ? null : id));
+  };
   const [about, setAbout] = useState<AboutSection | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -284,7 +291,7 @@ export default function Home() {
         const [
           slideData, servData, internData, placementData,
           cpData, testData, blogData, whyChooseData, settingsData,
-          aboutData
+          aboutData, courseData
         ] = await Promise.all([
           db.getHeroSlides(),
           db.getServices(),
@@ -295,12 +302,14 @@ export default function Home() {
           db.getBlogs(),
           db.getWhyChooseUs(),
           db.getSettings(),
-          db.getAbout()
+          db.getAbout(),
+          db.getCourses()
         ]);
 
         setSlides(slideData);
-        setServices(servData.slice(0, 4)); // top 4 featured services
+        setServices(servData.filter(s => s.isActive !== false)); // load all active services
         setInternships(internData.slice(0, 3)); // top 3 internships
+        setCourses(courseData.filter(c => c.isActive).slice(0, 3)); // top 3 premium courses
         setPlacements(placementData);
         setPartners(cpData);
         setTestimonials(testData.slice(0, 3));
@@ -694,138 +703,103 @@ export default function Home() {
 
       {/* 4. FEATURED SERVICES GRID */}
       {services.length > 0 && (
-        <section id="featured-services" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <span className="text-blue-600 dark:text-blue-400 font-bold tracking-widest text-xs uppercase block">
-              What We Do
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
-              Enterprise Solutions & <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500">Skill Acceleration</span>
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
-              We deliver elite technical consulting combined with placement-oriented enablement ecosystems. Explore our core engineering domains.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-            {services.map((serv) => (
-              <div 
-                id={`serv-card-${serv.id}`}
-                key={serv.id}
-                className="group border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 relative overflow-hidden flex flex-col justify-between"
-              >
-                {/* Visual hover color bar */}
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 to-emerald-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
-                
-                <div className="space-y-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:bg-gradient-to-tr group-hover:from-blue-600 group-hover:to-emerald-500 group-hover:text-white transition-colors">
-                    <LucideIcon name={serv.icon} size={22} />
-                  </div>
-                  
-                  <h3 className="font-bold text-slate-950 dark:text-white text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors font-display">
-                    {serv.title}
-                  </h3>
-                  
-                  <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-relaxed">
-                    {serv.description}
-                  </p>
-                </div>
-
-                <div className="pt-6">
-                  <Link 
-                    to="/services"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 group-hover:gap-2.5 transition-all"
-                  >
-                    View Domain Services
-                    <ArrowRight size={13} />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <PremiumServices services={services} />
       )}
 
-      {/* 5. INTERNSHIP HIGHLIGHTS */}
-      {internships.length > 0 && (
-        <section id="internship-highlights" className="py-20 bg-slate-100 dark:bg-slate-900/40 border-y border-slate-200/50 dark:border-slate-800/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-4">
-              <div className="space-y-4 max-w-2xl">
-                <span className="text-blue-600 dark:text-blue-400 font-bold tracking-widest text-xs uppercase block">
-                  Placement Enablement
+      {/* PREMIUM FUTURISTIC COURSES SECTION */}
+      {courses.length > 0 && (
+        <section id="featured-courses" className="bg-[#040812] py-24 border-y border-slate-900 text-slate-100 relative overflow-hidden">
+          {/* Mesh/Grid Background lines and radial light vectors */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_80%,transparent_100%)] pointer-events-none select-none z-0" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-7xl h-[600px] bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08)_0%,rgba(16,185,129,0.03)_50%,transparent_100%)] pointer-events-none select-none z-0" />
+          
+          {/* Background ambient glow points */}
+          <div className="absolute top-[20%] left-1/4 w-[350px] h-[350px] bg-emerald-500/5 rounded-full blur-[90px] pointer-events-none z-0" />
+          <div className="absolute bottom-[20%] right-1/4 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[110px] pointer-events-none z-0" />
+
+          {/* Floating stars/particles system */}
+          <FloatingParticles />
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            {/* Section Header */}
+            <div className="text-center max-w-3xl mx-auto mb-16 space-y-5">
+              {/* SMALL LABEL: OUR PROGRAMS with tech dots and accent lines */}
+              <div className="flex items-center justify-center gap-4 text-emerald-400 font-mono text-xs font-black tracking-[0.25em] uppercase select-none">
+                <span className="flex items-center gap-1.5 opacity-80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="w-8 h-[1px] bg-gradient-to-r from-transparent to-emerald-400" />
                 </span>
-                <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
-                  High-Impact <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500">Internship Tracks</span>
-                </h2>
-                <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
-                  Join our enterprise coding internships. Engineer modular services, commit to active branch repos, receive code reviews, and lock in placement offers.
-                </p>
+                OUR PROGRAMS
+                <span className="flex items-center gap-1.5 opacity-80">
+                  <span className="w-8 h-[1px] bg-gradient-to-l from-transparent to-emerald-400" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                </span>
               </div>
-              <Link 
-                to="/internships"
-                className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-6 py-3 rounded-lg shadow-lg shadow-blue-500/20 transition-all shrink-0 flex items-center gap-2 hover:scale-105"
-              >
-                All Internships
-                <ArrowRight size={14} />
-              </Link>
+
+              {/* MAIN HEADING */}
+              <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight text-white font-display">
+                Explore Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-400 to-cyan-400 drop-shadow-[0_0_15px_rgba(56,189,248,0.2)]">Premium</span> Courses
+              </h2>
+
+              {/* SUBTITLE */}
+              <p className="text-slate-400 text-xs sm:text-base font-light leading-relaxed">
+                Industry-relevant training programs designed to transform your career.
+              </p>
+
+              {/* Green Divider Lines */}
+              <div className="flex justify-center items-center gap-2 pt-2">
+                <div className="w-12 h-[1px] bg-gradient-to-r from-transparent to-emerald-500/50" />
+                <div className="w-2 h-2 rounded-full border border-emerald-500/50" />
+                <div className="w-12 h-[1px] bg-gradient-to-l from-transparent to-emerald-500/50" />
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {internships.map((intern) => (
-                <div 
-                  id={`intern-highlight-${intern.id}`}
-                  key={intern.id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all"
-                >
-                  <div className="h-48 relative overflow-hidden bg-slate-900">
-                    <img 
-                      src={intern.bannerUrl} 
-                      alt={intern.title} 
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                      {intern.mode}
-                    </div>
-                  </div>
-
-                  <div className="p-6 space-y-4">
-                    <div className="text-xs text-slate-400 dark:text-slate-500 font-semibold flex items-center gap-2 font-mono">
-                      <GraduationCap size={15} className="text-blue-500" />
-                      <span>Duration: {intern.duration}</span>
-                    </div>
-
-                    <h3 className="font-bold text-slate-900 dark:text-white text-lg tracking-tight line-clamp-1 font-display">
-                      {intern.title}
-                    </h3>
-
-                    <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed">
-                      {intern.description}
-                    </p>
-
-                    <div className="border-t border-slate-100 dark:border-slate-800 pt-4 flex items-center justify-between">
-                      <div>
-                        <span className="text-xs text-slate-400 font-semibold line-through">₹{intern.price}</span>
-                        <div className="text-lg font-bold text-blue-600 dark:text-blue-400 font-mono">
-                          ₹{intern.discountPrice || intern.price}
-                        </div>
-                      </div>
-                      
-                      <Link 
-                        to="/internships"
-                        className="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-4 py-2.5 rounded-lg hover:bg-blue-600 hover:text-white transition-all hover:scale-105"
-                      >
-                        Enroll Track
-                      </Link>
-                    </div>
-                  </div>
-                </div>
+            {/* Courses Cards Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {courses.map((course) => (
+                <PremiumCourseCard 
+                  key={course.id}
+                  course={course}
+                  expandedSyllabus={expandedSyllabus}
+                  toggleSyllabus={toggleSyllabus}
+                />
               ))}
             </div>
+
+            {/* Bottom CTA with curved dotted arrows */}
+            <div className="relative flex flex-col sm:flex-row justify-center items-center py-16 gap-6 select-none">
+              {/* Left dotted curve pointing to the CTA */}
+              <div className="absolute right-[56%] bottom-[45%] w-64 h-24 pointer-events-none hidden lg:block opacity-65">
+                <svg className="w-full h-full text-emerald-500/30" viewBox="0 0 200 80" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M 10 10 Q 90 75 185 30" strokeDasharray="5 7" />
+                  <polygon points="185,30 173,28 179,38" fill="currentColor" />
+                </svg>
+              </div>
+
+              {/* View All Courses Button with glow effect */}
+              <Link
+                to="/courses"
+                className="relative px-8 py-4 rounded-full bg-gradient-to-r from-emerald-500 via-emerald-600 to-blue-600 text-white font-extrabold text-xs sm:text-sm tracking-wider shadow-[0_0_25px_rgba(16,185,129,0.3)] hover:shadow-[0_0_35px_rgba(59,130,246,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 group z-10"
+              >
+                <span className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <span className="flex items-center gap-2">
+                  View All Courses <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform duration-300" />
+                </span>
+              </Link>
+
+              {/* Right dotted curve pointing to the CTA */}
+              <div className="absolute left-[56%] bottom-[45%] w-64 h-24 pointer-events-none hidden lg:block opacity-65">
+                <svg className="w-full h-full text-blue-500/30" viewBox="0 0 200 80" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M 190 10 Q 110 75 15 30" strokeDasharray="5 7" />
+                  <polygon points="15,30 27,38 21,28" fill="currentColor" />
+                </svg>
+              </div>
+            </div>
           </div>
         </section>
       )}
+
+
 
       {/* 6. PLACEMENT HIGHLIGHTS */}
       {placements.length > 0 && (

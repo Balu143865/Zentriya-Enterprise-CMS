@@ -30,11 +30,41 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
     const profile = auth.getCurrentUser();
     if (!profile) {
       navigate('/admin/login');
+      toast('Access Denied: Please authenticate to access the Admin Console.', 'error');
+    } else if (profile.role !== 'OWNER') {
+      auth.logout();
+      navigate('/admin/login');
+      toast('Access Denied: Only the company OWNER has console permission clearance.', 'error');
     } else {
       setUser(profile);
       db.getNotifications().then(setNotifications);
     }
   }, [navigate, location.pathname]);
+
+  // Session Timeout after 15 minutes of inactivity (900,000 ms)
+  useEffect(() => {
+    if (!user) return;
+
+    let timeoutId: any;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        auth.logout();
+        toast('Your session was terminated due to 15 minutes of inactivity.', 'warning');
+        navigate('/admin/login?timeout=true');
+      }, 15 * 60 * 1000); // 15 minutes
+    };
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(evt => window.addEventListener(evt, resetTimer));
+    resetTimer();
+
+    return () => {
+      events.forEach(evt => window.removeEventListener(evt, resetTimer));
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [user, navigate]);
 
   const handleLogout = () => {
     auth.logout();

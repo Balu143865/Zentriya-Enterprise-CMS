@@ -34,7 +34,7 @@ function ScrollToTop() {
 // Wrapper to isolate Header & Footer on Admin Pages
 function PublicLayout({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode: (dark: boolean) => void }) {
   return (
-    <div className="flex flex-col min-h-screen text-slate-800 bg-slate-50 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+    <div className="flex flex-col min-h-screen text-slate-800 bg-slate-50 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 w-full overflow-x-hidden">
       <Header darkMode={darkMode} setDarkMode={setDarkMode} />
       <main className="flex-1">
         <ScrollToTop />

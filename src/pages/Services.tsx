@@ -5,6 +5,7 @@ import LucideIcon from '../components/LucideIcon';
 import { Layers, Image, Eye, X, Send, ArrowLeft, CheckCircle2, Star, Sparkles, MessageSquareCode, ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import PremiumServices from '../components/PremiumServices';
 
 export default function Services() {
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -19,6 +20,16 @@ export default function Services() {
       const activeOnly = data.filter(s => s.isActive !== false);
       setServices(activeOnly);
       setLoading(false);
+
+      // Auto-open if query param ?id=service_id matches
+      const params = new URLSearchParams(window.location.search);
+      const serviceId = params.get('id');
+      if (serviceId) {
+        const found = activeOnly.find(s => s.id === serviceId);
+        if (found) {
+          setSelectedService(found);
+        }
+      }
     });
   }, []);
 
@@ -191,101 +202,11 @@ export default function Services() {
 
   // BROCHURE DIRECTORY GRID VIEW
   return (
-    <div id="services-page-root" className="bg-slate-50 dark:bg-slate-950 min-h-screen pb-24">
-      
-      {/* Header banner */}
-      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white py-16 sm:py-20 text-center relative border-b border-slate-800 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_70%)] animate-pulse" />
-        <div className="max-w-4xl mx-auto px-4 relative z-10 space-y-4">
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 font-bold tracking-widest text-[10px] uppercase block">
-            Official Capability Brochure
-          </span>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-none text-white font-display">
-            Our Enterprise Services & Sectors
-          </h1>
-          <p className="text-slate-400 text-xs sm:text-sm max-w-2xl mx-auto font-light leading-relaxed">
-            Delivering industry-grade custom software, state-of-the-art corporate upskilling programs, placement-backed internships, and high-performance consulting blueprints.
-          </p>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16">
-        
-        {/* Services List Section with Staggered Scroll Reveals */}
-        <motion.div 
-          initial="hidden"
-          animate="show"
-          variants={{
-            hidden: { opacity: 0 },
-            show: {
-              opacity: 1,
-              transition: {
-                staggerChildren: 0.1
-              }
-            }
-          }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-        >
-          {services.map((serv, index) => (
-            <motion.div 
-              key={serv.id}
-              variants={{
-                hidden: { opacity: 0, y: 20 },
-                show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
-              }}
-              whileHover={{ y: -6, scale: 1.01 }}
-              onClick={() => setSelectedService(serv)}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group"
-            >
-              <div className="space-y-6">
-                
-                {/* Cover Image */}
-                <div className="h-44 bg-slate-950 relative overflow-hidden">
-                  <img 
-                    src={serv.imageUrl} 
-                    alt={serv.title} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent" />
-                  
-                  {/* Decorative Icon inside Image */}
-                  <div className="absolute bottom-4 left-4 w-10 h-10 rounded-xl bg-slate-900/95 backdrop-blur-md text-blue-400 flex items-center justify-center border border-slate-800 shadow-lg">
-                    <LucideIcon name={serv.icon} size={18} />
-                  </div>
-                </div>
-
-                <div className="px-6 space-y-2.5">
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug group-hover:text-blue-500 transition-colors">
-                    {serv.title}
-                  </h3>
-
-                  <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-relaxed line-clamp-3">
-                    {serv.description}
-                  </p>
-                </div>
-
-              </div>
-
-              {/* Card Footer Actions */}
-              <div className="px-6 pb-6 pt-4 border-t border-slate-50 dark:border-slate-850/50 mt-6 flex items-center justify-between">
-                
-                <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-                  <Layers size={11} />
-                  Brochure Service
-                </span>
-
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                  View Brochure Details
-                  <ArrowUpRight size={13} />
-                </span>
-
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-
-      </div>
+    <div id="services-page-root" className="bg-[#050B14] min-h-screen">
+      <PremiumServices 
+        services={services} 
+        onSelectService={(serv) => setSelectedService(serv)} 
+      />
 
       {/* Dynamic Lightbox for Service Representation */}
       {activeGallery && lightboxIndex !== null && (

@@ -76,13 +76,13 @@ export default function Gallery() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent)]" />
         <div className="max-w-4xl mx-auto px-4 relative z-10 space-y-4 animate-fade-in">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 font-bold tracking-widest text-xs uppercase block">
-            Campus Celebrations & Records
+            6-Day SketchUp Workshop 2026
           </span>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-none text-white font-display">
-            Our Interactive Media Gallery
+            Interactive Media Gallery
           </h1>
           <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto font-light leading-relaxed">
-            Review live images of our technical lab layouts, student team hackathons, and global campus recruitment celebration circles.
+            Review official photos of our 6-Day SketchUp and Landscape Design workshop, interactive computer laboratory sessions, and achievements at Bapatla Engineering College.
           </p>
         </div>
       </div>

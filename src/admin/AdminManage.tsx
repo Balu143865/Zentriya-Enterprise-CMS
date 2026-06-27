@@ -113,7 +113,71 @@ export default function AdminManage() {
   const { toast } = useToast();
   
   const [user] = useState(() => auth.getCurrentUser());
-  const hasPermission = auth.hasAccess(user?.role || 'Support', activeTab);
+  const hasPermission = user?.role === 'OWNER';
+
+  // Owner System Utilities state
+  const [newPassword, setNewPassword] = useState('');
+  const [mfaActive, setMfaActive] = useState(() => localStorage.getItem('zentriya_owner_mfa') === 'true');
+
+  const handleBackup = () => {
+    try {
+      const data = db.backupData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `zentriya-owner-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast('Database backup archive compiled and downloaded successfully.', 'success');
+    } catch (e: any) {
+      toast('Failed to compile database backup.', 'error');
+    }
+  };
+
+  const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+        const ok = db.restoreData(parsed);
+        if (ok) {
+          toast('Database restored successfully! Reloading configuration context...', 'success');
+          setTimeout(() => window.location.reload(), 1500);
+        }
+      } catch (err: any) {
+        toast(err.message || 'Malformed backup file format. Restore aborted.', 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      toast('Security password must contain at least 6 characters.', 'warning');
+      return;
+    }
+    try {
+      await auth.changePassword(newPassword);
+      setNewPassword('');
+      toast('Security credentials updated successfully.', 'success');
+    } catch (err: any) {
+      toast(err.message || 'Failed to update credentials.', 'error');
+    }
+  };
+
+  const handleToggleMfa = () => {
+    const nextState = !mfaActive;
+    setMfaActive(nextState);
+    localStorage.setItem('zentriya_owner_mfa', nextState ? 'true' : 'false');
+    toast(`Two-Factor Authentication is now ${nextState ? 'ENABLED' : 'DISABLED'}.`, nextState ? 'success' : 'info');
+  };
 
   // Connection config
   const [supabaseUrl, setSupabaseUrl] = useState('');
@@ -221,6 +285,50 @@ export default function AdminManage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReorderCourse = async (courseId: string, direction: 'up' | 'down') => {
+    const currentIndex = courses.findIndex(c => c.id === courseId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= courses.length) return;
+
+    const updatedList = [...courses];
+    updatedList.forEach((item, index) => {
+      item.order = index;
+    });
+
+    const temp = updatedList[currentIndex].order;
+    updatedList[currentIndex].order = updatedList[targetIndex].order;
+    updatedList[targetIndex].order = temp;
+
+    updatedList.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    await db.saveCourses(updatedList);
+    toast('Course order sequence updated.', 'success');
+    loadData();
+  };
+
+  const handleReorderInternship = async (internId: string, direction: 'up' | 'down') => {
+    const currentIndex = internships.findIndex(i => i.id === internId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= internships.length) return;
+
+    const updatedList = [...internships];
+    updatedList.forEach((item, index) => {
+      item.order = index;
+    });
+
+    const temp = updatedList[currentIndex].order;
+    updatedList[currentIndex].order = updatedList[targetIndex].order;
+    updatedList[targetIndex].order = temp;
+
+    updatedList.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    await db.saveInternships(updatedList);
+    toast('Internship program order sequence updated.', 'success');
+    loadData();
   };
 
   useEffect(() => {
@@ -533,6 +641,95 @@ export default function AdminManage() {
                   </button>
                 </div>
               </div>
+
+              {/* System Security, Backups & Disaster Recovery section */}
+              <div className="border-t dark:border-slate-800 pt-8 mt-8 space-y-6 animate-fade-in">
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2 border-b dark:border-slate-800 pb-3">
+                  <ShieldAlert className="text-emerald-500" size={18} />
+                  System Security, Backups & Disaster Recovery
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left panel: Change Owner Password & 2FA */}
+                  <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 p-5 rounded-2xl space-y-5">
+                    <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">Owner Security Portal</h4>
+                    
+                    {/* Password Update form */}
+                    <form onSubmit={handleUpdatePassword} className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block">Change Security Password</label>
+                        <input 
+                          type="password" 
+                          placeholder="Enter new secure password (min 6 chars)"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-xs text-slate-900 dark:text-slate-100 outline-none"
+                          required
+                        />
+                      </div>
+                      <button 
+                        type="submit"
+                        className="w-full bg-slate-900 hover:bg-slate-850 text-white font-bold p-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-slate-800"
+                      >
+                        <Save size={13} />
+                        Update Security Password
+                      </button>
+                    </form>
+
+                    {/* Two-Factor Authentication support (optional) */}
+                    <div className="pt-3 border-t dark:border-slate-800/60 flex items-center justify-between gap-4">
+                      <div className="space-y-0.5">
+                        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">Two-Factor Authentication (2FA)</span>
+                        <p className="text-[9.5px] text-slate-400 leading-tight">Enable biometric or authenticator app validation overlays.</p>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={handleToggleMfa}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          mfaActive 
+                            ? 'bg-emerald-600 text-white shadow-sm' 
+                            : 'bg-slate-250 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                        }`}
+                      >
+                        {mfaActive ? 'ACTIVE' : 'INACTIVE'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right panel: Database Backup and Disaster Recovery */}
+                  <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 p-5 rounded-2xl space-y-5">
+                    <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">Database Backups & Disaster Recovery</h4>
+                    
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Download full backups of Zentriya's local records and website content sheets. If a system failure or data loss event occurs, drag-and-drop your backup file here to restore configurations instantly.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      {/* Backup button */}
+                      <button 
+                        type="button"
+                        onClick={handleBackup}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold p-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                      >
+                        <Save size={13} />
+                        Backup Database
+                      </button>
+
+                      {/* Restore Upload trigger */}
+                      <label className="bg-blue-600 hover:bg-blue-500 text-white font-bold p-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer text-center">
+                        <RefreshCw size={13} />
+                        Restore Database
+                        <input 
+                          type="file" 
+                          accept=".json"
+                          onChange={handleRestore}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -727,7 +924,10 @@ export default function AdminManage() {
                               isActive: fd.get('isActive') === 'true',
                               icon: fd.get('icon') as string || 'Layers',
                               imageUrl: uploadedImageUrl || editingItem?.imageUrl || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800',
-                              galleryUrls: []
+                              galleryUrls: [],
+                              themeColor: fd.get('themeColor') as string || 'Blue',
+                              buttonText: fd.get('buttonText') as string || 'View Service →',
+                              buttonLink: fd.get('buttonLink') as string || ''
                             };
                             await db.saveService(newService);
                             break;
@@ -746,7 +946,8 @@ export default function AdminManage() {
                               features: (fd.get('features') as string).split(',').map(f => f.trim()).filter(Boolean),
                               certificateDetails: fd.get('certificateDetails') as string,
                               bannerUrl: uploadedImageUrl || editingItem?.bannerUrl || 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800',
-                              isActive: true
+                              isActive: fd.get('isActive') === 'on',
+                              order: editingItem && 'order' in editingItem ? (editingItem.order as number) : undefined
                             };
                             await db.saveInternship(newIntern);
                             break;
@@ -764,7 +965,9 @@ export default function AdminManage() {
                               mode: fd.get('mode') as CourseItem['mode'],
                               features: (fd.get('features') as string).split(',').map(f => f.trim()).filter(Boolean),
                               syllabus: (fd.get('syllabus') as string).split(',').map(s => s.trim()).filter(Boolean),
-                              isActive: true
+                              bannerUrl: uploadedImageUrl || editingItem?.bannerUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800',
+                              isActive: fd.get('isActive') === 'on',
+                              order: editingItem && 'order' in editingItem ? (editingItem.order as number) : undefined
                             };
                             await db.saveCourse(newCourse);
                             break;
@@ -993,6 +1196,28 @@ export default function AdminManage() {
                               <option value="false">Inactive (Disabled)</option>
                             </select>
                           </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Theme Color *</label>
+                            <select name="themeColor" defaultValue={editingItem?.themeColor || 'Blue'} className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-white">
+                              <option value="Green">Green (Internships)</option>
+                              <option value="Blue">Blue (Software Development)</option>
+                              <option value="Purple">Purple (Training & Skill Dev)</option>
+                              <option value="Orange">Orange (Bootcamps & Hackathons)</option>
+                              <option value="Cyan">Cyan (Consulting Services)</option>
+                              <option value="Emerald">Emerald (Projects & Placements)</option>
+                              <option value="Indigo">Indigo (Global Certifications)</option>
+                            </select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">CTA Button Text</label>
+                              <input type="text" name="buttonText" defaultValue={editingItem?.buttonText || 'View Service →'} className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">CTA Button Link</label>
+                              <input type="text" name="buttonLink" defaultValue={editingItem?.buttonLink || ''} className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" placeholder="/contact or url" />
+                            </div>
+                          </div>
                         </div>
                         <div className="space-y-4">
                           <ImageDropzone 
@@ -1055,6 +1280,16 @@ export default function AdminManage() {
                           <div className="space-y-1">
                             <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Certificate Details *</label>
                             <input type="text" name="certificateDetails" defaultValue={editingItem?.certificateDetails || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                          </div>
+                          <div className="flex items-center gap-2 pt-2">
+                            <input 
+                              type="checkbox" 
+                              name="isActive" 
+                              id="isActive" 
+                              defaultChecked={editingItem ? editingItem.isActive : true} 
+                              className="w-4 h-4 rounded border-slate-200 dark:border-slate-800 text-blue-600 focus:ring-blue-500 bg-slate-50 dark:bg-slate-950" 
+                            />
+                            <label htmlFor="isActive" className="text-xs font-bold text-slate-700 dark:text-slate-300">Is Active / Visible on Website</label>
                           </div>
                         </div>
 
@@ -1122,6 +1357,21 @@ export default function AdminManage() {
                           <div className="space-y-1">
                             <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Perks & Features (comma separated) *</label>
                             <input type="text" name="features" defaultValue={editingItem?.features?.join(', ') || ''} required placeholder="Hands-on labs, 3 Case Studies" className="w-full bg-slate-50 dark:bg-slate-950 p-2 rounded border dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                          </div>
+                          <ImageDropzone 
+                            label="Course Banner / Thumbnail" 
+                            value={uploadedImageUrl || editingItem?.bannerUrl || ''} 
+                            onChange={setUploadedImageUrl} 
+                          />
+                          <div className="flex items-center gap-2 pt-2">
+                            <input 
+                              type="checkbox" 
+                              name="isActive" 
+                              id="courseActive" 
+                              defaultChecked={editingItem ? editingItem.isActive : true} 
+                              className="w-4 h-4 rounded border-slate-200 dark:border-slate-800 text-blue-600 focus:ring-blue-500 bg-slate-50 dark:bg-slate-950" 
+                            />
+                            <label htmlFor="courseActive" className="text-xs font-bold text-slate-700 dark:text-slate-300">Is Active / Visible on Website</label>
                           </div>
                         </div>
                       </div>
@@ -1723,41 +1973,70 @@ export default function AdminManage() {
                       {internships.length === 0 ? (
                         <div className="p-16 text-center text-slate-400">No internship tracks. Click "Add New" to customize.</div>
                       ) : (
-                        paginate(internships).map((track) => (
-                          <div key={track.id} className="p-6 flex flex-col sm:flex-row items-center gap-6 justify-between">
-                            <div className="flex items-center gap-4 flex-1">
-                              <img src={track.bannerUrl} alt={track.title} className="w-20 h-14 object-cover rounded-xl border" referrerPolicy="no-referrer" />
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{track.title}</h4>
-                                  <span className="text-[9px] bg-emerald-500/10 text-emerald-500 font-bold px-2 py-0.5 rounded">{track.mode}</span>
+                        paginate(internships).map((track, idx) => {
+                          const isFirst = currentPage === 1 && idx === 0;
+                          const isLast = (currentPage - 1) * itemsPerPage + idx === internships.length - 1;
+                          return (
+                            <div key={track.id} className="p-6 flex flex-col sm:flex-row items-center gap-6 justify-between">
+                              <div className="flex items-center gap-4 flex-1">
+                                <img src={track.bannerUrl} alt={track.title} className="w-20 h-14 object-cover rounded-xl border" referrerPolicy="no-referrer" />
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{track.title}</h4>
+                                    <span className="text-[9px] bg-emerald-500/10 text-emerald-500 font-bold px-2 py-0.5 rounded">{track.mode}</span>
+                                    {track.isActive ? (
+                                      <span className="text-[8px] bg-blue-500/10 text-blue-500 px-1.5 rounded font-bold uppercase">Active</span>
+                                    ) : (
+                                      <span className="text-[8px] bg-slate-500/10 text-slate-500 px-1.5 rounded font-bold uppercase">Disabled</span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-slate-500 font-bold">{track.duration} &bull; Tech: {track.technology} &bull; Order: {track.order ?? 0}</p>
+                                  <p className="text-xs text-emerald-600 font-extrabold">₹{track.discountPrice || track.price}</p>
                                 </div>
-                                <p className="text-xs text-slate-500 font-bold">{track.duration} &bull; Tech: {track.technology}</p>
-                                <p className="text-xs text-emerald-600 font-extrabold">₹{track.discountPrice || track.price}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {/* Reordering Buttons */}
+                                <div className="flex items-center gap-1 mr-2 border-r border-slate-200 dark:border-slate-800 pr-2">
+                                  <button
+                                    onClick={() => handleReorderInternship(track.id, 'up')}
+                                    disabled={isFirst}
+                                    className={`p-1.5 rounded-lg transition-colors ${isFirst ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                    title="Move Up"
+                                  >
+                                    <ArrowUp size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleReorderInternship(track.id, 'down')}
+                                    disabled={isLast}
+                                    className={`p-1.5 rounded-lg transition-colors ${isLast ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                    title="Move Down"
+                                  >
+                                    <ArrowDown size={12} />
+                                  </button>
+                                </div>
+
+                                <button 
+                                  onClick={() => { setEditingItem(track); setUploadedImageUrl(track.bannerUrl); }}
+                                  className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-800"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    if (confirm(`Remove training track: "${track.title}"?`)) {
+                                      await db.deleteInternship(track.id);
+                                      toast('Internship program track deleted.', 'info');
+                                      loadData();
+                                    }
+                                  }}
+                                  className="p-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 rounded-xl text-red-500 border border-red-100 dark:border-red-900/30"
+                                >
+                                  <Trash size={14} />
+                                </button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => { setEditingItem(track); setUploadedImageUrl(track.bannerUrl); }}
-                                className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button 
-                                onClick={async () => {
-                                  if (confirm(`Remove training track: "${track.title}"?`)) {
-                                    await db.deleteInternship(track.id);
-                                    toast('Internship program track deleted.', 'info');
-                                    loadData();
-                                  }
-                                }}
-                                className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500"
-                              >
-                                <Trash size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   )}
@@ -1767,38 +2046,67 @@ export default function AdminManage() {
                       {courses.length === 0 ? (
                         <div className="p-16 text-center text-slate-400">No enterprise courses configured.</div>
                       ) : (
-                        paginate(courses).map((course) => (
-                          <div key={course.id} className="p-6 flex flex-col sm:flex-row items-center gap-6 justify-between">
-                            <div className="flex-1 space-y-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{course.title}</h4>
-                                <span className="text-[8px] bg-blue-500/10 text-blue-600 px-2 rounded font-bold">{course.mode}</span>
+                        paginate(courses).map((course, idx) => {
+                          const isFirst = currentPage === 1 && idx === 0;
+                          const isLast = (currentPage - 1) * itemsPerPage + idx === courses.length - 1;
+                          return (
+                            <div key={course.id} className="p-6 flex flex-col sm:flex-row items-center gap-6 justify-between">
+                              <div className="flex-1 space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{course.title}</h4>
+                                  <span className="text-[8px] bg-blue-500/10 text-blue-600 px-2 rounded font-bold">{course.mode}</span>
+                                  {course.isActive ? (
+                                    <span className="text-[8px] bg-blue-500/10 text-blue-500 px-1.5 rounded font-bold uppercase">Active</span>
+                                  ) : (
+                                    <span className="text-[8px] bg-slate-500/10 text-slate-500 px-1.5 rounded font-bold uppercase">Disabled</span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-slate-400">Category: {course.category} &bull; Duration: {course.duration} &bull; Order: {course.order ?? 0}</p>
+                                <p className="text-xs text-emerald-600 font-bold">Standard Price: ₹{course.price}</p>
                               </div>
-                              <p className="text-xs text-slate-400">Category: {course.category} &bull; Duration: {course.duration}</p>
-                              <p className="text-xs text-emerald-600 font-bold">Standard Price: ₹{course.price}</p>
+                              <div className="flex items-center gap-2">
+                                {/* Reordering Buttons */}
+                                <div className="flex items-center gap-1 mr-2 border-r border-slate-200 dark:border-slate-800 pr-2">
+                                  <button
+                                    onClick={() => handleReorderCourse(course.id, 'up')}
+                                    disabled={isFirst}
+                                    className={`p-1.5 rounded-lg transition-colors ${isFirst ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                    title="Move Up"
+                                  >
+                                    <ArrowUp size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleReorderCourse(course.id, 'down')}
+                                    disabled={isLast}
+                                    className={`p-1.5 rounded-lg transition-colors ${isLast ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                    title="Move Down"
+                                  >
+                                    <ArrowDown size={12} />
+                                  </button>
+                                </div>
+
+                                <button 
+                                  onClick={() => { setEditingItem(course); setUploadedImageUrl(course.bannerUrl || ''); }}
+                                  className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-800"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    if (confirm(`Delete course: "${course.title}"?`)) {
+                                      await db.deleteCourse(course.id);
+                                      toast('Enterprise course deleted.', 'info');
+                                      loadData();
+                                    }
+                                  }}
+                                  className="p-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 rounded-xl text-red-500 border border-red-100 dark:border-red-900/30"
+                                >
+                                  <Trash size={14} />
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => { setEditingItem(course); }}
-                                className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button 
-                                onClick={async () => {
-                                  if (confirm(`Delete course: "${course.title}"?`)) {
-                                    await db.deleteCourse(course.id);
-                                    toast('Enterprise course deleted.', 'info');
-                                    loadData();
-                                  }
-                                }}
-                                className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500"
-                              >
-                                <Trash size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   )}

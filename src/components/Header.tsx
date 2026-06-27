@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Sun, Moon, LogIn, Send, PhoneCall, Sparkles, Mail, Globe } from 'lucide-react';
+import { Menu, X, Sun, Moon, LogIn, Send, Sparkles, Mail, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../services/db';
 import { WebsiteSettings } from '../types';
@@ -55,7 +55,7 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
     <>
       {/* Corporate Top Bar */}
       <div id="corporate-top-bar" className="bg-slate-900 text-slate-300 text-[11px] sm:text-xs py-2 border-b border-slate-800 relative z-50">
-        <div className="w-full px-4 sm:px-6 md:px-10 xl:px-12 flex flex-col md:flex-row justify-between items-center gap-2">
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 xl:px-8 flex flex-col md:flex-row justify-between items-center gap-2">
           {/* Official Helplines */}
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <span className="text-slate-400 font-medium">Official Helplines:</span>
@@ -99,57 +99,71 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
       {/* Main Nav Header */}
       <header 
         id="main-nav-header"
-        className={`sticky top-0 z-40 transition-all duration-300 ${
+        className={`sticky top-0 z-40 transition-all duration-350 ${
           scrolled 
-            ? 'bg-white/90 dark:bg-slate-900/90 shadow-lg shadow-slate-100/10 dark:shadow-none border-b border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl py-3' 
-            : 'bg-white/80 dark:bg-slate-950/80 border-b border-transparent backdrop-blur-md py-4'
+            ? 'bg-white/95 dark:bg-slate-950/90 border-b border-slate-100 dark:border-slate-900/60 shadow-[0_4px_30px_rgba(0,0,0,0.03)] dark:shadow-none backdrop-blur-xl py-3' 
+            : 'bg-white/80 dark:bg-slate-950/40 border-b border-transparent backdrop-blur-md py-4.5'
         }`}
       >
-        <div className="w-full px-4 sm:px-6 md:px-10 xl:px-12 flex xl:grid xl:grid-cols-[1fr_auto_1fr] items-center justify-between xl:justify-stretch">
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 xl:px-8 flex items-center justify-between gap-4">
           
           {/* Logo Brand */}
-          <Link id="logo-brand-link" to="/" className="flex items-center gap-3 group shrink-0 justify-self-start">
+          <Link id="logo-brand-link" to="/" className="flex items-center gap-3 group shrink-0 select-none">
             {settings?.logoUrl ? (
               <img 
                 src={settings.logoUrl} 
                 alt={settings?.companyName || 'Zentriya Logo'} 
-                className="h-10 w-auto object-contain group-hover:scale-105 transition-transform shrink-0"
+                className="h-10 w-auto object-contain group-hover:scale-105 group-hover:rotate-[2deg] transition-all duration-300 shrink-0"
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-black text-2xl shrink-0">
+              <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-black text-2xl shrink-0 group-hover:scale-105 group-hover:rotate-[2deg] transition-all duration-300">
                 Z
               </div>
             )}
             <div className="flex flex-col shrink-0">
-              <span className="font-bold text-base sm:text-lg leading-none tracking-tight text-slate-900 dark:text-white font-display whitespace-nowrap">
+              <span className="font-bold text-base sm:text-lg leading-none tracking-tight text-slate-900 dark:text-white font-display whitespace-nowrap group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
                 ZENTRIYA
               </span>
-              <span className="text-[8px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1 whitespace-nowrap">
+              <span className="text-[8px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1 whitespace-nowrap group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors duration-300">
                 IT Solutions Private Limited
               </span>
             </div>
           </Link>
-
-          {/* Desktop Navigation Link Cluster */}
-          <nav id="desktop-nav-cluster" className="hidden xl:flex items-center xl:gap-2.5 min-[1400px]:gap-4 2xl:gap-6 justify-self-center">
-            {navLinks.map((link) => (
-              <Link 
-                id={`nav-${link.name.toLowerCase()}`}
-                key={link.path} 
-                to={link.path} 
-                className={`xl:text-xs min-[1400px]:text-[13px] 2xl:text-sm whitespace-nowrap transition-all duration-200 ${activeLinkStyle(link.path)}`}
-              >
-                {link.name}
-              </Link>
-            ))}
+          
+          {/* Desktop Navigation Link Cluster with Sliding Glass Active Indicator */}
+          <nav id="desktop-nav-cluster" className="hidden xl:flex items-center justify-center xl:gap-0.5 min-[1350px]:gap-1 min-[1450px]:gap-2 2xl:gap-3 bg-transparent p-1 rounded-full border-none backdrop-blur-none">
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.path;
+              return (
+                <Link 
+                  id={`nav-${link.name.toLowerCase()}`}
+                  key={link.path} 
+                  to={link.path} 
+                  className={`relative px-1.5 min-[1350px]:px-2.5 min-[1450px]:px-3.5 2xl:px-4 py-1.5 text-[11px] min-[1350px]:text-xs min-[1450px]:text-[13px] 2xl:text-sm whitespace-nowrap rounded-full transition-colors duration-300 font-semibold tracking-tight ${
+                    isActive 
+                      ? 'text-blue-600 dark:text-blue-400 font-bold' 
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeNavIndicator"
+                      className="absolute bottom-0 left-2 right-2 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"
+                      transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                    />
+                  )}
+                  {link.name}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Controls & Action Call */}
-          <div id="header-action-panel" className="flex items-center gap-2 sm:gap-4 xl:gap-2.5 min-[1400px]:gap-3.5 2xl:gap-5 shrink-0 justify-self-end">
+          <div id="header-action-panel" className="flex items-center gap-1.5 sm:gap-2.5 min-[1350px]:gap-3 xl:gap-2 min-[1400px]:gap-3 2xl:gap-4 shrink-0">
             
             {/* Elegant, Explicit sliding Theme Toggle Switch */}
-            <div id="theme-toggle-switch" className="relative flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-full border border-slate-200/50 dark:border-slate-700/50 shrink-0 select-none w-[66px] h-[34px]">
+            <div id="theme-toggle-switch" className="relative flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-full border border-slate-200/50 dark:border-slate-700/50 shrink-0 select-none w-[66px] h-[34px] hover:scale-102 transition-transform duration-200">
               <button
                 id="theme-toggle-light"
                 onClick={() => setDarkMode(false)}
@@ -185,36 +199,29 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
               />
             </div>
 
-            {/* Admin Console shortcut link */}
+            {/* Secondary Portal button styled with brand accents */}
             <Link 
               id="admin-console-shortcut"
               to="/admin/login" 
-              className="p-2.5 sm:px-5 sm:py-2.5 xl:px-3 xl:py-2 min-[1400px]:px-4 min-[1400px]:py-2.5 2xl:px-5 2xl:py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full text-xs font-bold shadow-md hover:scale-105 transition-all duration-200 flex items-center justify-center gap-1.5 shrink-0"
+              className="group/admin px-2 xl:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-950 rounded-xl text-[11px] xl:text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1 xl:gap-1.5 shrink-0 shadow-md hover:scale-105 active:scale-95 border-none"
               title="Super Admin Dashboard Console"
             >
-              <LogIn size={13} className="shrink-0" />
-              <span className="hidden sm:inline xl:hidden 2xl:inline">Admin Portal</span>
+              <LogIn size={13} className="shrink-0 transition-transform group-hover/admin:translate-x-0.5 duration-200 text-blue-600 dark:text-blue-400" />
+              <span className="hidden sm:inline xl:hidden">Admin</span>
+              <span className="hidden xl:inline">Admin Portal</span>
             </Link>
 
             {/* Mobile Nav Menu Toggler */}
             <button 
               id="mobile-nav-toggle"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 xl:hidden text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg shrink-0"
+              className="p-2 xl:hidden text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg shrink-0 transition-colors"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
 
-            {/* Quick Contact Primary Button */}
-            <Link 
-              id="header-cta-btn"
-              to="/contact" 
-              className="hidden xl:flex items-center gap-1 bg-gradient-to-r from-blue-600 to-emerald-500 text-white text-xs 2xl:text-sm px-3 py-2 min-[1400px]:px-4 min-[1400px]:py-2.5 2xl:px-6 2xl:py-2.5 rounded-full font-bold shadow-lg shadow-blue-500/15 hover:scale-105 hover:brightness-110 transition-all duration-300 shrink-0"
-            >
-              <PhoneCall size={13} className="shrink-0" />
-              <span className="hidden xl:inline">Connect Now</span>
-            </Link>
+
           </div>
         </div>
 

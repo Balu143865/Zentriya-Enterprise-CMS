@@ -8,6 +8,23 @@ import {
   WhyChooseUsItem
 } from '../types';
 
+// @ts-ignore
+import workshopBanner from '../assets/images/workshop_banner_1782548250512.jpg';
+// @ts-ignore
+import groupPhoto from '../assets/images/group_photo_1782548265859.jpg';
+// @ts-ignore
+import presentationScreen from '../assets/images/presentation_screen_1782548285739.jpg';
+// @ts-ignore
+import awardTrophy from '../assets/images/award_trophy_1782548299290.jpg';
+// @ts-ignore
+import computerLabSession from '../assets/images/computer_lab_session_1782548312362.jpg';
+// @ts-ignore
+import landscapeVisualization from '../assets/images/landscape_visualization_1782548328367.jpg';
+// @ts-ignore
+import workshopOutdoorBanner from '../assets/images/workshop_outdoor_banner_1782549502724.jpg';
+// @ts-ignore
+import workshopSeminarAudience from '../assets/images/workshop_seminar_audience_1782549516586.jpg';
+
 // Supabase configuration storage keys
 const SUPABASE_URL_KEY = 'zentriya_supabase_url';
 const SUPABASE_ANON_KEY = 'zentriya_supabase_anon_key';
@@ -147,7 +164,10 @@ const defaultServices: ServiceItem[] = [
     benefits: ['Industry-Recognised Corporate Certification', 'Direct Placement Opportunities', 'Strong Alumni Network', 'Hands-on Git & CI/CD Exposure'],
     order: 1,
     isActive: true,
-    galleryUrls: []
+    galleryUrls: [],
+    themeColor: 'Green',
+    buttonText: 'View Programs →',
+    buttonLink: '/internships'
   },
   {
     id: 'service_2',
@@ -160,7 +180,10 @@ const defaultServices: ServiceItem[] = [
     benefits: ['Optimised Performance at Scale', 'High-Security Code Standards', 'Post-Deployment Lifetime Support', 'Full Intellectual Property Ownership'],
     order: 2,
     isActive: true,
-    galleryUrls: []
+    galleryUrls: [],
+    themeColor: 'Blue',
+    buttonText: 'Build with Us →',
+    buttonLink: '/contact'
   },
   {
     id: 'service_3',
@@ -173,7 +196,10 @@ const defaultServices: ServiceItem[] = [
     benefits: ['Accelerated Tech Mastery', 'Bridged Technological Skill Gaps', 'Measurable Team Productivity Boost', 'Verifiable Learning Credentials'],
     order: 3,
     isActive: true,
-    galleryUrls: []
+    galleryUrls: [],
+    themeColor: 'Purple',
+    buttonText: 'Start Learning →',
+    buttonLink: '/courses'
   },
   {
     id: 'service_4',
@@ -186,7 +212,10 @@ const defaultServices: ServiceItem[] = [
     benefits: ['Rapid Prototype Development', 'Collaborative Team Building', 'Instant Talent Discovery', 'Immersive Problem-Solving Experience'],
     order: 4,
     isActive: true,
-    galleryUrls: []
+    galleryUrls: [],
+    themeColor: 'Orange',
+    buttonText: 'Join Sprint →',
+    buttonLink: '/contact'
   },
   {
     id: 'service_5',
@@ -199,7 +228,10 @@ const defaultServices: ServiceItem[] = [
     benefits: ['Up to 40% Infrastructure Cost Reduction', 'Minimised System Downtime', 'Guaranteed Security Hardening', 'Scalable Enterprise Roadmaps'],
     order: 5,
     isActive: true,
-    galleryUrls: []
+    galleryUrls: [],
+    themeColor: 'Cyan',
+    buttonText: 'Consult Expert →',
+    buttonLink: '/contact'
   },
   {
     id: 'service_6',
@@ -212,7 +244,10 @@ const defaultServices: ServiceItem[] = [
     benefits: ['Access to Exclusive Tech Roles', 'Substantial Interview Success Boost', 'Direct Connection to 120+ Recruiter Networks', 'Strong Placement-Oriented Training'],
     order: 6,
     isActive: true,
-    galleryUrls: []
+    galleryUrls: [],
+    themeColor: 'Emerald',
+    buttonText: 'Get Placed →',
+    buttonLink: '/contact'
   },
   {
     id: 'service_7',
@@ -225,7 +260,10 @@ const defaultServices: ServiceItem[] = [
     benefits: ['Globally Credible Skills', 'Accelerated Career Trajectory', 'Enhanced Interview Call Volumes', 'Verified Expertise Standards'],
     order: 7,
     isActive: true,
-    galleryUrls: []
+    galleryUrls: [],
+    themeColor: 'Indigo',
+    buttonText: 'Get Certified →',
+    buttonLink: '/contact'
   }
 ];
 
@@ -292,55 +330,78 @@ const defaultInternships: InternshipProgram[] = [
 const defaultCourses: CourseItem[] = [
   {
     id: 'course_1',
-    title: 'React & TypeScript Enterprise Architecture',
-    duration: '8 Weeks',
-    category: 'Advanced Frontend',
-    description: 'Learn to build clean, maintainable, and type-safe frontends using React 19, TypeScript, state management systems (Zustand/Redux), custom Hooks, performance profiling, and design tokens.',
+    title: 'Full Stack Web Development',
+    duration: '3 / 6 Months',
+    category: 'Web Development',
+    description: 'An elite, comprehensive coding sprint. Build modern web applications with industry-standard tools and technologies.',
     syllabus: [
-      'Weeks 1-2: Advanced TypeScript Types, Generics, and React integrations',
-      'Weeks 3-4: State orchestration, Custom Hook design patterns, and context limits',
-      'Weeks 5-6: Performance profiling, virtualization, and lazy loading strategies',
-      'Weeks 7-8: Production bundlers, Vite configurations, and CI testing suites'
+      'Weeks 1-4: Advanced Frontend with React & Tailwind CSS',
+      'Weeks 5-8: Backend Engineering with Node.js, Express & MongoDB',
+      'Weeks 9-12: Production-grade deployments, security, and AWS Cloud integration'
     ],
-    price: 12000,
-    discountPrice: 9499,
-    mode: 'Online',
-    features: ['Accredited Certificate', '12 Hands-on Labs', 'Lifetime Course Repository Access'],
-    isActive: true
+    price: 15000,
+    discountPrice: 11999,
+    mode: 'Hybrid',
+    features: ['Live Projects', 'Mentor Support', 'Certificate'],
+    isActive: true,
+    bannerUrl: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&h=500&fit=crop&q=80',
+    order: 1
   },
   {
     id: 'course_2',
-    title: 'Java Spring Boot & Microservices Engineering',
-    duration: '12 Weeks',
-    category: 'Backend Engineering',
-    description: 'A robust, corporate-backed masterclass on JVM backend structures. Master Spring Boot, secure OAuth integrations, PostgreSQL schema design, Redis caches, and RabbitMQ message brokers.',
+    title: 'Enterprise Cloud & DevOps',
+    duration: '3 Months',
+    category: 'Cloud & DevOps',
+    description: 'Master cloud infrastructure, CI/CD pipelines, Docker, Kubernetes and DevOps best practices from scratch.',
     syllabus: [
-      'Weeks 1-3: Spring core, Spring MVC, REST controllers, and JPA repositories',
-      'Weeks 4-6: Relational schema engineering, migrations, and indexing strategies',
-      'Weeks 7-9: Secure JWT authorization, Spring Security, and role middleware',
-      'Weeks 10-12: Eureka discovery, API gateways, load balancing, and Docker deployment'
+      'Weeks 1-4: Cloud Architecture Foundations & AWS Services',
+      'Weeks 5-8: Containerization with Docker & Orchestration with Kubernetes',
+      'Weeks 9-12: CI/CD Pipelines (GitHub Actions) & Infrastructure as Code (Terraform)'
     ],
-    price: 22000,
-    discountPrice: 17999,
-    mode: 'Self-Paced',
-    features: ['1-on-1 Code Reviews', 'Real Enterprise Case Studies', 'Mock HR Interviews'],
-    isActive: true
+    price: 18000,
+    discountPrice: 14499,
+    mode: 'Online',
+    features: ['Live Projects', 'Mentor Support', 'Certificate'],
+    isActive: true,
+    bannerUrl: 'https://images.unsplash.com/photo-1484417894907-623942c8ee29?w=800&h=500&fit=crop&q=80',
+    order: 2
+  },
+  {
+    id: 'course_3',
+    title: 'Data Science & Machine Learning',
+    duration: '6 Months',
+    category: 'Data Science & ML',
+    description: 'Learn data analysis, machine learning algorithms, and build AI-powered real-world solutions.',
+    syllabus: [
+      'Weeks 1-8: Data Science Core (Python, Pandas, SQL, & Visualization)',
+      'Weeks 9-16: Machine Learning Models, Regression, and Supervised Learning',
+      'Weeks 17-24: Generative AI, LLM Integrations, and Prompt Engineering'
+    ],
+    price: 20000,
+    discountPrice: 15999,
+    mode: 'Hybrid',
+    features: ['Live Projects', 'Mentor Support', 'Certificate'],
+    isActive: true,
+    bannerUrl: 'https://images.unsplash.com/photo-1527474305487-b87b222841cc?w=800&h=500&fit=crop&q=80',
+    order: 3
   }
 ];
 
 const defaultGalleryAlbums: GalleryAlbum[] = [
-  { id: 'album_1', title: 'Corporate Headquarters', description: 'Zentriya Towers, state-of-the-art labs and open workspaces.', category: 'Campus', coverImageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&fit=crop&q=80' },
-  { id: 'album_2', title: 'National Code Hackathon 2025', description: 'Students and teams sprinting 36-hours to engineer tech solutions.', category: 'Events', coverImageUrl: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=600&fit=crop&q=80' },
-  { id: 'album_3', title: 'Student Placement Success Celebrations', description: 'Distributing offer letters to successfully selected interns.', category: 'Placements', coverImageUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&fit=crop&q=80' }
+  { id: 'album_workshop', title: '6-Day SketchUp Workshop 2026', description: 'Hands-on SketchUp and Landscape Design workshop at Bapatla Engineering College.', category: 'Workshops', coverImageUrl: workshopBanner },
+  { id: 'album_lab', title: 'Interactive Practical Sessions', description: 'Students designing 3D landscapes in the computer laboratory.', category: 'Labs', coverImageUrl: computerLabSession },
+  { id: 'album_achievements', title: 'Achievements & Awards', description: 'Award mementos and workshop certification ceremonies.', category: 'Achievements', coverImageUrl: awardTrophy }
 ];
 
 const defaultGalleryItems: GalleryItem[] = [
-  { id: 'gal_1', albumId: 'album_1', type: 'image', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&fit=crop&q=80', title: 'Executive Conference Lounge', category: 'Campus' },
-  { id: 'gal_2', albumId: 'album_1', type: 'image', url: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=800&fit=crop&q=80', title: 'Interactive Developer Lab', category: 'Campus' },
-  { id: 'gal_3', albumId: 'album_2', type: 'image', url: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800&fit=crop&q=80', title: 'Team Pitching to Judges', category: 'Events' },
-  { id: 'gal_4', albumId: 'album_2', type: 'image', url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&fit=crop&q=80', title: 'Award Distribution Ceremony', category: 'Events' },
-  { id: 'gal_5', albumId: 'album_3', type: 'image', url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&fit=crop&q=80', title: 'Offer Letter Handover - IBM', category: 'Placements' },
-  { id: 'gal_6', albumId: 'album_3', type: 'image', url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&fit=crop&q=80', title: 'Selected Batch Group Portrait', category: 'Placements' }
+  { id: 'gal_1', albumId: 'album_workshop', type: 'image', url: workshopBanner, title: 'Workshop Official Banner & Brochure', category: 'Workshops' },
+  { id: 'gal_2', albumId: 'album_workshop', type: 'image', url: groupPhoto, title: 'Workshop Batch Group Portrait', category: 'Workshops' },
+  { id: 'gal_3', albumId: 'album_workshop', type: 'image', url: presentationScreen, title: 'Landscape Design Presentation', category: 'Workshops' },
+  { id: 'gal_4', albumId: 'album_achievements', type: 'image', url: awardTrophy, title: 'Award Trophy presented to Ms. K. Lakshmi Naga Valli', category: 'Achievements' },
+  { id: 'gal_5', albumId: 'album_lab', type: 'image', url: computerLabSession, title: 'Practical SketchUp Modeling in Computer Lab', category: 'Labs' },
+  { id: 'gal_6', albumId: 'album_lab', type: 'image', url: landscapeVisualization, title: 'Final 3D Landscape Design Rendering', category: 'Labs' },
+  { id: 'gal_7', albumId: 'album_workshop', type: 'image', url: workshopOutdoorBanner, title: 'Workshop Outdoor Display Banner & Backdrop', category: 'Workshops' },
+  { id: 'gal_8', albumId: 'album_workshop', type: 'image', url: workshopSeminarAudience, title: 'Interactive Seminar Session & Guest Lecture', category: 'Workshops' }
 ];
 
 const defaultTeam: TeamMember[] = [
@@ -534,8 +595,8 @@ const defaultPlacementStats: PlacementStat[] = [
 ];
 
 const defaultActivityLogs: ActivityLog[] = [
-  { id: 'act_1', userId: 'usr_admin', userName: 'Admin Chief', userRole: 'Super Admin', action: 'System Initialization', details: 'Configured global system settings and loaded dynamic corporate database schemas.', timestamp: '2026-06-25T00:00:00Z' },
-  { id: 'act_2', userId: 'usr_admin', userName: 'Admin Chief', userRole: 'Super Admin', action: 'Syllabus Updated', details: 'Added new syllabus components to the MERN Full Stack internship model.', timestamp: '2026-06-25T02:15:00Z' }
+  { id: 'act_1', userId: 'usr_admin', userName: 'Admin Chief', userRole: 'OWNER', action: 'System Initialization', details: 'Configured global system settings and loaded dynamic corporate database schemas.', timestamp: '2026-06-25T00:00:00Z' },
+  { id: 'act_2', userId: 'usr_admin', userName: 'Admin Chief', userRole: 'OWNER', action: 'Syllabus Updated', details: 'Added new syllabus components to the MERN Full Stack internship model.', timestamp: '2026-06-25T02:15:00Z' }
 ];
 
 const defaultNotifications: SystemNotification[] = [
@@ -744,16 +805,32 @@ export const db = {
     return true;
   },
 
+  async saveServices(services: ServiceItem[]): Promise<ServiceItem[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('services').upsert(services);
+    }
+    setLocalData('zentriya_services', services);
+    this.logActivity('Services Reordered', 'Reordered Services directory items.');
+    return services;
+  },
+
   // --------------------------------------------------------------------
   // INTERNSHIP PROGRAMS
   // --------------------------------------------------------------------
   async getInternships(): Promise<InternshipProgram[]> {
     const supabase = getSupabase();
+    let list: InternshipProgram[] = [];
     if (supabase) {
       const { data, error } = await supabase.from('internships').select('*');
-      if (!error && data) return data as InternshipProgram[];
+      if (!error && data) {
+        list = data as InternshipProgram[];
+      }
     }
-    return getLocalData<InternshipProgram[]>('zentriya_internships', defaultInternships);
+    if (!list || list.length === 0) {
+      list = getLocalData<InternshipProgram[]>('zentriya_internships', defaultInternships);
+    }
+    return list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   },
 
   async saveInternship(internship: InternshipProgram): Promise<InternshipProgram> {
@@ -762,6 +839,9 @@ export const db = {
     if (index >= 0) {
       internships[index] = internship;
     } else {
+      if (internship.order === undefined) {
+        internship.order = internships.length;
+      }
       internships.push(internship);
     }
     const supabase = getSupabase();
@@ -771,6 +851,16 @@ export const db = {
     setLocalData('zentriya_internships', internships);
     this.logActivity('Internship Modified', `Syllabus/Pricing for "${internship.title}" updated.`);
     return internship;
+  },
+
+  async saveInternships(list: InternshipProgram[]): Promise<InternshipProgram[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('internships').upsert(list);
+    }
+    setLocalData('zentriya_internships', list);
+    this.logActivity('Internships Reordered', 'Reordered internship items sequence.');
+    return list;
   },
 
   async deleteInternship(id: string): Promise<boolean> {
@@ -790,11 +880,22 @@ export const db = {
   // --------------------------------------------------------------------
   async getCourses(): Promise<CourseItem[]> {
     const supabase = getSupabase();
+    let list: CourseItem[] = [];
     if (supabase) {
       const { data, error } = await supabase.from('courses').select('*');
-      if (!error && data) return data as CourseItem[];
+      if (!error && data) {
+        list = data as CourseItem[];
+      }
     }
-    return getLocalData<CourseItem[]>('zentriya_courses', defaultCourses);
+    if (!list || list.length === 0) {
+      list = getLocalData<CourseItem[]>('zentriya_courses', defaultCourses);
+      // Self-healing: Reset local cache if it is old
+      if (list.length < 3 || list.some(c => c.title.includes('React & TypeScript') || c.id === 'course_1' && c.title !== 'Full Stack Web Development')) {
+        list = defaultCourses;
+        setLocalData('zentriya_courses', defaultCourses);
+      }
+    }
+    return list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   },
 
   async saveCourse(course: CourseItem): Promise<CourseItem> {
@@ -803,6 +904,9 @@ export const db = {
     if (index >= 0) {
       courses[index] = course;
     } else {
+      if (course.order === undefined) {
+        course.order = courses.length;
+      }
       courses.push(course);
     }
     const supabase = getSupabase();
@@ -812,6 +916,16 @@ export const db = {
     setLocalData('zentriya_courses', courses);
     this.logActivity('Course Updated', `Enterprise training course "${course.title}" updated.`);
     return course;
+  },
+
+  async saveCourses(list: CourseItem[]): Promise<CourseItem[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('courses').upsert(list);
+    }
+    setLocalData('zentriya_courses', list);
+    this.logActivity('Courses Reordered', 'Reordered courses items sequence.');
+    return list;
   },
 
   async deleteCourse(id: string): Promise<boolean> {
@@ -835,7 +949,12 @@ export const db = {
       const { data, error } = await supabase.from('albums').select('*');
       if (!error && data) return data as GalleryAlbum[];
     }
-    return getLocalData<GalleryAlbum[]>('zentriya_albums', defaultGalleryAlbums);
+    const albums = getLocalData<GalleryAlbum[]>('zentriya_albums', defaultGalleryAlbums);
+    if (albums.some(a => a.id === 'album_1' || a.coverImageUrl.includes('unsplash.com'))) {
+      setLocalData('zentriya_albums', defaultGalleryAlbums);
+      return defaultGalleryAlbums;
+    }
+    return albums;
   },
 
   async saveGalleryAlbum(album: GalleryAlbum): Promise<GalleryAlbum> {
@@ -870,19 +989,11 @@ export const db = {
       if (!error && data) return data as GalleryItem[];
     }
     const items = getLocalData<GalleryItem[]>('zentriya_gallery', defaultGalleryItems);
-    // Dynamically fix the broken image URL if it exists in local storage
-    let modified = false;
-    const updatedItems = items.map(item => {
-      if (item.url && item.url.includes('photo-1521791136364-72861c39045b')) {
-        modified = true;
-        return { ...item, url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&fit=crop&q=80' };
-      }
-      return item;
-    });
-    if (modified) {
-      setLocalData('zentriya_gallery', updatedItems);
+    if (items.some(item => item.id === 'gal_1' && !item.url.includes('workshop_banner')) || items.length < 8 || items.some(item => item.url && item.url.includes('unsplash.5Fcom') || (item.url && item.url.includes('unsplash.com')))) {
+      setLocalData('zentriya_gallery', defaultGalleryItems);
+      return defaultGalleryItems;
     }
-    return updatedItems;
+    return items;
   },
 
   async saveGalleryItem(item: GalleryItem): Promise<GalleryItem> {
@@ -1320,7 +1431,7 @@ export const db = {
   logActivity(action: string, details: string) {
     const logs = getLocalData<ActivityLog[]>('zentriya_activity_logs', defaultActivityLogs);
     const activeUser = localStorage.getItem('zentriya_active_user');
-    let user: UserProfile = { id: 'usr_admin', name: 'Admin Chief', email: 'admin@zentriya.com', role: 'Super Admin' };
+    let user: UserProfile = { id: 'usr_admin', name: 'Admin Chief', email: 'admin@zentriya.com', role: 'OWNER' };
     if (activeUser) {
       try { user = JSON.parse(activeUser); } catch(e){}
     }
@@ -1413,5 +1524,42 @@ export const db = {
 
   saveDbConfig(config: DbConfig) {
     saveDbConfig(config);
+  },
+
+  backupData(): Record<string, any> {
+    const backupKeys = [
+      'zentriya_settings', 'zentriya_hero', 'zentriya_about', 'zentriya_services',
+      'zentriya_internships', 'zentriya_courses', 'zentriya_albums', 'zentriya_gallery',
+      'zentriya_team', 'zentriya_testimonials', 'zentriya_jobs', 'zentriya_applications',
+      'zentriya_contacts', 'zentriya_blogs', 'zentriya_faqs', 'zentriya_downloads',
+      'zentriya_placement_stats', 'zentriya_client_partners', 'zentriya_why_choose_us'
+    ];
+    const data: Record<string, any> = {};
+    backupKeys.forEach(k => {
+      const val = localStorage.getItem(k);
+      if (val) {
+        try {
+          data[k] = JSON.parse(val);
+        } catch (e) {
+          data[k] = val;
+        }
+      }
+    });
+    return data;
+  },
+
+  restoreData(data: Record<string, any>): boolean {
+    if (!data || typeof data !== 'object') return false;
+    // Check for core keys to validate the upload
+    if (!data['zentriya_settings']) {
+      throw new Error('Invalid backup file format: Missing core zentriya settings.');
+    }
+    Object.keys(data).forEach(k => {
+      if (k.startsWith('zentriya_')) {
+        const val = data[k];
+        localStorage.setItem(k, typeof val === 'string' ? val : JSON.stringify(val));
+      }
+    });
+    return true;
   }
 };

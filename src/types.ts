@@ -1,4 +1,4 @@
-export type UserRole = 'Super Admin' | 'Admin' | 'HR' | 'Trainer' | 'Editor' | 'Support';
+export type UserRole = 'OWNER';
 
 export interface UserProfile {
   id: string;
@@ -74,6 +74,9 @@ export interface ServiceItem {
   galleryUrls: string[];
   seoTitle?: string;
   seoDescription?: string;
+  buttonText?: string;
+  buttonLink?: string;
+  themeColor?: string;
 }
 
 export interface InternshipProgram {
@@ -89,6 +92,7 @@ export interface InternshipProgram {
   certificateDetails: string;
   bannerUrl: string;
   isActive: boolean;
+  order?: number;
 }
 
 export interface CourseItem {
@@ -100,9 +104,11 @@ export interface CourseItem {
   syllabus: string[];
   price: number;
   discountPrice?: number;
-  mode: 'Online' | 'Offline' | 'Self-Paced';
+  mode: 'Online' | 'Offline' | 'Self-Paced' | 'Hybrid';
   features: string[];
   isActive: boolean;
+  bannerUrl?: string;
+  order?: number;
 }
 
 export interface GalleryAlbum {
