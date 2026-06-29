@@ -145,12 +145,27 @@ export interface TeamMember {
 export interface TestimonialItem {
   id: string;
   name: string;
-  companyOrCollege: string;
-  type: 'Student' | 'Corporate' | 'Video';
-  text: string;
-  videoUrl?: string;
   rating: number;
+  
+  // Legacy / Compatibility fields
+  companyOrCollege?: string;
+  type?: 'Student' | 'Corporate' | 'Video';
+  text?: string;
+  videoUrl?: string;
   avatarUrl?: string;
+
+  // New fields matching the database schema
+  designation?: string;
+  company?: string;
+  company_logo?: string;
+  profile_photo?: string;
+  review?: string;
+  linkedin?: string;
+  is_verified?: boolean;
+  display_order?: number;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface JobListing {
@@ -240,6 +255,24 @@ export interface PlacementStat {
   studentPhoto?: string;
 }
 
+export interface Placement {
+  id: string;
+  student_name: string;
+  photo: string;
+  company_name: string;
+  company_logo: string;
+  job_role: string;
+  degree: string;
+  batch: string;
+  package?: number;
+  show_package: boolean;
+  placement_badge: string;
+  display_order: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface ActivityLog {
   id: string;
   userId: string;
@@ -268,4 +301,28 @@ export interface WhyChooseUsItem {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface StudentJourneyStep {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  display_order: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface IndustryPartner {
+  id: string;
+  company_name: string;
+  logo: string;
+  website_url?: string;
+  display_order: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+
 

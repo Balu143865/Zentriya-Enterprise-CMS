@@ -1,18 +1,22 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   ArrowRight, Award, GraduationCap, CheckCircle2, 
-  ChevronLeft, ChevronRight, TrendingUp, Sparkles, Send, Building 
+  ChevronLeft, ChevronRight, TrendingUp, Sparkles, Send, Building,
+  Trophy, Users, ShieldCheck, Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../services/db';
 import { 
   HeroSlide, WebsiteSettings, ServiceItem, InternshipProgram, CourseItem,
-  BlogPost, TestimonialItem, PlacementStat, ClientPartnerLogo,
+  BlogPost, TestimonialItem, PlacementStat, Placement, ClientPartnerLogo,
   WhyChooseUsItem, AboutSection
 } from '../types';
 import LucideIcon from '../components/LucideIcon';
 import PremiumServices from '../components/PremiumServices';
+import StudentJourney from '../components/StudentJourney';
+import IndustryNetwork from '../components/IndustryNetwork';
+import CompanyLogo from '../components/CompanyLogo';
 import { PremiumCourseCard, FloatingParticles } from './Courses';
 
 const containerVariants = {
@@ -258,12 +262,96 @@ const getLogoComponent = (name: string, logoUrl?: string) => {
   );
 };
 
+// Animated Counter component with intersection observer triggering
+function AnimatedCounter({ value, duration = 1500 }: { value: number; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const [triggered, setTriggered] = useState(false);
+  const elementRef = React.useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+      setTriggered(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setTriggered(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (elementRef.current) {
+      observer.observe(elementRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!triggered) return;
+    let start = 0;
+    const end = value;
+    if (start === end) return;
+
+    const totalMiliseconds = duration;
+    const incrementTime = Math.max(Math.floor(totalMiliseconds / end), 16);
+    
+    const timer = setInterval(() => {
+      start += Math.ceil(end / (totalMiliseconds / incrementTime));
+      if (start >= end) {
+        clearInterval(timer);
+        setCount(end);
+      } else {
+        setCount(start);
+      }
+    }, incrementTime);
+
+    return () => clearInterval(timer);
+  }, [value, duration, triggered]);
+
+  return <span ref={elementRef}>{count.toLocaleString()}</span>;
+}
+
+const getCardAccent = (globalIdx: number) => {
+  const accents = [
+    {
+      // Card 1: Blue
+      borderClass: "border-blue-100/80 dark:border-blue-900/40 hover:border-blue-500/50 hover:shadow-blue-500/10 dark:hover:shadow-blue-500/5",
+      quoteColor: "text-blue-300/60 dark:text-blue-800/40",
+      designationClass: "text-blue-600 dark:text-blue-400",
+      badgeClass: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 border-blue-100 dark:border-blue-500/20",
+      starColor: "text-amber-400"
+    },
+    {
+      // Card 2: Green
+      borderClass: "border-emerald-100/80 dark:border-emerald-900/40 hover:border-emerald-500/50 hover:shadow-emerald-500/10 dark:hover:shadow-emerald-500/5",
+      quoteColor: "text-emerald-300/60 dark:text-emerald-800/40",
+      designationClass: "text-emerald-600 dark:text-emerald-400",
+      badgeClass: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20",
+      starColor: "text-amber-400"
+    },
+    {
+      // Card 3: Purple
+      borderClass: "border-purple-100/80 dark:border-purple-900/40 hover:border-purple-500/50 hover:shadow-purple-500/10 dark:hover:shadow-purple-500/5",
+      quoteColor: "text-purple-300/60 dark:text-purple-800/40",
+      designationClass: "text-purple-600 dark:text-purple-400",
+      badgeClass: "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400 border-purple-100 dark:border-purple-500/20",
+      starColor: "text-amber-400"
+    }
+  ];
+  return accents[globalIdx % accents.length];
+};
+
 export default function Home() {
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [internships, setInternships] = useState<InternshipProgram[]>([]);
-  const [placements, setPlacements] = useState<PlacementStat[]>([]);
+  const [placements, setPlacements] = useState<Placement[]>([]);
   const [partners, setPartners] = useState<ClientPartnerLogo[]>([]);
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
@@ -277,6 +365,35 @@ export default function Home() {
   const [about, setAbout] = useState<AboutSection | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Custom Testimonials Carousel States
+  const [testIndex, setTestIndex] = useState(0);
+  const [testHovered, setTestHovered] = useState(false);
+  const [testCardsToShow, setTestCardsToShow] = useState(3);
+  const [expandedTestimonials, setExpandedTestimonials] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setTestCardsToShow(3);
+      } else if (window.innerWidth >= 768) {
+        setTestCardsToShow(2);
+      } else {
+        setTestCardsToShow(1);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (testHovered || testimonials.length === 0) return;
+    const interval = setInterval(() => {
+      setTestIndex((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [testHovered, testimonials.length]);
+
   // Statistics counters
   const [stats, setStats] = useState({
     studentsCount: 15340,
@@ -284,6 +401,36 @@ export default function Home() {
     trainingCount: 420,
     corporateClients: 120
   });
+
+  // Carousel State Variables
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const [cardsToShow, setCardsToShow] = useState(3);
+
+  // Responsive breakpoints
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setCardsToShow(3);
+      else if (window.innerWidth >= 768) setCardsToShow(2);
+      else setCardsToShow(1);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Autoplay functionality: slide every 5 seconds
+  useEffect(() => {
+    if (isHovered || placements.length === 0) return;
+    const interval = setInterval(() => {
+      setCarouselIndex((prev) => {
+        const maxIndex = Math.max(0, placements.length - cardsToShow);
+        if (maxIndex === 0) return 0;
+        return (prev + 1) > maxIndex ? 0 : prev + 1;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isHovered, placements.length, cardsToShow]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -296,7 +443,7 @@ export default function Home() {
           db.getHeroSlides(),
           db.getServices(),
           db.getInternships(),
-          db.getPlacementStats(),
+          db.getPlacements(),
           db.getClientPartners(),
           db.getTestimonials(),
           db.getBlogs(),
@@ -310,9 +457,15 @@ export default function Home() {
         setServices(servData.filter(s => s.isActive !== false)); // load all active services
         setInternships(internData.slice(0, 3)); // top 3 internships
         setCourses(courseData.filter(c => c.isActive).slice(0, 3)); // top 3 premium courses
-        setPlacements(placementData);
+        const activePlacements = (placementData || [])
+          .filter(p => p.is_active !== false)
+          .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+        setPlacements(activePlacements);
         setPartners(cpData);
-        setTestimonials(testData.slice(0, 3));
+        const sortedTestimonials = (testData || [])
+          .filter(t => t.is_active !== false)
+          .sort((a, b) => (a.display_order ?? 99) - (b.display_order ?? 99));
+        setTestimonials(sortedTestimonials.length > 0 ? sortedTestimonials : testData);
         setBlogs(blogData.slice(0, 2)); // top 2 latest blogs
         setWhyChooseUs(whyChooseData.filter(item => item.is_active));
         setWhyChooseUsTitle(settingsData.whyChooseUsTitle || 'Why Choose Us?');
@@ -706,6 +859,9 @@ export default function Home() {
         <PremiumServices services={services} />
       )}
 
+      {/* STUDENT SUCCESS JOURNEY */}
+      <StudentJourney />
+
       {/* PREMIUM FUTURISTIC COURSES SECTION */}
       {courses.length > 0 && (
         <section id="featured-courses" className="bg-[#040812] py-24 border-y border-slate-900 text-slate-100 relative overflow-hidden">
@@ -803,226 +959,500 @@ export default function Home() {
 
       {/* 6. PLACEMENT HIGHLIGHTS */}
       {placements.length > 0 && (
-        <section id="placement-highlights" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <span className="text-blue-600 dark:text-blue-400 font-bold tracking-widest text-xs uppercase block">
-              Recent Placement Records
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
-              Honoring Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500">Selected Alumnae</span>
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
-              Meet our successfully placed interns who transitioned from training modules directly into software products at IBM, Microsoft, and Accenture.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {placements.map((stat) => (
-              <div 
-                id={`placed-alumnus-${stat.id}`}
-                key={stat.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-md hover:shadow-xl transition-all flex items-center gap-4"
-              >
-                <img 
-                  src={stat.studentPhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80'} 
-                  alt={stat.studentName} 
-                  className="w-16 h-16 rounded-full object-cover ring-2 ring-blue-500/20"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="space-y-1">
-                  <h4 className="font-bold text-slate-950 dark:text-white text-base leading-tight font-display">
-                    {stat.studentName}
-                  </h4>
-                  <div className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                    Placed at {stat.companyName}
-                  </div>
-                  <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
-                    CTC Offer: <span className="font-bold text-slate-800 dark:text-slate-300">{stat.packageLPA} LPA</span>
-                  </div>
-                  <div className="text-[11px] italic text-slate-500">
-                    {stat.courseOrInternship}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 7. CLIENT & PARTNER LOGOS */}
-      {partners.length > 0 && (
-        <section id="partner-logos" className="py-16 bg-[#030712] border-y border-slate-900 relative overflow-hidden">
-          {/* Subtle grid accent background */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30" />
-          
-          {/* Global SVG definitions for card glow paths */}
-          <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
-            <defs>
-              <linearGradient id="emerald-blue-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#059669" />
-                <stop offset="50%" stopColor="#00E5FF" />
-                <stop offset="100%" stopColor="#3b82f6" />
-              </linearGradient>
-            </defs>
-          </svg>
+        <motion.section 
+          id="placement-highlights" 
+          className="relative py-28 overflow-hidden bg-gradient-to-b from-slate-50 to-white dark:from-[#080d1a] dark:to-[#0c1328] transition-colors duration-300 border-t border-b border-slate-100 dark:border-slate-900/40"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+        >
+          {/* Decorative ambient background lights */}
+          <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            {/* Header with horizontal green lines and circle dots */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-              className="flex items-center justify-center gap-4 mb-14"
-            >
-              <div className="hidden sm:flex items-center gap-1 shrink-0">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  whileInView={{ width: 96 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  className="h-[2px] bg-[#059669] dark:bg-emerald-500 rounded-full" 
-                />
-                <div className="w-1.5 h-1.5 rounded-full bg-[#059669] dark:bg-emerald-500 animate-pulse" />
-              </div>
+            {/* Section Header */}
+            <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+              <span className="text-xs font-black tracking-widest text-blue-600 dark:text-blue-400 uppercase bg-blue-50 dark:bg-blue-950/40 px-3.5 py-1.5 rounded-full inline-block">
+                RECENT PLACEMENT RECORDS
+              </span>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
+                Honoring Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-sky-500 to-emerald-400">Placed Students</span>
+              </h2>
               
-              <p className="text-center text-[10px] sm:text-[11px] text-slate-300 uppercase tracking-[0.25em] font-extrabold font-mono px-2">
-                RECOGNIZED AND HIRED BY ENTERPRISE LEADERS
-              </p>
-
-              <div className="hidden sm:flex items-center gap-1 shrink-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#059669] dark:bg-emerald-500 animate-pulse" />
-                <motion.div 
-                  initial={{ width: 0 }}
-                  whileInView={{ width: 96 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  className="h-[2px] bg-[#059669] dark:bg-emerald-500 rounded-full" 
-                />
+              {/* Elegant gradient divider lines below centered heading */}
+              <div className="flex items-center justify-center gap-3 py-2">
+                <div className="w-16 h-[2px] bg-gradient-to-r from-transparent to-blue-500 rounded-full" />
+                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-blue-600 to-emerald-400 animate-pulse" />
+                <div className="w-16 h-[2px] bg-gradient-to-l from-transparent to-emerald-400 rounded-full" />
               </div>
-            </motion.div>
 
-            {/* Grid layout with thin vertical dividers & staggered child entry */}
-            <motion.div 
-              variants={containerVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-80px" }}
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-y-10 sm:gap-y-12 md:gap-y-0 md:divide-x md:divide-slate-800/50 items-center justify-center"
-            >
-              {partners.map((cp) => (
+              <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+                Meet our talented students who have successfully transitioned from classroom learning to top-tier companies.
+              </p>
+            </div>
+
+            {/* Carousel Slider Controls Container */}
+            <div className="relative group/slider px-2">
+              
+              {/* Left Arrow Button */}
+              <button
+                onClick={() => {
+                  setCarouselIndex((prev) => {
+                    const maxIndex = Math.max(0, placements.length - cardsToShow);
+                    return prev === 0 ? maxIndex : prev - 1;
+                  });
+                }}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 lg:-translate-x-6 z-20 w-11 h-11 rounded-full flex items-center justify-center bg-white/90 dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-800 shadow-lg hover:scale-110 active:scale-95 hover:bg-gradient-to-tr hover:from-blue-600 hover:to-emerald-500 hover:text-white transition-all duration-300 cursor-pointer"
+                aria-label="Previous slide"
+              >
+                <ChevronLeft size={20} />
+              </button>
+
+              {/* Slider Viewport Container */}
+              <div className="overflow-hidden py-4 px-1">
+                {/* Sliding Track */}
                 <motion.div 
-                  key={cp.id} 
-                  variants={{
-                    hidden: { opacity: 0, y: 30 },
-                    visible: { 
-                      opacity: 1, 
-                      y: 0,
-                      transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
-                    }
+                  className="flex"
+                  animate={{ x: `-${carouselIndex * (100 / placements.length)}%` }}
+                  transition={{ type: "spring", stiffness: 220, damping: 26 }}
+                  style={{ 
+                    width: `${(placements.length / cardsToShow) * 100}%` 
                   }}
-                  whileHover={{ 
-                    y: -4,
-                    backgroundColor: "rgba(15, 23, 42, 0.45)",
-                    boxShadow: "0 12px 30px -10px rgba(5, 150, 105, 0.12)"
-                  }}
-                  className="flex flex-col items-center justify-center py-8 px-4 space-y-6 group rounded-2xl transition-all duration-300 relative overflow-hidden cursor-pointer"
                 >
-                  {/* Glowing background card element */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-emerald-500/0 group-hover:to-emerald-500/5 transition-all duration-300 -z-10" />
-                  
-                  {/* SVG glowing rotating border sweep */}
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none rounded-2xl" fill="none">
-                    <motion.rect
-                      x="0"
-                      y="0"
-                      width="100%"
-                      height="100%"
-                      rx="16"
-                      ry="16"
-                      stroke="url(#emerald-blue-gradient)"
-                      strokeWidth="1.5"
-                      vectorEffect="non-scaling-stroke"
-                      initial={{ strokeDasharray: "100 300", strokeDashoffset: 0, opacity: 0 }}
-                      whileHover={{ 
-                        strokeDashoffset: -400, 
-                        opacity: 1,
-                        transition: {
-                          strokeDashoffset: { repeat: Infinity, duration: 3, ease: "linear" },
-                          opacity: { duration: 0.25 }
-                        }
+                  {placements.map((item, idx) => (
+                    <motion.div 
+                      key={item.id}
+                      className="px-3 shrink-0 flex flex-col h-full"
+                      style={{ 
+                        width: `${100 / placements.length}%`,
+                        minWidth: `${100 / placements.length}%`,
+                        flex: `0 0 ${100 / placements.length}%`
                       }}
-                    />
-                  </svg>
+                      variants={{
+                        hidden: { opacity: 0, y: 25 },
+                        visible: { opacity: 1, y: 0 }
+                      }}
+                      transition={{ duration: 0.5, delay: (idx % cardsToShow) * 0.1, ease: "easeOut" }}
+                    >
+                      {/* Premium White/Dark Glass Card */}
+                      <div className="group relative flex flex-col justify-between h-full min-h-[460px] rounded-[32px] p-8 bg-white/70 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800/50 shadow-[0_15px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:shadow-blue-500/10 dark:hover:shadow-emerald-500/10 hover:-translate-y-3 transition-all duration-500 overflow-hidden">
+                        
+                        {/* Glow accent effect on hover */}
+                        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-blue-600/0 via-transparent to-emerald-500/0 group-hover:from-blue-600/10 group-hover:to-emerald-500/10 transition-all duration-500" />
+                        
+                        {/* Official company logo top-right corner */}
+                        <div className="absolute top-6 right-6 flex items-center justify-center px-3 py-1.5 bg-slate-50/90 dark:bg-slate-800/50 rounded-xl border border-slate-200/20 dark:border-slate-700/30 shadow-sm">
+                          <CompanyLogo name={item.company_logo} className="h-6 w-auto max-w-[85px] object-contain" />
+                        </div>
 
-                  {/* Logo Container with hover animation */}
-                  <div className="h-14 flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
-                    {getLogoComponent(cp.name, cp.logoUrl)}
-                  </div>
-                  {/* Subtitle / Caption */}
-                  <p className="text-[10px] sm:text-[11px] font-bold tracking-[0.18em] text-slate-400 group-hover:text-emerald-400 transition-colors uppercase font-mono text-center">
-                    {cp.name}
-                  </p>
+                        {/* Top contents */}
+                        <div className="flex flex-col items-center pt-6">
+                          {/* Student Portrait Circular Frame */}
+                          <div className="relative">
+                            <div className="absolute -inset-2 bg-gradient-to-tr from-blue-500 via-sky-400 to-emerald-400 rounded-full blur-md opacity-25 group-hover:opacity-75 group-hover:scale-110 transition-all duration-500" />
+                            <img 
+                              src={item.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&q=80'} 
+                              alt={item.student_name} 
+                              className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-white dark:border-slate-900 shadow-lg group-hover:scale-[1.05] transition-transform duration-500"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+
+                          {/* Student Profile Metadata */}
+                          <h3 className="text-lg sm:text-xl font-bold font-sans tracking-tight text-slate-800 dark:text-white mt-6 text-center leading-tight">
+                            {item.student_name}
+                          </h3>
+                          <p className="text-xs sm:text-sm font-bold text-blue-600 dark:text-emerald-400 mt-1 text-center">
+                            {item.job_role}
+                          </p>
+                          
+                          {/* Academic Details */}
+                          <div className="flex flex-wrap items-center justify-center gap-2 mt-4 font-mono text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest bg-slate-100/60 dark:bg-slate-800/40 px-3.5 py-1.5 rounded-full">
+                            <span>{item.degree}</span>
+                            <span className="text-slate-300 dark:text-slate-700">•</span>
+                            <span>{item.batch}</span>
+                          </div>
+                        </div>
+
+                        {/* Bottom contents */}
+                        <div className="flex flex-col items-center pt-4 mt-6 border-t border-slate-100 dark:border-slate-800/50">
+                          {/* Placement Package (Optional hide/show) */}
+                          {item.show_package && item.package && (
+                            <div className="mb-4 text-center">
+                              <span className="text-[10px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase block mb-1">
+                                CTC PACKAGE
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 px-4 py-1 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 dark:from-emerald-500/5 dark:to-teal-500/5 text-emerald-600 dark:text-emerald-400 font-mono text-xs sm:text-sm font-black border border-emerald-500/20 dark:border-emerald-500/10 rounded-full">
+                                <TrendingUp size={13} />
+                                {item.package} LPA
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Placed Badge */}
+                          <div className="w-full">
+                            <span className="flex items-center justify-center gap-1.5 w-full text-xs font-bold py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 font-sans border border-slate-200/30 dark:border-slate-700/30 group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-emerald-500 group-hover:text-white group-hover:border-transparent dark:group-hover:bg-gradient-to-r dark:group-hover:from-blue-600 dark:group-hover:to-emerald-500 dark:group-hover:text-white dark:group-hover:border-transparent transition-all duration-300 shadow-sm">
+                              <CheckCircle2 size={13} className="shrink-0" />
+                              Placed at {item.company_name}
+                            </span>
+                          </div>
+                        </div>
+
+                      </div>
+                    </motion.div>
+                  ))}
                 </motion.div>
-              ))}
-            </motion.div>
+              </div>
+
+              {/* Right Arrow Button */}
+              <button
+                onClick={() => {
+                  setCarouselIndex((prev) => {
+                    const maxIndex = Math.max(0, placements.length - cardsToShow);
+                    return prev >= maxIndex ? 0 : prev + 1;
+                  });
+                }}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 lg:-translate-x-6 z-20 w-11 h-11 rounded-full flex items-center justify-center bg-white/90 dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-800 shadow-lg hover:scale-110 active:scale-95 hover:bg-gradient-to-tr hover:from-blue-600 hover:to-emerald-500 hover:text-white transition-all duration-300 cursor-pointer"
+                aria-label="Next slide"
+              >
+                <ChevronRight size={20} />
+              </button>
+
+              {/* Pagination Dots */}
+              {placements.length > cardsToShow && (
+                <div className="flex items-center justify-center gap-2.5 mt-10">
+                  {Array.from({ length: placements.length - cardsToShow + 1 }).map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCarouselIndex(idx)}
+                      className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                        carouselIndex === idx 
+                          ? 'w-7 bg-blue-600 dark:bg-emerald-400' 
+                          : 'w-2.5 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-600'
+                      }`}
+                      aria-label={`Go to slide ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+
+            </div>
+
+            {/* Premium Statistics Strip */}
+            <div className="mt-28 relative">
+              <div className="absolute inset-0 -z-10 bg-gradient-to-r from-blue-500/5 to-emerald-500/5 dark:from-blue-500/2 dark:to-emerald-500/2 rounded-3xl blur-md" />
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 p-6 sm:p-10 rounded-3xl bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/40 dark:border-slate-800/40 shadow-xl dark:shadow-2xl">
+                
+                {/* Stat 1 */}
+                <div className="flex flex-col items-center text-center p-3 sm:p-4 rounded-2xl hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-300">
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl text-blue-600 dark:text-blue-400 mb-4 shadow-sm">
+                    <Users size={22} />
+                  </div>
+                  <span className="text-2xl sm:text-3xl font-black font-display text-slate-800 dark:text-white tracking-tight">
+                    <AnimatedCounter value={5000} />+
+                  </span>
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1.5">
+                    Students Trained
+                  </span>
+                </div>
+
+                {/* Stat 2 */}
+                <div className="flex flex-col items-center text-center p-3 sm:p-4 rounded-2xl hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-300">
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl text-emerald-600 dark:text-emerald-400 mb-4 shadow-sm">
+                    <Award size={22} />
+                  </div>
+                  <span className="text-2xl sm:text-3xl font-black font-display text-slate-800 dark:text-white tracking-tight">
+                    <AnimatedCounter value={1200} />+
+                  </span>
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1.5">
+                    Placed Graduates
+                  </span>
+                </div>
+
+                {/* Stat 3 */}
+                <div className="flex flex-col items-center text-center p-3 sm:p-4 rounded-2xl hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-300">
+                  <div className="p-3 bg-sky-50 dark:bg-sky-950/30 rounded-xl text-sky-600 dark:text-sky-400 mb-4 shadow-sm">
+                    <Building size={22} />
+                  </div>
+                  <span className="text-2xl sm:text-3xl font-black font-display text-slate-800 dark:text-white tracking-tight">
+                    <AnimatedCounter value={250} />+
+                  </span>
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1.5">
+                    Hiring Partners
+                  </span>
+                </div>
+
+                {/* Stat 4 */}
+                <div className="flex flex-col items-center text-center p-3 sm:p-4 rounded-2xl hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-300">
+                  <div className="p-3 bg-purple-50 dark:bg-purple-950/30 rounded-xl text-purple-600 dark:text-purple-400 mb-4 shadow-sm">
+                    <TrendingUp size={22} />
+                  </div>
+                  <span className="text-2xl sm:text-3xl font-black font-display text-slate-800 dark:text-white tracking-tight">
+                    <AnimatedCounter value={98} />%
+                  </span>
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1.5">
+                    Assistance Rate
+                  </span>
+                </div>
+
+                {/* Stat 5 */}
+                <div className="flex flex-col items-center text-center p-3 sm:p-4 rounded-2xl col-span-2 md:col-span-1 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-300">
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl text-amber-500 dark:text-amber-400 mb-4 shadow-sm">
+                    <Trophy size={22} />
+                  </div>
+                  <span className="text-2xl sm:text-3xl font-black font-display text-slate-800 dark:text-white tracking-tight">
+                    <AnimatedCounter value={50} />+
+                  </span>
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1.5">
+                    Awards & Honors
+                  </span>
+                </div>
+
+              </div>
+            </div>
+
           </div>
-        </section>
+        </motion.section>
       )}
+
+      {/* 7. OUR INDUSTRY NETWORK */}
+      <IndustryNetwork />
 
       {/* 8. TESTIMONIALS SLIDER SECTION */}
       {testimonials.length > 0 && (
-        <section id="testimonials" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <span className="text-blue-600 dark:text-blue-400 font-bold tracking-widest text-xs uppercase block">
-              Success Reviews
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
-              Testimonials from <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500">Students & Corporates</span>
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
-              We focus on building career capability, leading directly to outstanding corporate satisfaction.
-            </p>
-          </div>
+        <section 
+          id="testimonials" 
+          className="relative py-28 overflow-hidden bg-gradient-to-b from-slate-50 to-white dark:from-[#0B1220] dark:to-[#080d19] transition-colors duration-300 border-t border-b border-slate-100 dark:border-slate-900/40"
+          onMouseEnter={() => setTestHovered(true)}
+          onMouseLeave={() => setTestHovered(false)}
+        >
+          {/* Blurred Radial Shape Decorative Lights */}
+          <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/5 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-emerald-500/5 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {testimonials.map((test) => (
-              <div 
-                id={`testimonial-${test.id}`}
-                key={test.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-lg relative flex flex-col justify-between hover:shadow-2xl hover:scale-[1.02] transition-all"
-              >
-                <div className="space-y-4">
-                  {/* Rating Stars */}
-                  <div className="flex text-amber-500">
-                    {Array.from({ length: test.rating }).map((_, i) => (
-                      <span key={i} className="text-base">★</span>
-                    ))}
-                  </div>
-                  
-                  <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed italic">
-                    "{test.text}"
-                  </p>
-                </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            
+            {/* Section Header */}
+            <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-8 h-[2px] bg-blue-500 rounded-full" />
+                <span className="text-blue-600 dark:text-blue-400 font-extrabold tracking-widest text-xs uppercase block">
+                  SUCCESS REVIEWS
+                </span>
+                <div className="w-8 h-[2px] bg-blue-500 rounded-full" />
+              </div>
 
-                <div className="pt-6 border-t border-slate-100 dark:border-slate-800/60 mt-6 flex items-center gap-3">
-                  <img 
-                    src={test.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80'} 
-                    alt={test.name} 
-                    className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500/15"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div>
-                    <h5 className="font-bold text-slate-950 dark:text-white text-sm font-display">
-                      {test.name}
-                    </h5>
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 font-bold leading-none mt-1">
-                      {test.companyOrCollege}
-                    </p>
-                  </div>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
+                Testimonials from <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500">Students & Corporate Partners</span>
+              </h2>
+
+              <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
+                We focus on building career capability, leading directly to outstanding corporate satisfaction.
+              </p>
+
+              {/* Elegant blue and green divider lines with dots */}
+              <div className="flex items-center justify-center gap-1.5 pt-2">
+                <div className="w-10 h-[3px] bg-blue-500 rounded-l-full" />
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <div className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <div className="w-10 h-[3px] bg-emerald-500 rounded-r-full" />
+              </div>
+            </div>
+
+            {/* Carousel Container */}
+            <div className="relative px-4 sm:px-12">
+              
+              {/* Carousel Viewport Wrapper */}
+              <div className="overflow-hidden py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-center items-stretch min-h-[380px]">
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    {(() => {
+                      if (testimonials.length === 0) return null;
+                      
+                      // Calculate visible items
+                      const visibleItems: TestimonialItem[] = [];
+                      if (testimonials.length <= testCardsToShow) {
+                        visibleItems.push(...testimonials);
+                      } else {
+                        for (let i = 0; i < testCardsToShow; i++) {
+                          const targetIndex = (testIndex + i) % testimonials.length;
+                          if (testimonials[targetIndex]) {
+                            visibleItems.push(testimonials[targetIndex]);
+                          }
+                        }
+                      }
+
+                      return visibleItems.map((test, index) => {
+                        const globalIndex = (testIndex + index) % testimonials.length;
+                        const accent = getCardAccent(globalIndex);
+                        
+                        // Handle legacy/new field mapping for full safety
+                        const reviewText = test.review || test.text || '';
+                        const reviewerPhoto = test.profile_photo || test.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+                        const reviewerDesignation = test.designation || (test.companyOrCollege ? test.companyOrCollege.split(' at ')[0] : 'Trainee');
+                        const reviewerCompany = test.company || (test.companyOrCollege ? (test.companyOrCollege.includes(' at ') ? test.companyOrCollege.split(' at ')[1] : test.companyOrCollege) : 'Zentriya');
+                        const companyLogo = test.company_logo || (reviewerCompany.toLowerCase().includes('ibm') ? 'ibm' : reviewerCompany.toLowerCase().includes('accenture') ? 'accenture' : reviewerCompany.toLowerCase().includes('innocorp') ? 'innocorp' : '');
+                        const isVerified = test.is_verified ?? true;
+                        const ratingValue = test.rating ?? 5;
+                        const isExpanded = !!expandedTestimonials[test.id];
+
+                        return (
+                          <motion.div
+                            id={`testimonial-card-${test.id}`}
+                            key={test.id}
+                            layout
+                            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -30, scale: 0.95 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25, delay: index * 0.05 }}
+                            className={`w-full max-w-[430px] mx-auto rounded-[24px] p-8 shadow-xl relative flex flex-col justify-between transition-all duration-300 bg-white dark:bg-[#0c1425]/90 backdrop-blur-md hover:-translate-y-2 hover:scale-[1.03] ${accent.borderClass} h-full group`}
+                          >
+                            {/* TOP OF CARD: Quotation Icon & Five gold stars */}
+                            <div className="flex items-center justify-between mb-6">
+                              <span className={`text-6xl font-serif leading-none select-none ${accent.quoteColor}`}>“</span>
+                              <div className="flex gap-0.5 text-amber-400 group-hover:scale-105 transition-transform duration-300">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <svg 
+                                    key={i} 
+                                    className={`w-5 h-5 ${i < ratingValue ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200 dark:fill-slate-800 dark:text-slate-800'}`} 
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                  </svg>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* BODY: Testimonial text with premium typography */}
+                            <div className="flex-1 mb-8">
+                              <p className={`text-slate-700 dark:text-slate-300 font-sans text-[14px] leading-relaxed ${isExpanded ? '' : 'line-clamp-5'}`}>
+                                "{reviewText}"
+                              </p>
+                              {reviewText.length > 180 && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedTestimonials(prev => ({
+                                      ...prev,
+                                      [test.id]: !prev[test.id]
+                                    }));
+                                  }}
+                                  className="text-xs font-extrabold text-blue-600 dark:text-blue-400 hover:underline mt-2 inline-block transition-colors"
+                                >
+                                  {isExpanded ? 'Read Less' : 'Read More'}
+                                </button>
+                              )}
+                            </div>
+
+                            {/* BOTTOM SECTION */}
+                            <div className="pt-6 border-t border-slate-100 dark:border-slate-800/60 space-y-4">
+                              
+                              {/* Row 1: Profile Photo, Name Center, Company Logo Right */}
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                  <img 
+                                    src={reviewerPhoto} 
+                                    alt={test.name} 
+                                    className="w-12 h-12 rounded-full object-cover border border-slate-100 dark:border-slate-800 shadow-md transform group-hover:scale-110 transition-transform duration-300"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                  <div>
+                                    <h5 className="font-extrabold text-slate-900 dark:text-white text-sm font-display tracking-tight">
+                                      {test.name}
+                                    </h5>
+                                    <p className={`text-[11px] font-bold mt-0.5 ${accent.designationClass}`}>
+                                      {reviewerDesignation}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                                      {reviewerCompany}
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                {companyLogo && (
+                                  <div className="shrink-0 flex items-center h-8">
+                                    <CompanyLogo name={companyLogo} className="h-6 object-contain opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Row 2: Verified Badge Left, LinkedIn Icon Right */}
+                              <div className="flex items-center justify-between pt-1">
+                                {isVerified && (
+                                  <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border shadow-sm ${accent.badgeClass}`}>
+                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    Verified
+                                  </div>
+                                )}
+
+                                {test.linkedin && (
+                                  <a 
+                                    href={test.linkedin} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="w-7 h-7 rounded-md bg-[#0A66C2] hover:bg-[#004182] flex items-center justify-center text-white transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/30"
+                                    title="View LinkedIn Profile"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+                                    </svg>
+                                  </a>
+                                )}
+                              </div>
+
+                            </div>
+                          </motion.div>
+                        );
+                      });
+                    })()}
+                  </AnimatePresence>
                 </div>
               </div>
-            ))}
+
+              {/* Navigation Arrows */}
+              {testimonials.length > testCardsToShow && (
+                <>
+                  <button 
+                    onClick={() => setTestIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length)}
+                    className="absolute left-0 sm:-left-4 top-1/2 -translate-y-1/2 z-25 w-11 h-11 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-slate-200/50 dark:border-slate-800/50 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
+                    aria-label="Previous testimonials"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button 
+                    onClick={() => setTestIndex((prev) => (prev + 1) % testimonials.length)}
+                    className="absolute right-0 sm:-right-4 top-1/2 -translate-y-1/2 z-25 w-11 h-11 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-slate-200/50 dark:border-slate-800/50 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
+                    aria-label="Next testimonials"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </>
+              )}
+
+              {/* Pagination Dots */}
+              {testimonials.length > testCardsToShow && (
+                <div className="flex items-center justify-center gap-2 mt-10">
+                  {testimonials.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setTestIndex(i)}
+                      className={`h-2.5 rounded-full transition-all duration-300 ${testIndex === i ? 'w-6 bg-blue-600 dark:bg-blue-400' : 'w-2.5 bg-slate-200 dark:bg-slate-800'}`}
+                      aria-label={`Go to testimonial page ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+
+            </div>
+
           </div>
         </section>
       )}

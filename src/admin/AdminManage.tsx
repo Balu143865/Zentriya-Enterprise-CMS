@@ -7,7 +7,8 @@ import {
   WebsiteSettings, HeroSlide, AboutSection, ServiceItem, 
   InternshipProgram, CourseItem, GalleryItem, 
   TeamMember, TestimonialItem, JobListing, JobApplication, 
-  ContactMessage, BlogPost, FaqItem, WhyChooseUsItem 
+  ContactMessage, BlogPost, FaqItem, WhyChooseUsItem,
+  StudentJourneyStep, IndustryPartner, Placement
 } from '../types';
 import { 
   Save, Plus, Trash, Edit, Check, Settings, Image, 
@@ -17,6 +18,8 @@ import {
   ArrowUp, ArrowDown, GripVertical
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import { renderPartnerLogo } from '../utils/partnerLogos';
+import CompanyLogo from '../components/CompanyLogo';
 
 // REUSABLE BASE64 IMAGE DROPZONE COMPONENT
 interface ImageDropzoneProps {
@@ -200,6 +203,9 @@ export default function AdminManage() {
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
   const [whyChooseUs, setWhyChooseUs] = useState<WhyChooseUsItem[]>([]);
+  const [studentJourneySteps, setStudentJourneySteps] = useState<StudentJourneyStep[]>([]);
+  const [industryPartners, setIndustryPartners] = useState<IndustryPartner[]>([]);
+  const [adminPlacements, setAdminPlacements] = useState<Placement[]>([]);
 
   // Search, Filter, Pagination
   const [searchQuery, setSearchQuery] = useState('');
@@ -277,6 +283,15 @@ export default function AdminManage() {
         case 'why_choose_us':
           setWhyChooseUs(await db.getWhyChooseUs());
           break;
+        case 'student_journey':
+          setStudentJourneySteps(await db.getStudentJourneySteps());
+          break;
+        case 'industry_network':
+          setIndustryPartners(await db.getIndustryPartners());
+          break;
+        case 'placements':
+          setAdminPlacements(await db.getPlacements());
+          break;
         default:
           break;
       }
@@ -328,6 +343,26 @@ export default function AdminManage() {
 
     await db.saveInternships(updatedList);
     toast('Internship program order sequence updated.', 'success');
+    loadData();
+  };
+
+  const handleReorderPlacement = async (placementId: string, direction: 'up' | 'down') => {
+    const currentIndex = adminPlacements.findIndex(p => p.id === placementId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= adminPlacements.length) return;
+
+    const updatedList = [...adminPlacements].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    const currentIdxInSorted = updatedList.findIndex(p => p.id === placementId);
+    const targetIdxInSorted = direction === 'up' ? currentIdxInSorted - 1 : currentIdxInSorted + 1;
+    if (targetIdxInSorted < 0 || targetIdxInSorted >= updatedList.length) return;
+
+    const tempOrder = updatedList[currentIdxInSorted].display_order;
+    updatedList[currentIdxInSorted].display_order = updatedList[targetIdxInSorted].display_order;
+    updatedList[targetIdxInSorted].display_order = tempOrder;
+
+    await db.reorderPlacements(updatedList);
+    toast('Placement record display order updated.', 'success');
     loadData();
   };
 
@@ -909,6 +944,58 @@ export default function AdminManage() {
                               updated_at: new Date().toISOString()
                             };
                             await db.saveWhyChooseUsItem(item);
+                            break;
+                          }
+
+                          case 'student_journey': {
+                            const item: StudentJourneyStep = {
+                              id,
+                              title: fd.get('title') as string,
+                              description: fd.get('description') as string,
+                              icon: fd.get('icon') as string || 'Milestone',
+                              display_order: Number(fd.get('display_order')) || studentJourneySteps.length + 1,
+                              is_active: fd.get('is_active') === 'true',
+                              created_at: editingItem?.created_at || new Date().toISOString(),
+                              updated_at: new Date().toISOString()
+                            };
+                            await db.saveStudentJourneyStep(item);
+                            break;
+                          }
+
+                          case 'industry_network': {
+                            const item: IndustryPartner = {
+                              id,
+                              company_name: fd.get('company_name') as string,
+                              logo: fd.get('logo') as string,
+                              website_url: fd.get('website_url') as string || '',
+                              display_order: Number(fd.get('display_order')) || industryPartners.length + 1,
+                              is_active: fd.get('is_active') === 'true',
+                              created_at: editingItem?.created_at || new Date().toISOString(),
+                              updated_at: new Date().toISOString()
+                            };
+                            await db.saveIndustryPartner(item);
+                            break;
+                          }
+
+                          case 'placements': {
+                            const item: Placement = {
+                              id,
+                              student_name: fd.get('student_name') as string,
+                              photo: uploadedImageUrl || editingItem?.photo || '',
+                              company_name: fd.get('company_name') as string,
+                              company_logo: fd.get('company_logo') as string,
+                              job_role: fd.get('job_role') as string,
+                              degree: fd.get('degree') as string,
+                              batch: fd.get('batch') as string,
+                              package: fd.get('package') ? Number(fd.get('package')) : undefined,
+                              show_package: fd.get('show_package') === 'true',
+                              placement_badge: fd.get('placement_badge') as string || `Placed at ${fd.get('company_name')}`,
+                              display_order: Number(fd.get('display_order')) || adminPlacements.length + 1,
+                              is_active: fd.get('is_active') === 'true',
+                              created_at: editingItem?.created_at || new Date().toISOString(),
+                              updated_at: new Date().toISOString()
+                            };
+                            await db.savePlacement(item);
                             break;
                           }
 
@@ -1674,6 +1761,297 @@ export default function AdminManage() {
                             <option value="true">Enabled / Active</option>
                             <option value="false">Disabled / Hidden</option>
                           </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STUDENT JOURNEY FORM */}
+                    {activeTab === 'student_journey' && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Step Title *</label>
+                            <input 
+                              type="text" 
+                              name="title" 
+                              placeholder="e.g. Training & Skill Development"
+                              defaultValue={editingItem?.title || ''} 
+                              required 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Lucide Icon *</label>
+                            <select 
+                              name="icon" 
+                              defaultValue={editingItem?.icon || 'Milestone'} 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
+                            >
+                              <option value="UserPlus">👤 UserPlus (Registration)</option>
+                              <option value="BookOpen">📖 BookOpen (Training)</option>
+                              <option value="Briefcase">💼 Briefcase (Internship)</option>
+                              <option value="Terminal">💻 Terminal (Projects)</option>
+                              <option value="Award">🏆 Award (Certification)</option>
+                              <option value="TrendingUp">📈 TrendingUp (Placement)</option>
+                              <option value="Compass">🧭 Compass (Guidance)</option>
+                              <option value="Milestone">🏁 Milestone (General)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Description / Subtitle *</label>
+                          <textarea 
+                            name="description" 
+                            placeholder="Describe what the student achieves or does in this step."
+                            defaultValue={editingItem?.description || ''} 
+                            required 
+                            rows={3}
+                            className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Display Order</label>
+                            <input 
+                              type="number" 
+                              name="display_order" 
+                              defaultValue={editingItem ? editingItem.display_order : studentJourneySteps.length + 1} 
+                              required 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Status</label>
+                            <select 
+                              name="is_active" 
+                              defaultValue={editingItem ? String(editingItem.is_active) : 'true'} 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
+                            >
+                              <option value="true">Active / Visible</option>
+                              <option value="false">Disabled / Hidden</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* INDUSTRY NETWORK FORM */}
+                    {activeTab === 'industry_network' && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Company Name *</label>
+                            <input 
+                              type="text" 
+                              name="company_name" 
+                              placeholder="e.g. Google"
+                              defaultValue={editingItem?.company_name || ''} 
+                              required 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Website URL</label>
+                            <input 
+                              type="url" 
+                              name="website_url" 
+                              placeholder="e.g. https://google.com"
+                              defaultValue={editingItem?.website_url || ''} 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Official Logo Image URL (SVG/PNG) *</label>
+                          <input 
+                            type="text" 
+                            name="logo" 
+                            placeholder="e.g. https://upload.wikimedia.org/.../Google_2015_logo.svg"
+                            defaultValue={editingItem?.logo || ''} 
+                            required 
+                            className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                          />
+                          <p className="text-[10px] text-slate-400">
+                            Provide a transparent SVG or high-quality PNG logo URL.
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Display Order</label>
+                            <input 
+                              type="number" 
+                              name="display_order" 
+                              defaultValue={editingItem ? editingItem.display_order : industryPartners.length + 1} 
+                              required 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Status</label>
+                            <select 
+                              name="is_active" 
+                              defaultValue={editingItem ? String(editingItem.is_active) : 'true'} 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
+                            >
+                              <option value="true">Active / Visible</option>
+                              <option value="false">Disabled / Hidden</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PLACEMENT RECORD FORM */}
+                    {activeTab === 'placements' && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Student Name *</label>
+                            <input 
+                              type="text" 
+                              name="student_name" 
+                              placeholder="e.g. Preeti Sharma"
+                              defaultValue={editingItem?.student_name || ''} 
+                              required 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Job Role *</label>
+                            <input 
+                              type="text" 
+                              name="job_role" 
+                              placeholder="e.g. Full Stack Java Developer"
+                              defaultValue={editingItem?.job_role || ''} 
+                              required
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Degree *</label>
+                            <input 
+                              type="text" 
+                              name="degree" 
+                              placeholder="e.g. B.Tech (CSE)"
+                              defaultValue={editingItem?.degree || ''} 
+                              required 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Batch *</label>
+                            <input 
+                              type="text" 
+                              name="batch" 
+                              placeholder="e.g. 2024 Batch"
+                              defaultValue={editingItem?.batch || ''} 
+                              required
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Company Name *</label>
+                            <select 
+                              name="company_name"
+                              defaultValue={editingItem?.company_name || 'IBM'}
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
+                            >
+                              {["Microsoft", "IBM", "Google", "Amazon", "Infosys", "TCS", "Accenture", "Cognizant", "Wipro", "Capgemini", "Oracle", "Cisco", "Dell Technologies", "HCLTech"].map(company => (
+                                <option key={company} value={company}>{company}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Company Logo *</label>
+                            <select 
+                              name="company_logo"
+                              defaultValue={editingItem?.company_logo || 'IBM'}
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
+                            >
+                              {["Microsoft", "IBM", "Google", "Amazon", "Infosys", "TCS", "Accenture", "Cognizant", "Wipro", "Capgemini", "Oracle", "Cisco", "Dell Technologies", "HCLTech"].map(company => (
+                                <option key={company} value={company}>{company}</option>
+                              ))}
+                            </select>
+                            <p className="text-[10px] text-slate-400">Select company to load the official SVG corporate logo automatically.</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Package (LPA)</label>
+                            <input 
+                              type="number" 
+                              step="0.1"
+                              name="package" 
+                              placeholder="e.g. 12.4"
+                              defaultValue={editingItem?.package || ''} 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Show Package?</label>
+                            <select 
+                              name="show_package"
+                              defaultValue={editingItem ? String(editingItem.show_package) : 'true'}
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
+                            >
+                              <option value="true">Show Package</option>
+                              <option value="false">Hide Package</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Placement Badge</label>
+                            <input 
+                              type="text" 
+                              name="placement_badge" 
+                              placeholder="e.g. Placed at IBM"
+                              defaultValue={editingItem?.placement_badge || ''} 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                            <p className="text-[10px] text-slate-400">Leave blank to default to "Placed at Company Name"</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Display Order</label>
+                            <input 
+                              type="number" 
+                              name="display_order" 
+                              defaultValue={editingItem ? editingItem.display_order : adminPlacements.length + 1} 
+                              required 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Status</label>
+                            <select 
+                              name="is_active" 
+                              defaultValue={editingItem ? String(editingItem.is_active) : 'true'} 
+                              className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
+                            >
+                              <option value="true">Active / Visible</option>
+                              <option value="false">Disabled / Hidden</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <ImageDropzone 
+                            label="Student Profile Photo (Recommended transparent / headshot)" 
+                            value={uploadedImageUrl || editingItem?.photo || ''} 
+                            onChange={setUploadedImageUrl} 
+                          />
                         </div>
                       </div>
                     )}
@@ -2615,6 +2993,317 @@ export default function AdminManage() {
                     </div>
                   )}
 
+                  {activeTab === 'student_journey' && (
+                    <div className="space-y-6">
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {studentJourneySteps.length === 0 ? (
+                          <div className="p-16 text-center text-slate-400">Student Success Journey is empty. Add a new step.</div>
+                        ) : (
+                          [...studentJourneySteps].sort((a, b) => a.display_order - b.display_order).map((item, index, arr) => (
+                            <div key={item.id} className="p-6 flex flex-col sm:flex-row items-center gap-6 justify-between">
+                              <div className="flex items-center gap-4 flex-1">
+                                <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center shrink-0 border dark:border-slate-800 text-blue-500">
+                                  <LucideIcon name={item.icon} size={20} />
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                                      {item.title}
+                                    </h4>
+                                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                      item.is_active 
+                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
+                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-850 dark:text-slate-400'
+                                    }`}>
+                                      {item.is_active ? 'Active' : 'Disabled'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
+                                    {item.description}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 font-mono">
+                                    Display Order: {item.display_order} &bull; Icon: {item.icon}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={async () => {
+                                      if (index === 0) return;
+                                      const prevItem = arr[index - 1];
+                                      const oldOrder = item.display_order;
+                                      item.display_order = prevItem.display_order;
+                                      prevItem.display_order = oldOrder;
+                                      await db.saveStudentJourneyStepOrder([...studentJourneySteps]);
+                                      loadData();
+                                    }}
+                                    disabled={index === 0}
+                                    className="p-1.5 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30"
+                                    title="Move Up"
+                                  >
+                                    <ArrowUp size={12} />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (index === arr.length - 1) return;
+                                      const nextItem = arr[index + 1];
+                                      const oldOrder = item.display_order;
+                                      item.display_order = nextItem.display_order;
+                                      nextItem.display_order = oldOrder;
+                                      await db.saveStudentJourneyStepOrder([...studentJourneySteps]);
+                                      loadData();
+                                    }}
+                                    disabled={index === arr.length - 1}
+                                    className="p-1.5 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30"
+                                    title="Move Down"
+                                  >
+                                    <ArrowDown size={12} />
+                                  </button>
+                                </div>
+
+                                <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-800" />
+
+                                <button 
+                                  onClick={() => { setEditingItem(item); }}
+                                  className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300"
+                                  title="Edit"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    if (confirm(`Remove student success step: "${item.title}"?`)) {
+                                      await db.deleteStudentJourneyStep(item.id);
+                                      toast('Step deleted successfully.', 'info');
+                                      loadData();
+                                    }
+                                  }}
+                                  className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500"
+                                  title="Delete"
+                                >
+                                  <Trash size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'industry_network' && (
+                    <div className="space-y-6">
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {industryPartners.length === 0 ? (
+                          <div className="p-16 text-center text-slate-400">Industry Network is empty. Add a new company.</div>
+                        ) : (
+                          paginate([...industryPartners].sort((a, b) => a.display_order - b.display_order)).map((item, index, arr) => (
+                            <div key={item.id} className="p-6 flex flex-col sm:flex-row items-center gap-6 justify-between">
+                              <div className="flex items-center gap-4 flex-1">
+                                <div className="w-16 h-16 rounded-xl bg-slate-50 dark:bg-slate-950 flex items-center justify-center shrink-0 border dark:border-slate-800 p-2">
+                                  {renderPartnerLogo(item, "max-h-full max-w-full object-contain")}
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                                      {item.company_name}
+                                    </h4>
+                                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                      item.is_active 
+                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
+                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-850 dark:text-slate-400'
+                                    }`}>
+                                      {item.is_active ? 'Active' : 'Disabled'}
+                                    </span>
+                                  </div>
+                                  {item.website_url && (
+                                    <p className="text-xs text-blue-500 hover:underline flex items-center gap-1 font-medium">
+                                      <Globe size={12} />
+                                      <a href={item.website_url} target="_blank" rel="noopener noreferrer">
+                                        {item.website_url}
+                                      </a>
+                                    </p>
+                                  )}
+                                  <p className="text-[10px] text-slate-400 font-mono">
+                                    Display Order: {item.display_order}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={async () => {
+                                      if (index === 0) return;
+                                      const prevItem = arr[index - 1];
+                                      const oldOrder = item.display_order;
+                                      item.display_order = prevItem.display_order;
+                                      prevItem.display_order = oldOrder;
+                                      await db.saveIndustryPartnerOrder([...industryPartners]);
+                                      loadData();
+                                    }}
+                                    disabled={index === 0}
+                                    className="p-1.5 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30"
+                                    title="Move Up"
+                                  >
+                                    <ArrowUp size={12} />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (index === arr.length - 1) return;
+                                      const nextItem = arr[index + 1];
+                                      const oldOrder = item.display_order;
+                                      item.display_order = nextItem.display_order;
+                                      nextItem.display_order = oldOrder;
+                                      await db.saveIndustryPartnerOrder([...industryPartners]);
+                                      loadData();
+                                    }}
+                                    disabled={index === arr.length - 1}
+                                    className="p-1.5 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30"
+                                    title="Move Down"
+                                  >
+                                    <ArrowDown size={12} />
+                                  </button>
+                                </div>
+
+                                <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-800" />
+
+                                <button 
+                                  onClick={() => { setEditingItem(item); }}
+                                  className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300"
+                                  title="Edit"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    if (confirm(`Remove company: "${item.company_name}"?`)) {
+                                      await db.deleteIndustryPartner(item.id);
+                                      toast('Company deleted successfully.', 'info');
+                                      loadData();
+                                    }
+                                  }}
+                                  className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500"
+                                  title="Delete"
+                                >
+                                  <Trash size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'placements' && (
+                    <div className="space-y-6">
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {adminPlacements.length === 0 ? (
+                          <div className="p-16 text-center text-slate-400">No placements recorded yet. Add your first student record!</div>
+                        ) : (
+                          paginate([...adminPlacements].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))).map((item, index, arr) => (
+                            <div key={item.id} className="p-6 flex flex-col sm:flex-row items-center gap-6 justify-between">
+                              <div className="flex items-center gap-4 flex-1">
+                                {item.photo ? (
+                                  <img 
+                                    src={item.photo} 
+                                    alt={item.student_name} 
+                                    className="w-16 h-16 rounded-xl object-cover shrink-0 border dark:border-slate-800" 
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border dark:border-slate-800">
+                                    <GraduationCap className="text-slate-400" size={24} />
+                                  </div>
+                                )}
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                                      {item.student_name}
+                                    </h4>
+                                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                      item.is_active 
+                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
+                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-850 dark:text-slate-400'
+                                    }`}>
+                                      {item.is_active ? 'Active' : 'Disabled'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                    {item.job_role} • {item.degree} ({item.batch})
+                                  </p>
+                                  <div className="flex items-center gap-2 pt-0.5">
+                                    <CompanyLogo name={item.company_logo} className="h-4 w-auto text-slate-700 dark:text-slate-300" />
+                                    {item.package && (
+                                      <span className="text-[10px] bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 font-bold px-1.5 py-0.5 rounded">
+                                        {item.package} LPA {item.show_package ? '' : '(Hidden)'}
+                                      </span>
+                                    )}
+                                    {item.placement_badge && (
+                                      <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-medium">
+                                        {item.placement_badge}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-slate-400 font-mono pt-1">
+                                    Display Order: {item.display_order}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleReorderPlacement(item.id, 'up')}
+                                    disabled={index === 0}
+                                    className="p-1.5 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30"
+                                    title="Move Up"
+                                  >
+                                    <ArrowUp size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleReorderPlacement(item.id, 'down')}
+                                    disabled={index === arr.length - 1}
+                                    className="p-1.5 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30"
+                                    title="Move Down"
+                                  >
+                                    <ArrowDown size={12} />
+                                  </button>
+                                </div>
+
+                                <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-800" />
+
+                                <button 
+                                  onClick={() => { setEditingItem(item); setUploadedImageUrl(item.photo); }}
+                                  className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300"
+                                  title="Edit"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    if (confirm(`Remove placement record for student "${item.student_name}"?`)) {
+                                      await db.deletePlacement(item.id);
+                                      toast('Placement record deleted successfully.', 'info');
+                                      loadData();
+                                    }
+                                  }}
+                                  className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500"
+                                  title="Delete"
+                                >
+                                  <Trash size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Dynamic Simple Pagination controls */}
                   <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/20 text-xs">
                     <span className="text-slate-500">Page {currentPage} of records list</span>
@@ -2641,7 +3330,10 @@ export default function AdminManage() {
                           (activeTab === 'applications' && applications.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'contacts' && messages.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'faqs' && faqs.length <= currentPage * itemsPerPage) ||
-                          (activeTab === 'why_choose_us' && whyChooseUs.length <= currentPage * itemsPerPage)
+                          (activeTab === 'why_choose_us' && whyChooseUs.length <= currentPage * itemsPerPage) ||
+                          (activeTab === 'student_journey' && studentJourneySteps.length <= currentPage * itemsPerPage) ||
+                          (activeTab === 'industry_network' && industryPartners.length <= currentPage * itemsPerPage) ||
+                          (activeTab === 'placements' && adminPlacements.length <= currentPage * itemsPerPage)
                         }
                         className="p-2 px-3 bg-white dark:bg-slate-900 rounded-xl border dark:border-slate-800 disabled:opacity-50"
                       >

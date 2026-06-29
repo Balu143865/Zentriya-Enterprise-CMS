@@ -4,8 +4,8 @@ import {
   InternshipProgram, CourseItem, GalleryAlbum, GalleryItem, 
   TeamMember, TestimonialItem, JobListing, JobApplication, 
   ContactMessage, BlogPost, FaqItem, DownloadItem, 
-  ClientPartnerLogo, PlacementStat, ActivityLog, SystemNotification, UserProfile, UserRole,
-  WhyChooseUsItem
+  ClientPartnerLogo, PlacementStat, Placement, ActivityLog, SystemNotification, UserProfile, UserRole,
+  WhyChooseUsItem, StudentJourneyStep, IndustryPartner
 } from '../types';
 
 // @ts-ignore
@@ -442,7 +442,16 @@ const defaultTestimonials: TestimonialItem[] = [
     type: 'Student',
     text: 'The Full Stack Internship at Zentriya completely changed my trajectory. I learned GitHub collaboration, Dockerized containerization, and clean database structures. The mock interviews by Rahul Sir secured my offer at IBM.',
     rating: 5,
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&q=80'
+    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&q=80',
+    designation: 'Software Engineer',
+    company: 'IBM (Alumna)',
+    company_logo: 'ibm',
+    profile_photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&q=80',
+    review: 'The Full Stack Internship at Zentriya completely changed my trajectory. I learned GitHub collaboration, Dockerized containerization, and clean database structures. The mock interviews by Rahul Sir secured my offer at IBM.',
+    linkedin: 'https://linkedin.com',
+    is_verified: true,
+    display_order: 1,
+    is_active: true
   },
   {
     id: 'test_2',
@@ -451,7 +460,16 @@ const defaultTestimonials: TestimonialItem[] = [
     type: 'Corporate',
     text: 'We recruited 12 engineers from Zentriya IT solutions in our 2025 cycle. Every candidate had robust coding discipline, understood git commands thoroughly, and had worked on real APIs. Outstanding training quality.',
     rating: 5,
-    avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&q=80'
+    avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&q=80',
+    designation: 'VP of Technology',
+    company: 'InnoCorp Solutions Ltd',
+    company_logo: 'innocorp',
+    profile_photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&q=80',
+    review: 'We recruited 12 engineers from Zentriya IT Solutions in our 2025 drive. Every candidate had strong coding discipline, understood git commands thoroughly, and had worked on real APIs. Outstanding training quality!',
+    linkedin: 'https://linkedin.com',
+    is_verified: true,
+    display_order: 2,
+    is_active: true
   },
   {
     id: 'test_3',
@@ -460,7 +478,16 @@ const defaultTestimonials: TestimonialItem[] = [
     type: 'Student',
     text: 'Zentriyas Cloud Computing syllabus perfectly mimics what modern corporates use. Setting up AWS instances and configuring Terraform prepared me fully. Highly recommended training!',
     rating: 5,
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&q=80'
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&q=80',
+    designation: 'Systems Engineer',
+    company: 'Accenture (Alumnus)',
+    company_logo: 'accenture',
+    profile_photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&q=80',
+    review: 'Zentriya’s Cloud Computing syllabus perfectly mimics what modern corporates use. Setting up AWS instances and configuring Terraform prepared me fully. Highly recommended training!',
+    linkedin: 'https://linkedin.com',
+    is_verified: true,
+    display_order: 3,
+    is_active: true
   }
 ];
 
@@ -575,6 +602,131 @@ const defaultWhyChooseUs: WhyChooseUsItem[] = [
   }
 ];
 
+const defaultStudentJourneySteps: StudentJourneyStep[] = [
+  { id: 'sj_1', title: 'Registration', description: 'Register and consult with our career advisors to choose the right technology track matching your aspirations.', icon: 'UserPlus', display_order: 1, is_active: true },
+  { id: 'sj_2', title: 'Training & Skill Development', description: 'Undergo rigorous, hands-on, live interactive training sessions led by seasoned principal architects and mentors.', icon: 'BookOpen', display_order: 2, is_active: true },
+  { id: 'sj_3', title: 'Live Internship', description: 'Get onboarded onto active enterprise developer internship roles with real corporate standards and metrics.', icon: 'Briefcase', display_order: 3, is_active: true },
+  { id: 'sj_4', title: 'Real-Time Projects', description: 'Build production-ready projects, work with Git, Docker, CI/CD pipelines, and experience true enterprise-grade development.', icon: 'Terminal', display_order: 4, is_active: true },
+  { id: 'sj_5', title: 'Certification', description: 'Earn industry-recognized corporate certifications highlighting your verified practical skills and project experience.', icon: 'Award', display_order: 5, is_active: true },
+  { id: 'sj_6', title: 'Placement Assistance', description: 'Unlock direct recruitment channels, portfolio profiling, mock interviews, and land placements with leading tech companies.', icon: 'TrendingUp', display_order: 6, is_active: true }
+];
+
+const defaultIndustryPartners: IndustryPartner[] = [
+  {
+    id: 'partner_01',
+    company_name: 'Microsoft',
+    logo: 'https://logo.clearbit.com/microsoft.com',
+    website_url: 'https://www.microsoft.com',
+    display_order: 1,
+    is_active: true
+  },
+  {
+    id: 'partner_02',
+    company_name: 'Google',
+    logo: 'https://logo.clearbit.com/google.com',
+    website_url: 'https://www.google.com',
+    display_order: 2,
+    is_active: true
+  },
+  {
+    id: 'partner_03',
+    company_name: 'Amazon Web Services (AWS)',
+    logo: 'https://logo.clearbit.com/amazon.com',
+    website_url: 'https://aws.amazon.com',
+    display_order: 3,
+    is_active: true
+  },
+  {
+    id: 'partner_04',
+    company_name: 'IBM',
+    logo: 'https://logo.clearbit.com/ibm.com',
+    website_url: 'https://www.ibm.com',
+    display_order: 4,
+    is_active: true
+  },
+  {
+    id: 'partner_05',
+    company_name: 'Infosys',
+    logo: 'https://logo.clearbit.com/infosys.com',
+    website_url: 'https://www.infosys.com',
+    display_order: 5,
+    is_active: true
+  },
+  {
+    id: 'partner_06',
+    company_name: 'Tata Consultancy Services (TCS)',
+    logo: 'https://logo.clearbit.com/tcs.com',
+    website_url: 'https://www.tcs.com',
+    display_order: 6,
+    is_active: true
+  },
+  {
+    id: 'partner_07',
+    company_name: 'Accenture',
+    logo: 'https://logo.clearbit.com/accenture.com',
+    website_url: 'https://www.accenture.com',
+    display_order: 7,
+    is_active: true
+  },
+  {
+    id: 'partner_08',
+    company_name: 'Cognizant',
+    logo: 'https://logo.clearbit.com/cognizant.com',
+    website_url: 'https://www.cognizant.com',
+    display_order: 8,
+    is_active: true
+  },
+  {
+    id: 'partner_09',
+    company_name: 'Wipro',
+    logo: 'https://logo.clearbit.com/wipro.com',
+    website_url: 'https://www.wipro.com',
+    display_order: 9,
+    is_active: true
+  },
+  {
+    id: 'partner_10',
+    company_name: 'Capgemini',
+    logo: 'https://logo.clearbit.com/capgemini.com',
+    website_url: 'https://www.capgemini.com',
+    display_order: 10,
+    is_active: true
+  },
+  {
+    id: 'partner_11',
+    company_name: 'Oracle',
+    logo: 'https://logo.clearbit.com/oracle.com',
+    website_url: 'https://www.oracle.com',
+    display_order: 11,
+    is_active: true
+  },
+  {
+    id: 'partner_12',
+    company_name: 'Cisco',
+    logo: 'https://logo.clearbit.com/cisco.com',
+    website_url: 'https://www.cisco.com',
+    display_order: 12,
+    is_active: true
+  },
+  {
+    id: 'partner_13',
+    company_name: 'Dell Technologies',
+    logo: 'https://logo.clearbit.com/dell.com',
+    website_url: 'https://www.dell.com',
+    display_order: 13,
+    is_active: true
+  },
+  {
+    id: 'partner_14',
+    company_name: 'HCLTech',
+    logo: 'https://logo.clearbit.com/hcltech.com',
+    website_url: 'https://www.hcltech.com',
+    display_order: 14,
+    is_active: true
+  }
+];
+
+
 const defaultDownloads: DownloadItem[] = [
   { id: 'dl_1', title: 'Zentriya Corporate Brochure 2026', fileUrl: '#', category: 'Brochure', downloadsCount: 2450 },
   { id: 'dl_2', title: 'MERN Full-Stack Internship Syllabus PDF', fileUrl: '#', category: 'Syllabus', downloadsCount: 4210 },
@@ -592,6 +744,54 @@ const defaultPlacementStats: PlacementStat[] = [
   { id: 'p_1', studentName: 'Preeti Sharma', companyName: 'IBM India', packageLPA: 12.4, courseOrInternship: 'Full Stack Java Internship', studentPhoto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&h=120&fit=crop&q=80' },
   { id: 'p_2', studentName: 'Aditya Hegde', companyName: 'Microsoft GTSC', packageLPA: 18.5, courseOrInternship: 'Cloud & DevOps Bootcamp', studentPhoto: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=120&fit=crop&q=80' },
   { id: 'p_3', studentName: 'Rohan Nambiar', companyName: 'Accenture', packageLPA: 8.2, courseOrInternship: 'Full Stack Web (MERN)', studentPhoto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&q=80' }
+];
+
+const defaultPlacements: Placement[] = [
+  {
+    id: 'place_1',
+    student_name: 'Preeti Sharma',
+    photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop&crop=faces&q=80',
+    company_name: 'IBM',
+    company_logo: 'IBM',
+    job_role: 'Full Stack Java Developer',
+    degree: 'B.Tech (CSE)',
+    batch: '2024 Batch',
+    package: 12.4,
+    show_package: true,
+    placement_badge: 'Placed at IBM',
+    display_order: 1,
+    is_active: true
+  },
+  {
+    id: 'place_2',
+    student_name: 'Aditya Hegde',
+    photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=300&fit=crop&crop=faces&q=80',
+    company_name: 'Microsoft',
+    company_logo: 'Microsoft',
+    job_role: 'Cloud & DevOps Engineer',
+    degree: 'B.Tech (IT)',
+    batch: '2024 Batch',
+    package: 18.5,
+    show_package: true,
+    placement_badge: 'Placed at Microsoft',
+    display_order: 2,
+    is_active: true
+  },
+  {
+    id: 'place_3',
+    student_name: 'Rohan Nambiar',
+    photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop&crop=faces&q=80',
+    company_name: 'Accenture',
+    company_logo: 'Accenture',
+    job_role: 'Full Stack Web Developer',
+    degree: 'B.Tech (CSE)',
+    batch: '2024 Batch',
+    package: 8.2,
+    show_package: true,
+    placement_badge: 'Placed at Accenture',
+    display_order: 3,
+    is_active: true
+  }
 ];
 
 const defaultActivityLogs: ActivityLog[] = [
@@ -1388,6 +1588,57 @@ export const db = {
     return true;
   },
 
+  // Premium Placements (Dynamic Table)
+  async getPlacements(): Promise<Placement[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('placements')
+        .select('*')
+        .order('display_order', { ascending: true });
+      if (!error && data) return data as Placement[];
+    }
+    const local = getLocalData<Placement[]>('zentriya_placements', defaultPlacements);
+    return local.sort((a, b) => a.display_order - b.display_order);
+  },
+
+  async savePlacement(placement: Placement): Promise<Placement> {
+    const list = await this.getPlacements();
+    const index = list.findIndex(p => p.id === placement.id);
+    if (index >= 0) list[index] = placement;
+    else list.push(placement);
+    
+    const supabase = getSupabase();
+    if (supabase) {
+      const { error } = await supabase.from('placements').upsert(placement);
+      if (error) console.error('Supabase savePlacement failed:', error);
+    }
+    setLocalData('zentriya_placements', list);
+    return placement;
+  },
+
+  async deletePlacement(id: string): Promise<boolean> {
+    const list = await this.getPlacements();
+    const filtered = list.filter(p => p.id !== id);
+    
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('placements').delete().eq('id', id);
+    }
+    setLocalData('zentriya_placements', filtered);
+    return true;
+  },
+
+  async reorderPlacements(items: Placement[]): Promise<void> {
+    const supabase = getSupabase();
+    if (supabase) {
+      for (const item of items) {
+        await supabase.from('placements').upsert(item);
+      }
+    }
+    setLocalData('zentriya_placements', items);
+  },
+
   async getClientPartners(): Promise<ClientPartnerLogo[]> {
     const supabase = getSupabase();
     if (supabase) {
@@ -1474,7 +1725,7 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       const { data, error } = await supabase.from('why_choose_us').select('*').order('display_order', { ascending: true });
-      if (!error && data) return data as WhyChooseUsItem[];
+      if (!error && data && data.length > 0) return data as WhyChooseUsItem[];
     }
     const local = getLocalData<WhyChooseUsItem[]>('zentriya_why_choose_us', defaultWhyChooseUs);
     return local.sort((a, b) => a.display_order - b.display_order);
@@ -1518,6 +1769,196 @@ export const db = {
     setLocalData('zentriya_why_choose_us', updated);
   },
 
+  // --------------------------------------------------------------------
+  // STUDENT SUCCESS JOURNEY
+  // --------------------------------------------------------------------
+  async getStudentJourneySteps(): Promise<StudentJourneyStep[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      const { data, error } = await supabase.from('student_journey').select('*').order('display_order', { ascending: true });
+      if (!error && data && data.length > 0) return data as StudentJourneyStep[];
+    }
+    const local = getLocalData<StudentJourneyStep[]>('zentriya_student_journey', defaultStudentJourneySteps);
+    return local.sort((a, b) => a.display_order - b.display_order);
+  },
+
+  async saveStudentJourneyStep(step: StudentJourneyStep): Promise<StudentJourneyStep> {
+    const items = await this.getStudentJourneySteps();
+    const index = items.findIndex(i => i.id === step.id);
+    if (index >= 0) items[index] = step;
+    else items.push(step);
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('student_journey').upsert(step);
+    }
+    setLocalData('zentriya_student_journey', items);
+    return step;
+  },
+
+  async deleteStudentJourneyStep(id: string): Promise<boolean> {
+    const items = await this.getStudentJourneySteps();
+    const filtered = items.filter(i => i.id !== id);
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('student_journey').delete().eq('id', id);
+    }
+    setLocalData('zentriya_student_journey', filtered);
+    return true;
+  },
+
+  async saveStudentJourneyStepOrder(items: StudentJourneyStep[]): Promise<void> {
+    const updated = items.map((item, idx) => ({
+      ...item,
+      display_order: idx + 1
+    }));
+    const supabase = getSupabase();
+    if (supabase) {
+      for (const item of updated) {
+        await supabase.from('student_journey').upsert(item);
+      }
+    }
+    setLocalData('zentriya_student_journey', updated);
+  },
+
+  // --------------------------------------------------------------------
+  // INDUSTRY PARTNERS
+  // --------------------------------------------------------------------
+  async getIndustryPartners(): Promise<IndustryPartner[]> {
+    const supabase = getSupabase();
+    let partners: IndustryPartner[] = [];
+    let isSupabase = false;
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('industry_partners').select('*').order('display_order', { ascending: true });
+        if (!error && data && data.length > 0) {
+          partners = data as IndustryPartner[];
+          isSupabase = true;
+        }
+      } catch (e) {
+        console.error('Supabase query failed:', e);
+      }
+    }
+    
+    if (partners.length === 0) {
+      partners = getLocalData<IndustryPartner[]>('zentriya_industry_partners', defaultIndustryPartners);
+    }
+
+    const logoMap: { [key: string]: string } = {
+      'microsoft': 'https://logo.clearbit.com/microsoft.com',
+      'google': 'https://logo.clearbit.com/google.com',
+      'amazon': 'https://logo.clearbit.com/amazon.com',
+      'aws': 'https://logo.clearbit.com/amazon.com',
+      'ibm': 'https://logo.clearbit.com/ibm.com',
+      'infosys': 'https://logo.clearbit.com/infosys.com',
+      'tata': 'https://logo.clearbit.com/tcs.com',
+      'tcs': 'https://logo.clearbit.com/tcs.com',
+      'accenture': 'https://logo.clearbit.com/accenture.com',
+      'cognizant': 'https://logo.clearbit.com/cognizant.com',
+      'wipro': 'https://logo.clearbit.com/wipro.com',
+      'capgemini': 'https://logo.clearbit.com/capgemini.com',
+      'oracle': 'https://logo.clearbit.com/oracle.com',
+      'cisco': 'https://logo.clearbit.com/cisco.com',
+      'dell': 'https://logo.clearbit.com/dell.com',
+      'hcl': 'https://logo.clearbit.com/hcltech.com',
+      'hcltech': 'https://logo.clearbit.com/hcltech.com'
+    };
+
+    let logoMigrated = false;
+    partners = partners.map(partner => {
+      const nameLower = partner.company_name.toLowerCase();
+      let matchedLogo = '';
+      for (const [key, val] of Object.entries(logoMap)) {
+        if (nameLower.includes(key)) {
+          matchedLogo = val;
+          break;
+        }
+      }
+      if (matchedLogo && partner.logo !== matchedLogo) {
+        logoMigrated = true;
+        return { ...partner, logo: matchedLogo };
+      }
+      return partner;
+    });
+
+    if (logoMigrated) {
+      setLocalData('zentriya_industry_partners', partners);
+    }
+
+    // Merge missing default partners to make sure TCS, Cognizant, Wipro, and HCLTech are always present and visible
+    let updated = logoMigrated;
+    const currentList = [...partners];
+    for (const def of defaultIndustryPartners) {
+      const exists = currentList.some(p => 
+        p.id === def.id || 
+        p.company_name.toLowerCase().replace(/\s+/g, '') === def.company_name.toLowerCase().replace(/\s+/g, '') ||
+        p.company_name.toLowerCase().includes('tcs') && def.company_name.toLowerCase().includes('tcs') ||
+        p.company_name.toLowerCase().includes('cognizant') && def.company_name.toLowerCase().includes('cognizant') ||
+        p.company_name.toLowerCase().includes('wipro') && def.company_name.toLowerCase().includes('wipro') ||
+        p.company_name.toLowerCase().includes('hcl') && def.company_name.toLowerCase().includes('hcl')
+      );
+      if (!exists) {
+        currentList.push(def);
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      currentList.sort((a, b) => a.display_order - b.display_order);
+      setLocalData('zentriya_industry_partners', currentList);
+      if (supabase) {
+        // Safely push missing/updated ones to Supabase in the background
+        for (const item of currentList) {
+          try {
+            await supabase.from('industry_partners').upsert(item);
+          } catch (e) {
+            console.error('Failed to sync partner to Supabase:', e);
+          }
+        }
+      }
+      partners = currentList;
+    }
+
+    return partners.sort((a, b) => a.display_order - b.display_order);
+  },
+
+  async saveIndustryPartner(partner: IndustryPartner): Promise<IndustryPartner> {
+    const items = await this.getIndustryPartners();
+    const index = items.findIndex(i => i.id === partner.id);
+    if (index >= 0) items[index] = partner;
+    else items.push(partner);
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('industry_partners').upsert(partner);
+    }
+    setLocalData('zentriya_industry_partners', items);
+    return partner;
+  },
+
+  async deleteIndustryPartner(id: string): Promise<boolean> {
+    const items = await this.getIndustryPartners();
+    const filtered = items.filter(i => i.id !== id);
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('industry_partners').delete().eq('id', id);
+    }
+    setLocalData('zentriya_industry_partners', filtered);
+    return true;
+  },
+
+  async saveIndustryPartnerOrder(items: IndustryPartner[]): Promise<void> {
+    const updated = items.map((item, idx) => ({
+      ...item,
+      display_order: idx + 1
+    }));
+    const supabase = getSupabase();
+    if (supabase) {
+      for (const item of updated) {
+        await supabase.from('industry_partners').upsert(item);
+      }
+    }
+    setLocalData('zentriya_industry_partners', updated);
+  },
+
   getDbConfig() {
     return getDbConfig();
   },
@@ -1532,7 +1973,8 @@ export const db = {
       'zentriya_internships', 'zentriya_courses', 'zentriya_albums', 'zentriya_gallery',
       'zentriya_team', 'zentriya_testimonials', 'zentriya_jobs', 'zentriya_applications',
       'zentriya_contacts', 'zentriya_blogs', 'zentriya_faqs', 'zentriya_downloads',
-      'zentriya_placement_stats', 'zentriya_client_partners', 'zentriya_why_choose_us'
+      'zentriya_placement_stats', 'zentriya_client_partners', 'zentriya_why_choose_us',
+      'zentriya_student_journey', 'zentriya_industry_partners', 'zentriya_placements'
     ];
     const data: Record<string, any> = {};
     backupKeys.forEach(k => {
