@@ -324,5 +324,44 @@ export interface IndustryPartner {
   updated_at?: string;
 }
 
+export interface Article {
+  id: string;
+  title: string;
+  description: string;
+  excerpt?: string; // alias for Home.tsx
+  content?: string;
+  cover_image: string;
+  read_time: string;
+  read_time_minutes?: number; // alias for Home.tsx
+  category: string;
+  author_name: string;
+  author_image: string;
+  author_avatar?: string; // alias for Home.tsx
+  author_designation: string;
+  published_date: string;
+  published_at?: string; // alias for Home.tsx
+  display_order: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ArticleCategory {
+  id: string;
+  name: string;
+  icon: string;
+  display_order: number;
+  created_at?: string;
+}
+
+export interface ArticleStatistic {
+  id: string;
+  label: string;
+  value: string;
+  icon: string;
+  display_order: number;
+  created_at?: string;
+}
+
 
 

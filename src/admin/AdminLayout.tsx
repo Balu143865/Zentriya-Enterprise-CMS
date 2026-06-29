@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Settings, FileText, GraduationCap, 
   Layers, Image, Users, MessageSquare, Briefcase, 
   HelpCircle, LogOut, Moon, Sun, Bell, Terminal, Database,
-  ArrowLeft, Menu, X, Award, ShieldAlert, Milestone
+  ArrowLeft, Menu, X, Award, ShieldAlert, Milestone, BookOpen
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 
@@ -94,6 +94,7 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
     { name: 'Enterprise Courses', key: 'courses', path: '/admin/manage?tab=courses', icon: GraduationCap },
     { name: 'Media Gallery', key: 'gallery', path: '/admin/manage?tab=gallery', icon: Image },
     { name: 'Blogs & Articles', key: 'blogs', path: '/admin/manage?tab=blogs', icon: FileText },
+    { name: 'Tech Articles', key: 'articles', path: '/admin/manage?tab=articles', icon: BookOpen },
     { name: 'Team Management', key: 'team', path: '/admin/manage?tab=team', icon: Users },
     { name: 'Testimonials Feed', key: 'testimonials', path: '/admin/manage?tab=testimonials', icon: MessageSquare },
     { name: 'Careers & Jobs', key: 'careers', path: '/admin/manage?tab=careers', icon: Briefcase },

@@ -3,20 +3,22 @@ import { Link } from 'react-router-dom';
 import { 
   ArrowRight, Award, GraduationCap, CheckCircle2, 
   ChevronLeft, ChevronRight, TrendingUp, Sparkles, Send, Building,
-  Trophy, Users, ShieldCheck, Briefcase
+  Trophy, Users, ShieldCheck, Briefcase, Clock, Calendar, BookOpen, 
+  Cloud, Cpu, Shield, Layout, Settings, Eye, Download, Star, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../services/db';
 import { 
   HeroSlide, WebsiteSettings, ServiceItem, InternshipProgram, CourseItem,
   BlogPost, TestimonialItem, PlacementStat, Placement, ClientPartnerLogo,
-  WhyChooseUsItem, AboutSection
+  WhyChooseUsItem, AboutSection, Article, ArticleCategory, ArticleStatistic
 } from '../types';
 import LucideIcon from '../components/LucideIcon';
 import PremiumServices from '../components/PremiumServices';
 import StudentJourney from '../components/StudentJourney';
 import IndustryNetwork from '../components/IndustryNetwork';
 import CompanyLogo from '../components/CompanyLogo';
+import TechInsights from '../components/TechInsights';
 import { PremiumCourseCard, FloatingParticles } from './Courses';
 
 const containerVariants = {
@@ -1005,7 +1007,7 @@ export default function Home() {
                     return prev === 0 ? maxIndex : prev - 1;
                   });
                 }}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 lg:-translate-x-6 z-20 w-11 h-11 rounded-full flex items-center justify-center bg-white/90 dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-800 shadow-lg hover:scale-110 active:scale-95 hover:bg-gradient-to-tr hover:from-blue-600 hover:to-emerald-500 hover:text-white transition-all duration-300 cursor-pointer"
+                className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 lg:-translate-x-6 z-20 w-11 h-11 rounded-full items-center justify-center bg-white/90 dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-800 shadow-lg hover:scale-110 active:scale-95 hover:bg-gradient-to-tr hover:from-blue-600 hover:to-emerald-500 hover:text-white transition-all duration-300 cursor-pointer"
                 aria-label="Previous slide"
               >
                 <ChevronLeft size={20} />
@@ -1115,7 +1117,7 @@ export default function Home() {
                     return prev >= maxIndex ? 0 : prev + 1;
                   });
                 }}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 lg:-translate-x-6 z-20 w-11 h-11 rounded-full flex items-center justify-center bg-white/90 dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-800 shadow-lg hover:scale-110 active:scale-95 hover:bg-gradient-to-tr hover:from-blue-600 hover:to-emerald-500 hover:text-white transition-all duration-300 cursor-pointer"
+                className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 lg:translate-x-6 z-20 w-11 h-11 rounded-full items-center justify-center bg-white/90 dark:bg-slate-900/90 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-800 shadow-lg hover:scale-110 active:scale-95 hover:bg-gradient-to-tr hover:from-blue-600 hover:to-emerald-500 hover:text-white transition-all duration-300 cursor-pointer"
                 aria-label="Next slide"
               >
                 <ChevronRight size={20} />
@@ -1422,14 +1424,14 @@ export default function Home() {
                 <>
                   <button 
                     onClick={() => setTestIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length)}
-                    className="absolute left-0 sm:-left-4 top-1/2 -translate-y-1/2 z-25 w-11 h-11 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-slate-200/50 dark:border-slate-800/50 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
+                    className="hidden sm:flex absolute left-0 sm:-left-4 md:-left-8 top-1/2 -translate-y-1/2 z-25 w-11 h-11 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-slate-200/50 dark:border-slate-800/50 items-center justify-center text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
                     aria-label="Previous testimonials"
                   >
                     <ChevronLeft size={20} />
                   </button>
                   <button 
                     onClick={() => setTestIndex((prev) => (prev + 1) % testimonials.length)}
-                    className="absolute right-0 sm:-right-4 top-1/2 -translate-y-1/2 z-25 w-11 h-11 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-slate-200/50 dark:border-slate-800/50 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
+                    className="hidden sm:flex absolute right-0 sm:-right-4 md:-right-8 top-1/2 -translate-y-1/2 z-25 w-11 h-11 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-slate-200/50 dark:border-slate-800/50 items-center justify-center text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
                     aria-label="Next testimonials"
                   >
                     <ChevronRight size={20} />
@@ -1457,64 +1459,8 @@ export default function Home() {
         </section>
       )}
 
-      {/* 9. LATEST BLOGS & ARTICLES */}
-      {blogs.length > 0 && (
-        <section id="latest-blogs" className="py-20 bg-slate-100 dark:bg-slate-900/40 border-t border-slate-200/50 dark:border-slate-800/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-16 gap-4">
-              <div className="space-y-4">
-                <span className="text-blue-600 dark:text-blue-400 font-bold tracking-widest text-xs uppercase block">
-                  Tech Insights
-                </span>
-                <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
-                  Articles from Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500">Tech Council</span>
-                </h2>
-                <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
-                  Stay updated with advanced Cloud migrating tricks, serverless cost structures, and secure AI integrations.
-                </p>
-              </div>
-              <Link 
-                to="/blog"
-                className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-500 shrink-0 flex items-center gap-1.5"
-              >
-                View Tech Feed
-                <ArrowRight size={15} />
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {blogs.map((post) => (
-                <div 
-                  id={`home-blog-post-${post.id}`}
-                  key={post.id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-md hover:shadow-xl transition-all flex flex-col sm:flex-row gap-5 items-start"
-                >
-                  <img 
-                    src={post.imageUrl} 
-                    alt={post.title} 
-                    className="w-full sm:w-44 h-40 rounded-xl object-cover shrink-0"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="space-y-3 flex-1">
-                    <span className="text-[10px] bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-md font-bold uppercase tracking-wider font-mono">
-                      {post.category}
-                    </span>
-                    <h3 className="font-bold text-slate-900 dark:text-white text-base leading-tight tracking-tight hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-display">
-                      <Link to={`/blog`}>{post.title}</Link>
-                    </h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm line-clamp-2">
-                      {post.excerpt}
-                    </p>
-                    <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
-                      Published: {new Date(post.createdAt).toLocaleDateString()} &bull; Written by {post.author}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* 9. TECH INSIGHTS / ARTICLES SECTION */}
+      <TechInsights />
 
       {/* 10. CALL-TO-ACTION SECTION */}
       <section id="cta-action" className="py-20 bg-gradient-to-r from-blue-600 via-blue-700 to-emerald-600 text-white relative overflow-hidden">

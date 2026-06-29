@@ -8,7 +8,8 @@ import {
   InternshipProgram, CourseItem, GalleryItem, 
   TeamMember, TestimonialItem, JobListing, JobApplication, 
   ContactMessage, BlogPost, FaqItem, WhyChooseUsItem,
-  StudentJourneyStep, IndustryPartner, Placement
+  StudentJourneyStep, IndustryPartner, Placement,
+  Article, ArticleCategory, ArticleStatistic
 } from '../types';
 import { 
   Save, Plus, Trash, Edit, Check, Settings, Image, 
@@ -206,6 +207,9 @@ export default function AdminManage() {
   const [studentJourneySteps, setStudentJourneySteps] = useState<StudentJourneyStep[]>([]);
   const [industryPartners, setIndustryPartners] = useState<IndustryPartner[]>([]);
   const [adminPlacements, setAdminPlacements] = useState<Placement[]>([]);
+  const [adminArticles, setAdminArticles] = useState<Article[]>([]);
+  const [adminCategories, setAdminCategories] = useState<ArticleCategory[]>([]);
+  const [adminStats, setAdminStats] = useState<ArticleStatistic[]>([]);
 
   // Search, Filter, Pagination
   const [searchQuery, setSearchQuery] = useState('');
@@ -267,6 +271,11 @@ export default function AdminManage() {
           break;
         case 'blogs':
           setBlogs(await db.getBlogs());
+          break;
+        case 'articles':
+          setAdminArticles(await db.getArticles());
+          setAdminCategories(await db.getArticleCategories());
+          setAdminStats(await db.getArticleStatistics());
           break;
         case 'careers':
           setJobs(await db.getJobs());
@@ -363,6 +372,26 @@ export default function AdminManage() {
 
     await db.reorderPlacements(updatedList);
     toast('Placement record display order updated.', 'success');
+    loadData();
+  };
+
+  const handleReorderArticle = async (articleId: string, direction: 'up' | 'down') => {
+    const currentIndex = adminArticles.findIndex(a => a.id === articleId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= adminArticles.length) return;
+
+    const updatedList = [...adminArticles].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    const currentIdxInSorted = updatedList.findIndex(a => a.id === articleId);
+    const targetIdxInSorted = direction === 'up' ? currentIdxInSorted - 1 : currentIdxInSorted + 1;
+    if (targetIdxInSorted < 0 || targetIdxInSorted >= updatedList.length) return;
+
+    const tempOrder = updatedList[currentIdxInSorted].display_order;
+    updatedList[currentIdxInSorted].display_order = updatedList[targetIdxInSorted].display_order;
+    updatedList[targetIdxInSorted].display_order = tempOrder;
+
+    await db.saveArticlesOrder(updatedList);
+    toast('Article display order sequence updated.', 'success');
     loadData();
   };
 
@@ -1090,14 +1119,35 @@ export default function AdminManage() {
                           }
 
                           case 'testimonials': {
+                            const text = fd.get('text') as string;
+                            const profilePhoto = uploadedImageUrl || editingItem?.profile_photo || editingItem?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800';
+                            const designation = fd.get('designation') as string || '';
+                            const companyName = fd.get('company') as string || '';
+                            
+                            // fallback for legacy compatibility
+                            const fallbackCompanyOrCollege = companyName && designation 
+                              ? `${designation} at ${companyName}`
+                              : (fd.get('companyOrCollege') as string || '');
+
                             const newTest: TestimonialItem = {
                               id,
                               name: fd.get('name') as string,
-                              companyOrCollege: fd.get('companyOrCollege') as string,
+                              companyOrCollege: fallbackCompanyOrCollege,
                               type: fd.get('type') as 'Student' | 'Corporate',
-                              text: fd.get('text') as string,
+                              text: text,
                               rating: Number(fd.get('rating')) || 5,
-                              avatarUrl: uploadedImageUrl || editingItem?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800'
+                              avatarUrl: profilePhoto,
+                              
+                              // New DB fields
+                              designation: designation,
+                              company: companyName,
+                              company_logo: fd.get('company_logo') as string || '',
+                              profile_photo: profilePhoto,
+                              review: text,
+                              linkedin: fd.get('linkedin') as string || '',
+                              is_verified: fd.get('is_verified') === 'true',
+                              display_order: Number(fd.get('display_order')) ?? 99,
+                              is_active: fd.get('is_active') === 'true',
                             };
                             await db.saveTestimonial(newTest);
                             break;
@@ -1119,6 +1169,36 @@ export default function AdminManage() {
                               createdAt: editingItem?.createdAt || new Date().toISOString()
                             };
                             await db.saveBlogPost(newBlog);
+                            break;
+                          }
+
+                          case 'articles': {
+                            const title = fd.get('title') as string;
+                            const desc = fd.get('description') as string;
+                            const rTime = fd.get('read_time') as string || '5 min read';
+                            const pDate = editingItem?.published_date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                            const authImg = fd.get('author_image') as string || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80';
+                            
+                            const newArticle: Article = {
+                              id,
+                              title,
+                              description: desc,
+                              excerpt: desc,
+                              content: fd.get('content') as string,
+                              category: fd.get('category') as string || 'Cloud & DevOps',
+                              cover_image: uploadedImageUrl || editingItem?.cover_image || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800',
+                              read_time: rTime,
+                              read_time_minutes: parseInt(rTime) || 5,
+                              author_name: fd.get('author_name') as string || 'Zentriya Architect',
+                              author_designation: fd.get('author_designation') as string || 'Cloud Lead',
+                              author_image: authImg,
+                              author_avatar: authImg,
+                              is_active: fd.get('is_active') === 'true',
+                              published_date: pDate,
+                              published_at: pDate,
+                              display_order: editingItem ? editingItem.display_order : (adminArticles.length + 1)
+                            };
+                            await db.saveArticle(newArticle);
                             break;
                           }
 
@@ -1546,6 +1626,65 @@ export default function AdminManage() {
                       </div>
                     )}
 
+                    {/* TECH ARTICLES FORM */}
+                    {activeTab === 'articles' && (
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+                        <div className="md:col-span-8 space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Article Title Heading *</label>
+                            <input type="text" name="title" defaultValue={editingItem?.title || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white font-bold" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Excerpt / Short Description *</label>
+                            <textarea rows={2} name="description" defaultValue={editingItem?.description || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Rich HTML Content Body *</label>
+                            <textarea rows={10} name="content" defaultValue={editingItem?.content || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white leading-relaxed" placeholder="<h2>Your heading</h2><p>Your content body...</p>" />
+                          </div>
+                        </div>
+
+                        <div className="md:col-span-4 space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Category *</label>
+                            <select name="category" defaultValue={editingItem?.category || 'Cloud & DevOps'} className="w-full bg-slate-50 dark:bg-slate-950 p-2 rounded text-xs text-slate-750 dark:text-white">
+                              {adminCategories.map(cat => (
+                                <option key={cat.id} value={cat.name}>{cat.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Read Time (e.g. '5 min read')</label>
+                            <input type="text" name="read_time" defaultValue={editingItem?.read_time || '5 min read'} className="w-full bg-slate-50 dark:bg-slate-950 p-2 rounded text-xs text-slate-900 dark:text-white" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Author Name</label>
+                            <input type="text" name="author_name" defaultValue={editingItem?.author_name || 'Zentriya Principal Consultant'} className="w-full bg-slate-50 dark:bg-slate-950 p-2 rounded text-xs text-slate-900 dark:text-white" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Author Designation</label>
+                            <input type="text" name="author_designation" defaultValue={editingItem?.author_designation || 'Principal Solutions Architect'} className="w-full bg-slate-50 dark:bg-slate-950 p-2 rounded text-xs text-slate-900 dark:text-white" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Author Avatar URL</label>
+                            <input type="text" name="author_image" defaultValue={editingItem?.author_image || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80'} className="w-full bg-slate-50 dark:bg-slate-950 p-2 rounded text-xs text-slate-900 dark:text-white" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Status</label>
+                            <select name="is_active" defaultValue={editingItem?.is_active !== false ? 'true' : 'false'} className="w-full bg-slate-50 dark:bg-slate-950 p-2 rounded text-xs text-slate-700 dark:text-white">
+                              <option value="true">Published & Active</option>
+                              <option value="false">Disabled / Draft</option>
+                            </select>
+                          </div>
+                          <ImageDropzone 
+                            label="Cover Image" 
+                            value={uploadedImageUrl || editingItem?.cover_image || ''} 
+                            onChange={setUploadedImageUrl} 
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     {/* TEAM FORM */}
                     {activeTab === 'team' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1592,15 +1731,49 @@ export default function AdminManage() {
                     {activeTab === 'testimonials' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="space-y-4">
-                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Reviewer Name *</label>
-                            <input type="text" name="name" defaultValue={editingItem?.name || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Corporate Title or College Name *</label>
-                            <input type="text" name="companyOrCollege" defaultValue={editingItem?.companyOrCollege || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
-                          </div>
                           <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Reviewer Name *</label>
+                              <input type="text" name="name" defaultValue={editingItem?.name || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">LinkedIn Profile URL</label>
+                              <input type="url" name="linkedin" placeholder="https://linkedin.com/in/username" defaultValue={editingItem?.linkedin || ''} className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Designation / Role *</label>
+                              <input type="text" name="designation" placeholder="e.g. Software Engineer / Alumna" defaultValue={editingItem?.designation || (editingItem?.companyOrCollege ? editingItem.companyOrCollege.split(' at ')[0] : '')} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Company Name *</label>
+                              <input type="text" name="company" placeholder="e.g. IBM / Accenture" defaultValue={editingItem?.company || (editingItem?.companyOrCollege ? (editingItem.companyOrCollege.includes(' at ') ? editingItem.companyOrCollege.split(' at ')[1] : editingItem.companyOrCollege) : '')} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Company Logo Accent *</label>
+                              <select name="company_logo" defaultValue={editingItem?.company_logo || ''} className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-750 dark:text-white">
+                                <option value="">None / Custom Text</option>
+                                <option value="ibm">IBM</option>
+                                <option value="accenture">Accenture</option>
+                                <option value="innocorp">Innocorp</option>
+                                <option value="capgemini">Capgemini</option>
+                                <option value="tcs">TCS</option>
+                                <option value="infosys">Infosys</option>
+                                <option value="wipro">Wipro</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Star Rating (1 to 5) *</label>
+                              <input type="number" name="rating" min={1} max={5} defaultValue={editingItem?.rating || 5} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-1">
                               <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Testimonial Type *</label>
                               <select name="type" defaultValue={editingItem?.type || 'Student'} className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-750 dark:text-white">
@@ -1609,20 +1782,38 @@ export default function AdminManage() {
                               </select>
                             </div>
                             <div className="space-y-1">
-                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Star Rating (1 to 5) *</label>
-                              <input type="number" name="rating" min={1} max={5} defaultValue={editingItem?.rating || 5} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Verified Badge *</label>
+                              <select name="is_verified" defaultValue={editingItem?.is_verified !== false ? 'true' : 'false'} className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-750 dark:text-white">
+                                <option value="true">Verified Reviewer</option>
+                                <option value="false">Unverified</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Display Order *</label>
+                              <input type="number" name="display_order" min={0} defaultValue={editingItem?.display_order ?? 99} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
                             </div>
                           </div>
+
+                          <div className="grid grid-cols-1 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Active Status *</label>
+                              <select name="is_active" defaultValue={editingItem?.is_active !== false ? 'true' : 'false'} className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-750 dark:text-white">
+                                <option value="true">Active (Visible)</option>
+                                <option value="false">Disabled (Hidden)</option>
+                              </select>
+                            </div>
+                          </div>
+
                           <div className="space-y-1">
                             <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Testimonial Review text *</label>
-                            <textarea rows={4} name="text" defaultValue={editingItem?.text || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            <textarea rows={4} name="text" defaultValue={editingItem?.text || editingItem?.review || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
                           </div>
                         </div>
 
                         <div className="space-y-4">
                           <ImageDropzone 
                             label="Reviewer Profile Photo" 
-                            value={uploadedImageUrl || editingItem?.avatarUrl || ''} 
+                            value={uploadedImageUrl || editingItem?.profile_photo || editingItem?.avatarUrl || ''} 
                             onChange={setUploadedImageUrl} 
                           />
                         </div>
@@ -2575,6 +2766,267 @@ export default function AdminManage() {
                     </div>
                   )}
 
+                  {activeTab === 'articles' && (
+                    <div className="space-y-8">
+                      {/* 1. DYNAMIC STATISTICS GRID */}
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-2xl border dark:border-slate-800 space-y-4">
+                        <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                          <Layers className="text-emerald-500" size={16} />
+                          Live Statistics Configuration Bar
+                        </h3>
+                        <p className="text-[11px] text-slate-400">These 5 statistics are displayed at the bottom of the Tech Insights section in real-time.</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                          {adminStats.sort((a,b) => a.display_order - b.display_order).map((stat) => (
+                            <div key={stat.id} className="bg-white dark:bg-slate-950 p-4 rounded-xl border dark:border-slate-850 space-y-2 shadow-sm">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-emerald-500 uppercase">Stat {stat.display_order}</span>
+                                <LucideIcon name={stat.icon} size={14} className="text-slate-400" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-bold text-slate-400 block">Label</label>
+                                <input 
+                                  type="text" 
+                                  defaultValue={stat.label} 
+                                  onBlur={async (e) => {
+                                    const val = e.target.value;
+                                    if (val && val !== stat.label) {
+                                      await db.saveArticleStatistic({ ...stat, label: val });
+                                      toast('Statistic label updated.', 'success');
+                                      loadData();
+                                    }
+                                  }}
+                                  className="w-full bg-slate-50 dark:bg-slate-900 p-1.5 rounded text-[11px] text-slate-800 dark:text-slate-200"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-bold text-slate-400 block">Value</label>
+                                <input 
+                                  type="text" 
+                                  defaultValue={stat.value} 
+                                  onBlur={async (e) => {
+                                    const val = e.target.value;
+                                    if (val && val !== stat.value) {
+                                      await db.saveArticleStatistic({ ...stat, value: val });
+                                      toast('Statistic value updated.', 'success');
+                                      loadData();
+                                    }
+                                  }}
+                                  className="w-full bg-slate-50 dark:bg-slate-900 p-1.5 rounded text-[11px] text-slate-850 dark:text-slate-200 font-bold"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-bold text-slate-400 block">Icon Name</label>
+                                <input 
+                                  type="text" 
+                                  defaultValue={stat.icon} 
+                                  onBlur={async (e) => {
+                                    const val = e.target.value;
+                                    if (val && val !== stat.icon) {
+                                      await db.saveArticleStatistic({ ...stat, icon: val });
+                                      toast('Statistic icon updated.', 'success');
+                                      loadData();
+                                    }
+                                  }}
+                                  className="w-full bg-slate-50 dark:bg-slate-900 p-1.5 rounded text-[11px] font-mono text-slate-500"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 2. MAIN LAYOUT: CATEGORIES & ARTICLES */}
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* CATEGORY MANAGER COLUMN */}
+                        <div className="lg:col-span-4 space-y-4">
+                          <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border dark:border-slate-800 space-y-4">
+                            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                              Category Manager
+                            </h3>
+                            
+                            {/* Create New Category Form */}
+                            <form 
+                              onSubmit={async (e) => {
+                                e.preventDefault();
+                                const form = e.currentTarget;
+                                const fd = new FormData(form);
+                                const name = fd.get('name') as string;
+                                const icon = fd.get('icon') as string || 'Layers';
+                                
+                                if (!name) return;
+                                await db.saveArticleCategory({
+                                  id: 'cat_' + Date.now(),
+                                  name,
+                                  icon,
+                                  display_order: adminCategories.length + 1
+                                });
+                                toast('New article category created.', 'success');
+                                form.reset();
+                                loadData();
+                              }}
+                              className="bg-white dark:bg-slate-950 p-4 rounded-xl border dark:border-slate-850 space-y-3 shadow-sm"
+                            >
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-500 block">Category Name</label>
+                                <input type="text" name="name" required placeholder="e.g. Cybersecurity" className="w-full bg-slate-50 dark:bg-slate-900 p-2 rounded text-xs text-slate-900 dark:text-white" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-500 block">Icon Class (from Lucide)</label>
+                                <input type="text" name="icon" defaultValue="Layers" placeholder="Layers, Award, Globe, etc." className="w-full bg-slate-50 dark:bg-slate-900 p-2 rounded text-xs text-slate-900 dark:text-white" />
+                              </div>
+                              <button type="submit" className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-colors">
+                                <Plus size={13} />
+                                Add Category
+                              </button>
+                            </form>
+
+                            {/* List of Existing Categories */}
+                            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                              {adminCategories.sort((a,b) => a.display_order - b.display_order).map((cat) => (
+                                <div key={cat.id} className="bg-white dark:bg-slate-950 p-3 rounded-xl border dark:border-slate-850 flex items-center justify-between shadow-sm">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-900 flex items-center justify-center shrink-0">
+                                      <LucideIcon name={cat.icon} size={13} className="text-emerald-500" />
+                                    </div>
+                                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{cat.name}</span>
+                                  </div>
+                                  <button 
+                                    onClick={async () => {
+                                      if (adminCategories.length <= 1) {
+                                        toast('Must retain at least one category.', 'warning');
+                                        return;
+                                      }
+                                      if (confirm(`Remove category: "${cat.name}"? Articles using this category will still exist but should be re-assigned.`)) {
+                                        await db.deleteArticleCategory(cat.id);
+                                        toast('Category deleted.', 'info');
+                                        loadData();
+                                      }
+                                    }}
+                                    className="p-1 hover:bg-red-50 dark:hover:bg-red-950/20 rounded text-red-500 transition-colors"
+                                    title="Delete category"
+                                  >
+                                    <Trash size={12} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ARTICLES LIST COLUMN */}
+                        <div className="lg:col-span-8">
+                          <div className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                            {adminArticles.length === 0 ? (
+                              <div className="p-16 text-center text-slate-400">
+                                No technical articles found. Click "Add New Record" at the top to write your first article.
+                              </div>
+                            ) : (
+                              paginate(adminArticles).map((article, idx) => {
+                                const isFirst = (currentPage - 1) * itemsPerPage + idx === 0;
+                                const isLast = (currentPage - 1) * itemsPerPage + idx === adminArticles.length - 1;
+                                
+                                return (
+                                  <div key={article.id} className="p-5 flex flex-col sm:flex-row items-center gap-5 justify-between hover:bg-slate-50/50 dark:hover:bg-slate-950/25 transition-colors">
+                                    <div className="flex items-center gap-4 flex-1 w-full sm:w-auto">
+                                      <img 
+                                        src={article.cover_image} 
+                                        alt={article.title} 
+                                        className="w-20 h-14 object-cover rounded-xl border shrink-0 bg-slate-100" 
+                                        referrerPolicy="no-referrer"
+                                      />
+                                      <div className="space-y-1 min-w-0 flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-[8px] bg-emerald-500/10 text-emerald-600 font-bold px-2 py-0.5 rounded uppercase">
+                                            {article.category}
+                                          </span>
+                                          {article.is_active ? (
+                                            <span className="text-[8px] bg-blue-500/10 text-blue-600 font-bold px-2 py-0.5 rounded uppercase">
+                                              Active
+                                            </span>
+                                          ) : (
+                                            <span className="text-[8px] bg-slate-500/10 text-slate-500 font-bold px-2 py-0.5 rounded uppercase">
+                                              Draft
+                                            </span>
+                                          )}
+                                        </div>
+                                        <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">
+                                          {article.title}
+                                        </h4>
+                                        <p className="text-[10px] text-slate-400 font-medium truncate">
+                                          By {article.author_name} &bull; {article.read_time}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      {/* Reorder Buttons */}
+                                      <div className="flex items-center gap-1 border-r border-slate-200 dark:border-slate-800 pr-2">
+                                        <button
+                                          onClick={() => handleReorderArticle(article.id, 'up')}
+                                          disabled={isFirst}
+                                          className={`p-1.5 rounded-lg transition-colors ${isFirst ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                          title="Move Up"
+                                        >
+                                          <ArrowUp size={12} />
+                                        </button>
+                                        <button
+                                          onClick={() => handleReorderArticle(article.id, 'down')}
+                                          disabled={isLast}
+                                          className={`p-1.5 rounded-lg transition-colors ${isLast ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                          title="Move Down"
+                                        >
+                                          <ArrowDown size={12} />
+                                        </button>
+                                      </div>
+
+                                      {/* Status Toggle Button */}
+                                      <button
+                                        onClick={async () => {
+                                          const nextActive = !article.is_active;
+                                          await db.saveArticle({ ...article, is_active: nextActive });
+                                          toast(`Article status changed to ${nextActive ? 'Active' : 'Draft'}.`, 'success');
+                                          loadData();
+                                        }}
+                                        className={`p-2 rounded-xl border transition-all ${
+                                          article.is_active 
+                                            ? 'bg-blue-50 hover:bg-blue-100 border-blue-100 text-blue-600' 
+                                            : 'bg-slate-50 hover:bg-slate-100 border-slate-250 text-slate-500'
+                                        }`}
+                                        title={article.is_active ? "Switch to Draft" : "Switch to Active"}
+                                      >
+                                        <Eye size={14} />
+                                      </button>
+
+                                      <button 
+                                        onClick={() => { setEditingItem(article); setUploadedImageUrl(article.cover_image); }}
+                                        className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300 border dark:border-slate-800"
+                                      >
+                                        <Edit size={14} />
+                                      </button>
+                                      <button 
+                                        onClick={async () => {
+                                          if (confirm(`Remove dynamic tech article: "${article.title}"?`)) {
+                                            await db.deleteArticle(article.id);
+                                            toast('Dynamic tech article deleted.', 'info');
+                                            loadData();
+                                          }
+                                        }}
+                                        className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 border border-red-100"
+                                      >
+                                        <Trash size={14} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {activeTab === 'team' && (
                     <div className="divide-y divide-slate-100 dark:divide-slate-800">
                       {team.length === 0 ? (
@@ -3324,6 +3776,7 @@ export default function AdminManage() {
                           (activeTab === 'courses' && courses.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'gallery' && galleryItems.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'blogs' && blogs.length <= currentPage * itemsPerPage) ||
+                          (activeTab === 'articles' && adminArticles.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'team' && team.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'testimonials' && testimonials.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'careers' && jobs.length <= currentPage * itemsPerPage) ||

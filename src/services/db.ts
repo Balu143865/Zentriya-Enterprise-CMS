@@ -5,7 +5,8 @@ import {
   TeamMember, TestimonialItem, JobListing, JobApplication, 
   ContactMessage, BlogPost, FaqItem, DownloadItem, 
   ClientPartnerLogo, PlacementStat, Placement, ActivityLog, SystemNotification, UserProfile, UserRole,
-  WhyChooseUsItem, StudentJourneyStep, IndustryPartner
+  WhyChooseUsItem, StudentJourneyStep, IndustryPartner,
+  Article, ArticleCategory, ArticleStatistic
 } from '../types';
 
 // @ts-ignore
@@ -538,6 +539,80 @@ const defaultJobs: JobListing[] = [
   }
 ];
 
+const defaultArticles: Article[] = [
+  {
+    id: 'art_1',
+    title: 'Demystifying Serverless Architectures for Enterprise Platforms',
+    description: 'Explore how serverless models help businesses reduce infrastructure cost to zero during idle periods while maintaining scalability and reliability.',
+    excerpt: 'Explore how serverless models help businesses reduce infrastructure cost to zero during idle periods while maintaining scalability and reliability.',
+    cover_image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80',
+    read_time: '6 min read',
+    read_time_minutes: 6,
+    category: 'Cloud & DevOps',
+    author_name: 'Dr. Anand Kumar',
+    author_image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+    author_avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+    author_designation: 'Cloud Architect',
+    published_date: 'Jun 18, 2026',
+    published_at: 'Jun 18, 2026',
+    display_order: 1,
+    is_active: true
+  },
+  {
+    id: 'art_2',
+    title: 'The AI Revolution: Integrating Custom LLM APIs Safely into Corporate Systems',
+    description: 'Learn the essential security architectures required to proxy Generative AI services safely without exposing sensitive data or violating compliance.',
+    excerpt: 'Learn the essential security architectures required to proxy Generative AI services safely without exposing sensitive data or violating compliance.',
+    cover_image: 'https://images.unsplash.com/photo-1527474305487-b87b222841cc?w=800&q=80',
+    read_time: '7 min read',
+    read_time_minutes: 7,
+    category: 'AI & Machine Learning',
+    author_name: 'Er. Suresh Deshmukh',
+    author_image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150',
+    author_avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150',
+    author_designation: 'AI Solutions Architect',
+    published_date: 'Jun 20, 2026',
+    published_at: 'Jun 20, 2026',
+    display_order: 2,
+    is_active: true
+  },
+  {
+    id: 'art_3',
+    title: 'Cloud Cost Optimization 2026: Strategies That Actually Work',
+    description: 'Deep dive into proven cost optimization techniques using modern cloud-native services and serverless patterns for maximum ROI.',
+    excerpt: 'Deep dive into proven cost optimization techniques using modern cloud-native services and serverless patterns for maximum ROI.',
+    cover_image: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=800&q=80',
+    read_time: '5 min read',
+    read_time_minutes: 5,
+    category: 'Cloud Architecture',
+    author_name: 'Priya Nair',
+    author_image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    author_avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    author_designation: 'Cloud FinOps Engineer',
+    published_date: 'Jun 22, 2026',
+    published_at: 'Jun 22, 2026',
+    display_order: 3,
+    is_active: true
+  }
+];
+
+const defaultArticleCategories: ArticleCategory[] = [
+  { id: 'cat_1', name: 'All Articles', icon: 'BookOpen', display_order: 1 },
+  { id: 'cat_2', name: 'Cloud & DevOps', icon: 'Cloud', display_order: 2 },
+  { id: 'cat_3', name: 'AI & Machine Learning', icon: 'Cpu', display_order: 3 },
+  { id: 'cat_4', name: 'Security', icon: 'Shield', display_order: 4 },
+  { id: 'cat_5', name: 'Architecture', icon: 'Layout', display_order: 5 },
+  { id: 'cat_6', name: 'Engineering', icon: 'Settings', display_order: 6 }
+];
+
+const defaultArticleStatistics: ArticleStatistic[] = [
+  { id: 'stat_1', label: 'Articles Published', value: '250+', icon: 'BookOpen', display_order: 1 },
+  { id: 'stat_2', label: 'Expert Authors', value: '50+', icon: 'Users', display_order: 2 },
+  { id: 'stat_3', label: 'Monthly Readers', value: '120K+', icon: 'Eye', display_order: 3 },
+  { id: 'stat_4', label: 'Resource Downloads', value: '15K+', icon: 'Download', display_order: 4 },
+  { id: 'stat_5', label: 'Reader Rating', value: '4.8/5', icon: 'Star', display_order: 5 }
+];
+
 const defaultBlogs: BlogPost[] = [
   {
     id: 'blog_1',
@@ -570,6 +645,7 @@ const defaultBlogs: BlogPost[] = [
     createdAt: '2026-06-20T09:15:00Z'
   }
 ];
+
 
 const defaultFaqs: FaqItem[] = [
   { id: 'faq_1', question: 'Does Zentriya offer a placement guarantee for interns?', answer: 'We offer a comprehensive 100% placement referral and coordination program. Students who successfully complete their project assignments, pass our internal coding reviews, and participate in mock interviews get active referrals to our partner network of 120+ software agencies.', category: 'Internships' },
@@ -1959,6 +2035,170 @@ export const db = {
     setLocalData('zentriya_industry_partners', updated);
   },
 
+  // --------------------------------------------------------------------
+  // TECH ARTICLES (SUPABASE & LOCAL STORAGE MODE)
+  // --------------------------------------------------------------------
+  async getArticles(): Promise<Article[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('articles').select('*').order('display_order', { ascending: true });
+        if (!error && data && data.length > 0) return data as Article[];
+      } catch (e) {
+        console.warn('Supabase query failed for articles:', e);
+      }
+    }
+    return getLocalData<Article[]>('zentriya_articles', defaultArticles).sort((a, b) => a.display_order - b.display_order);
+  },
+
+  async saveArticle(article: Article): Promise<Article> {
+    const items = await this.getArticles();
+    const index = items.findIndex(i => i.id === article.id);
+    if (index >= 0) items[index] = article;
+    else items.push(article);
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('articles').upsert(article);
+      } catch (e) {
+        console.warn('Supabase upsert failed for article:', e);
+      }
+    }
+    setLocalData('zentriya_articles', items);
+    this.logActivity('Article Saved', `Saved tech article: "${article.title}".`);
+    return article;
+  },
+
+  async deleteArticle(id: string): Promise<boolean> {
+    const items = await this.getArticles();
+    const filtered = items.filter(i => i.id !== id);
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('articles').delete().eq('id', id);
+      } catch (e) {
+        console.warn('Supabase delete failed for article:', e);
+      }
+    }
+    setLocalData('zentriya_articles', filtered);
+    this.logActivity('Article Deleted', `Deleted tech article with ID: ${id}`);
+    return true;
+  },
+
+  async saveArticlesOrder(items: Article[]): Promise<void> {
+    const updated = items.map((item, idx) => ({
+      ...item,
+      display_order: idx + 1
+    }));
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        for (const item of updated) {
+          await supabase.from('articles').upsert(item);
+        }
+      } catch (e) {
+        console.warn('Supabase upsert order failed for articles:', e);
+      }
+    }
+    setLocalData('zentriya_articles', updated);
+  },
+
+  // --------------------------------------------------------------------
+  // ARTICLE CATEGORIES (SUPABASE & LOCAL STORAGE MODE)
+  // --------------------------------------------------------------------
+  async getArticleCategories(): Promise<ArticleCategory[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('article_categories').select('*').order('display_order', { ascending: true });
+        if (!error && data && data.length > 0) return data as ArticleCategory[];
+      } catch (e) {
+        console.warn('Supabase query failed for article_categories:', e);
+      }
+    }
+    return getLocalData<ArticleCategory[]>('zentriya_article_categories', defaultArticleCategories).sort((a, b) => a.display_order - b.display_order);
+  },
+
+  async saveArticleCategory(category: ArticleCategory): Promise<ArticleCategory> {
+    const items = await this.getArticleCategories();
+    const index = items.findIndex(i => i.id === category.id);
+    if (index >= 0) items[index] = category;
+    else items.push(category);
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('article_categories').upsert(category);
+      } catch (e) {
+        console.warn('Supabase upsert failed for category:', e);
+      }
+    }
+    setLocalData('zentriya_article_categories', items);
+    return category;
+  },
+
+  async deleteArticleCategory(id: string): Promise<boolean> {
+    const items = await this.getArticleCategories();
+    const filtered = items.filter(i => i.id !== id);
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('article_categories').delete().eq('id', id);
+      } catch (e) {
+        console.warn('Supabase delete failed for category:', e);
+      }
+    }
+    setLocalData('zentriya_article_categories', filtered);
+    return true;
+  },
+
+  // --------------------------------------------------------------------
+  // ARTICLE STATISTICS (SUPABASE & LOCAL STORAGE MODE)
+  // --------------------------------------------------------------------
+  async getArticleStatistics(): Promise<ArticleStatistic[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('article_statistics').select('*').order('display_order', { ascending: true });
+        if (!error && data && data.length > 0) return data as ArticleStatistic[];
+      } catch (e) {
+        console.warn('Supabase query failed for article_statistics:', e);
+      }
+    }
+    return getLocalData<ArticleStatistic[]>('zentriya_article_statistics', defaultArticleStatistics).sort((a, b) => a.display_order - b.display_order);
+  },
+
+  async saveArticleStatistic(stat: ArticleStatistic): Promise<ArticleStatistic> {
+    const items = await this.getArticleStatistics();
+    const index = items.findIndex(i => i.id === stat.id);
+    if (index >= 0) items[index] = stat;
+    else items.push(stat);
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('article_statistics').upsert(stat);
+      } catch (e) {
+        console.warn('Supabase upsert failed for statistic:', e);
+      }
+    }
+    setLocalData('zentriya_article_statistics', items);
+    return stat;
+  },
+
+  async deleteArticleStatistic(id: string): Promise<boolean> {
+    const items = await this.getArticleStatistics();
+    const filtered = items.filter(i => i.id !== id);
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('article_statistics').delete().eq('id', id);
+      } catch (e) {
+        console.warn('Supabase delete failed for statistic:', e);
+      }
+    }
+    setLocalData('zentriya_article_statistics', filtered);
+    return true;
+  },
+
   getDbConfig() {
     return getDbConfig();
   },
@@ -1974,7 +2214,8 @@ export const db = {
       'zentriya_team', 'zentriya_testimonials', 'zentriya_jobs', 'zentriya_applications',
       'zentriya_contacts', 'zentriya_blogs', 'zentriya_faqs', 'zentriya_downloads',
       'zentriya_placement_stats', 'zentriya_client_partners', 'zentriya_why_choose_us',
-      'zentriya_student_journey', 'zentriya_industry_partners', 'zentriya_placements'
+      'zentriya_student_journey', 'zentriya_industry_partners', 'zentriya_placements',
+      'zentriya_articles', 'zentriya_article_categories', 'zentriya_article_statistics'
     ];
     const data: Record<string, any> = {};
     backupKeys.forEach(k => {
