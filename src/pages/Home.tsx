@@ -20,6 +20,7 @@ import IndustryNetwork from '../components/IndustryNetwork';
 import CompanyLogo from '../components/CompanyLogo';
 import TechInsights from '../components/TechInsights';
 import { PremiumCourseCard, FloatingParticles } from './Courses';
+import { AnimatedHeader, AnimatedCardContainer, AnimatedCard } from '../components/AnimatedTransitions';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -773,7 +774,7 @@ export default function Home() {
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             {/* Section Header */}
-            <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+            <AnimatedHeader className="text-center max-w-3xl mx-auto mb-16 space-y-4">
               <span className="text-emerald-600 dark:text-emerald-400 font-bold tracking-widest text-xs uppercase block font-mono">
                 Corporate Distinction
               </span>
@@ -781,7 +782,7 @@ export default function Home() {
                 {whyChooseUsTitle}
               </h2>
               <div className="h-1 w-20 bg-gradient-to-r from-emerald-500 to-blue-600 mx-auto rounded-full" />
-            </div>
+            </AnimatedHeader>
 
             {/* Features Grid */}
             <motion.div 
@@ -797,7 +798,7 @@ export default function Home() {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, margin: "-100px" }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-8"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
             >
               {whyChooseUs.map((item) => (
                 <motion.div
@@ -880,7 +881,7 @@ export default function Home() {
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             {/* Section Header */}
-            <div className="text-center max-w-3xl mx-auto mb-16 space-y-5">
+            <AnimatedHeader className="text-center max-w-3xl mx-auto mb-16 space-y-5">
               {/* SMALL LABEL: OUR PROGRAMS with tech dots and accent lines */}
               <div className="flex items-center justify-center gap-4 text-emerald-400 font-mono text-xs font-black tracking-[0.25em] uppercase select-none">
                 <span className="flex items-center gap-1.5 opacity-80">
@@ -910,19 +911,20 @@ export default function Home() {
                 <div className="w-2 h-2 rounded-full border border-emerald-500/50" />
                 <div className="w-12 h-[1px] bg-gradient-to-l from-transparent to-emerald-500/50" />
               </div>
-            </div>
+            </AnimatedHeader>
 
             {/* Courses Cards Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <AnimatedCardContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {courses.map((course) => (
-                <PremiumCourseCard 
-                  key={course.id}
-                  course={course}
-                  expandedSyllabus={expandedSyllabus}
-                  toggleSyllabus={toggleSyllabus}
-                />
+                <AnimatedCard key={course.id}>
+                  <PremiumCourseCard 
+                    course={course}
+                    expandedSyllabus={expandedSyllabus}
+                    toggleSyllabus={toggleSyllabus}
+                  />
+                </AnimatedCard>
               ))}
-            </div>
+            </AnimatedCardContainer>
 
             {/* Bottom CTA with curved dotted arrows */}
             <div className="relative flex flex-col sm:flex-row justify-center items-center py-16 gap-6 select-none">
@@ -976,7 +978,7 @@ export default function Home() {
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             {/* Section Header */}
-            <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+            <AnimatedHeader className="text-center max-w-3xl mx-auto mb-16 space-y-4">
               <span className="text-xs font-black tracking-widest text-blue-600 dark:text-blue-400 uppercase bg-blue-50 dark:bg-blue-950/40 px-3.5 py-1.5 rounded-full inline-block">
                 RECENT PLACEMENT RECORDS
               </span>
@@ -994,7 +996,7 @@ export default function Home() {
               <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
                 Meet our talented students who have successfully transitioned from classroom learning to top-tier companies.
               </p>
-            </div>
+            </AnimatedHeader>
 
             {/* Carousel Slider Controls Container */}
             <div className="relative group/slider px-2">
@@ -1238,7 +1240,7 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
             
             {/* Section Header */}
-            <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
+            <AnimatedHeader className="text-center max-w-3xl mx-auto mb-20 space-y-4">
               <div className="flex items-center justify-center gap-3">
                 <div className="w-8 h-[2px] bg-blue-500 rounded-full" />
                 <span className="text-blue-600 dark:text-blue-400 font-extrabold tracking-widest text-xs uppercase block">
@@ -1263,7 +1265,7 @@ export default function Home() {
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 <div className="w-10 h-[3px] bg-emerald-500 rounded-r-full" />
               </div>
-            </div>
+            </AnimatedHeader>
 
             {/* Carousel Container */}
             <div className="relative px-4 sm:px-12">

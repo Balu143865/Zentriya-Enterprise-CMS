@@ -8,6 +8,7 @@ import {
   Users, Eye, Download, Star
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { AnimatedHeader, AnimatedCardContainer, AnimatedCard } from './AnimatedTransitions';
 
 // CountUpStat Component for statistics
 const CountUpStat = ({ value, label, icon: IconName }: { value: string, label: string, icon: string, key?: any }) => {
@@ -129,9 +130,11 @@ export default function TechInsights() {
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024) {
+      if (window.innerWidth >= 1280) {
+        setArticleCardsToShow(4);
+      } else if (window.innerWidth >= 1024) {
         setArticleCardsToShow(3);
-      } else if (window.innerWidth >= 768) {
+      } else if (window.innerWidth >= 640) {
         setArticleCardsToShow(2);
       } else {
         setArticleCardsToShow(1);
@@ -171,7 +174,7 @@ export default function TechInsights() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         
         {/* Section Header */}
-        <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-16 relative z-10">
+        <AnimatedHeader className="flex flex-col items-center text-center max-w-3xl mx-auto mb-16 relative z-10">
           <div className="inline-flex items-center gap-2 mb-3">
             <div className="w-8 h-px bg-gradient-to-r from-transparent to-blue-500" />
             <span className="text-blue-600 dark:text-blue-400 font-extrabold tracking-widest text-[11px] uppercase font-mono">
@@ -187,7 +190,7 @@ export default function TechInsights() {
           <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base leading-relaxed max-w-2xl">
             Stay updated with advanced Cloud migration tricks, serverless cost structures, and secure AI integrations.
           </p>
-        </div>
+        </AnimatedHeader>
 
         {/* Filter Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 relative z-10">
@@ -261,7 +264,7 @@ export default function TechInsights() {
 
               {/* Carousel Window */}
               <div className="overflow-hidden w-full py-4">
-                <div 
+                <AnimatedCardContainer 
                   className="flex gap-0 transition-all duration-500 ease-out"
                   style={{
                     transform: `translateX(-${articleIndex * (100 / articleCardsToShow)}%)`,
@@ -269,19 +272,19 @@ export default function TechInsights() {
                   }}
                 >
                   {filtered.map((article) => (
-                    <div
+                    <AnimatedCard
                       key={article.id}
                       style={{
                         flex: `0 0 ${100 / articleCardsToShow}%`,
                       }}
-                      className="px-3 shrink-0"
+                      className="px-2.5 shrink-0"
                     >
                       <div
                         id={`home-article-card-${article.id}`}
-                        className="group bg-white/80 dark:bg-slate-900/65 backdrop-blur-md rounded-[24px] border border-slate-200/60 dark:border-slate-800/40 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-2xl hover:shadow-blue-500/10 hover:border-blue-200/60 transition-all duration-300 hover:-translate-y-2 flex flex-col h-full overflow-hidden"
+                        className="group bg-white/80 dark:bg-slate-900/65 backdrop-blur-md rounded-[20px] border border-slate-200/60 dark:border-slate-800/40 shadow-[0_6px_24px_rgb(0,0,0,0.02)] hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-200/60 transition-all duration-300 hover:-translate-y-1.5 flex flex-col h-full overflow-hidden max-w-[320px] mx-auto w-full"
                       >
                         {/* Card Cover Image */}
-                        <div className="relative h-56 w-full overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-950">
+                        <div className="relative h-44 w-full overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-950">
                           <img 
                             src={article.cover_image || "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&fit=crop&q=80"} 
                             alt={article.title} 
@@ -289,64 +292,64 @@ export default function TechInsights() {
                             referrerPolicy="no-referrer"
                           />
                           {/* Read Time Badge */}
-                          <div className="absolute top-4 right-4 bg-slate-950/70 backdrop-blur text-white text-[10px] font-extrabold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
-                            <Clock size={11} className="text-blue-400" />
+                          <div className="absolute top-3.5 right-3.5 bg-slate-950/70 backdrop-blur text-white text-[9px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                            <Clock size={10} className="text-blue-400" />
                             {article.read_time_minutes} min read
                           </div>
                         </div>
 
                         {/* Card Info Content */}
-                        <div className="p-6 flex-1 flex flex-col justify-between">
+                        <div className="p-4.5 flex-1 flex flex-col justify-between">
                           <div className="flex-1">
                             {/* Category Badge */}
-                            <span className={`inline-block text-[9px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider mb-3.5 border ${getCategoryBadgeClass(article.category)}`}>
+                            <span className={`inline-block text-[8px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-2.5 border ${getCategoryBadgeClass(article.category)}`}>
                               {article.category}
                             </span>
                             
                             {/* Title */}
-                            <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug mb-2 font-display">
+                            <h3 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug mb-1.5 font-display">
                               <Link to="/blog">{article.title}</Link>
                             </h3>
 
                             {/* Excerpt */}
-                            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm line-clamp-3 mb-6 leading-relaxed">
+                            <p className="text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs line-clamp-3 mb-4 leading-relaxed">
                               {article.excerpt || article.description}
                             </p>
                           </div>
 
                           {/* Divider line */}
-                          <div className="w-full h-px bg-slate-100 dark:bg-slate-800/60 my-4" />
+                          <div className="w-full h-px bg-slate-100 dark:bg-slate-800/60 my-3" />
 
                           {/* Author Row */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-2">
                               <img 
                                 src={article.author_avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80"} 
                                 alt={article.author_name} 
-                                className="w-9 h-9 rounded-full object-cover border border-slate-100 dark:border-slate-800"
+                                className="w-8 h-8 rounded-full object-cover border border-slate-100 dark:border-slate-800"
                                 referrerPolicy="no-referrer"
                               />
                               <div className="flex flex-col text-left">
-                                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                                <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100 leading-tight">
                                   {article.author_name}
                                 </span>
-                                <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 leading-none mt-0.5">
+                                <span className="text-[8px] font-semibold text-slate-400 dark:text-slate-500 leading-none mt-0.5">
                                   {article.author_designation}
                                 </span>
                               </div>
                             </div>
                             
                             {/* Date Published */}
-                            <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[10px] font-semibold shrink-0 font-mono">
-                              <Calendar size={11} />
+                            <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[9px] font-semibold shrink-0 font-mono">
+                              <Calendar size={10} />
                               <span>{new Date(article.published_at || article.created_at || '').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </AnimatedCard>
                   ))}
-                </div>
+                </AnimatedCardContainer>
               </div>
 
               {/* Pagination Dots */}

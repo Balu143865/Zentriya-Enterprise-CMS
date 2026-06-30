@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
+import { AnimatedHeader } from './AnimatedTransitions';
 import LucideIcon from './LucideIcon';
 import { 
   Check, ShieldCheck, Cpu, Star, GraduationCap, Users, 
@@ -282,7 +283,7 @@ export default function PremiumServices({ services, onSelectService }: PremiumSe
       <div className="max-w-[1650px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 relative z-10">
         
         {/* SECTION HEADER */}
-        <div className="text-center max-w-4xl mx-auto mb-20 space-y-4">
+        <AnimatedHeader className="text-center max-w-4xl mx-auto mb-20 space-y-4">
           
           {/* Custom vector header ornament exactly like reference */}
           <div className="flex items-center justify-center gap-4">
@@ -312,7 +313,7 @@ export default function PremiumServices({ services, onSelectService }: PremiumSe
           <p className="text-slate-400 text-sm sm:text-base md:text-lg font-light leading-relaxed max-w-3xl mx-auto pt-1">
             End-to-end IT training, development, and innovation services designed to empower individuals and organizations.
           </p>
-        </div>
+        </AnimatedHeader>
 
         {/* SERVICES CARDS WRAPPER */}
         <motion.div

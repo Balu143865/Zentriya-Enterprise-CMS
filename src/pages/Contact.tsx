@@ -3,6 +3,7 @@ import { db } from '../services/db';
 import { WebsiteSettings } from '../types';
 import { Mail, Phone, Globe, Send, MessageSquare, ExternalLink } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import { AnimatedHeader, AnimatedCardContainer, AnimatedCard } from '../components/AnimatedTransitions';
 
 export default function Contact() {
   const [settings, setSettings] = useState<WebsiteSettings | null>(null);
@@ -57,9 +58,9 @@ export default function Contact() {
     <div id="contact-page-root" className="bg-slate-50 dark:bg-slate-950 min-h-screen pb-20">
       
       {/* Page Header */}
-      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white py-16 sm:py-20 text-center relative border-b border-slate-800">
+      <AnimatedHeader className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white py-16 sm:py-20 text-center relative border-b border-slate-800">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent)]" />
-        <div className="max-w-4xl mx-auto px-4 relative z-10 space-y-4 animate-fade-in">
+        <div className="max-w-4xl mx-auto px-4 relative z-10 space-y-4">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 font-bold tracking-widest text-xs uppercase block">
             Let's Collaborate
           </span>
@@ -70,13 +71,13 @@ export default function Contact() {
             Have an enterprise product to scale, or need to discuss university training alliances? Drop us a line or connect with our support desk.
           </p>
         </div>
-      </div>
+      </AnimatedHeader>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <AnimatedCardContainer className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           
           {/* Left Column - Contact Details & Map */}
-          <div className="lg:col-span-5 space-y-8">
+          <AnimatedCard className="lg:col-span-5 space-y-8">
             
             <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
               <h3 className="font-extrabold text-slate-900 dark:text-white text-lg tracking-tight border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -133,10 +134,10 @@ export default function Contact() {
               </div>
             </div>
 
-          </div>
+          </AnimatedCard>
 
           {/* Right Column - Contact Form */}
-          <div className="lg:col-span-7">
+          <AnimatedCard className="lg:col-span-7">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
               <h3 className="font-extrabold text-slate-900 dark:text-white text-lg tracking-tight mb-2">
                 Leave an Inquiry Message
@@ -223,9 +224,9 @@ export default function Contact() {
 
               </form>
             </div>
-          </div>
+          </AnimatedCard>
 
-        </div>
+        </AnimatedCardContainer>
       </div>
 
     </div>

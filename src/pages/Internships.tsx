@@ -5,6 +5,7 @@ import { BookOpen, Clock, Check, Award, ArrowRight, Users, Cloud, Brain, Briefca
 import { useToast } from '../components/Toast';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { AnimatedHeader } from '../components/AnimatedTransitions';
 
 // Container variants for staggered entrance
 const containerVariants = {
@@ -507,7 +508,7 @@ export default function Internships() {
       <FloatingParticles />
 
       {/* Hero Header Block */}
-      <div className="py-20 sm:py-24 text-center relative z-10 max-w-5xl mx-auto px-4 space-y-6 animate-fade-in">
+      <AnimatedHeader className="py-20 sm:py-24 text-center relative z-10 max-w-5xl mx-auto px-4 space-y-6">
         
         {/* SMALL LABEL: DIRECT CAREERS with tech dots and accent lines */}
         <div className="flex items-center justify-center gap-4 text-emerald-400 font-mono text-xs font-black tracking-[0.25em] uppercase select-none">
@@ -538,7 +539,7 @@ export default function Internships() {
           <div className="w-2 h-2 rounded-full border border-emerald-500/50" />
           <div className="w-12 h-[1px] bg-gradient-to-l from-transparent to-emerald-500/50" />
         </div>
-      </div>
+      </AnimatedHeader>
 
       {/* Main Grid Viewport */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-12">

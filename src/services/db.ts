@@ -545,6 +545,16 @@ const defaultArticles: Article[] = [
     title: 'Demystifying Serverless Architectures for Enterprise Platforms',
     description: 'Explore how serverless models help businesses reduce infrastructure cost to zero during idle periods while maintaining scalability and reliability.',
     excerpt: 'Explore how serverless models help businesses reduce infrastructure cost to zero during idle periods while maintaining scalability and reliability.',
+    content: `<h2>The Rise of Serverless Compute</h2>
+<p>For decades, enterprise platforms were hosted on massive, heavy server architectures that required persistent care and feeding from IT teams. If a system experienced a traffic surge, servers crashed. If traffic slumped, companies overpaid for unused CPU hours. Serverless computing completely rewrites this calculus.</p>
+<h3>What is Serverless?</h3>
+<p>Contrary to its name, servers are still involved, but the developer never has to provision, manage, or patch them. Code is packaged into functional execution routes (like AWS Lambda, Google Cloud Functions, or Cloud Run) that boot up dynamically when triggered, perform their task, and instantly scale back down to zero.</p>
+<h3>Why Enterprises are Migrating</h3>
+<ul>
+  <li><strong>Zero idle overhead:</strong> Pay exclusively for the exact milliseconds your code runs.</li>
+  <li><strong>Auto-scalability:</strong> Instantly handle sudden surges without manual intervention.</li>
+  <li><strong>Developer Focus:</strong> Spend hours writing core business logic instead of debugging OS kernels.</li>
+</ul>`,
     cover_image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80',
     read_time: '6 min read',
     read_time_minutes: 6,
@@ -563,6 +573,12 @@ const defaultArticles: Article[] = [
     title: 'The AI Revolution: Integrating Custom LLM APIs Safely into Corporate Systems',
     description: 'Learn the essential security architectures required to proxy Generative AI services safely without exposing sensitive data or violating compliance.',
     excerpt: 'Learn the essential security architectures required to proxy Generative AI services safely without exposing sensitive data or violating compliance.',
+    content: `<h2>Enterprise AI Integration Safely</h2>
+<p>Generative Artificial Intelligence is transforming productivity. From custom customer service agents to smart internal search tools, companies are eager to harness LLM models like Gemini. However, simply copy-pasting API keys into public frontends is a massive security hazard.</p>
+<h3>The Risk: Exposed Keys & Data Leakage</h3>
+<p>If an API key is shipped in client-side code, anyone can inspect the browser devtools, steal the key, and rack up thousands of dollars of costs. Furthermore, uploading sensitive corporate intellectual property into generic public AI models risks training public networks on your proprietary information.</p>
+<h3>The Solution: Server-Side Proxies & Private Endpoints</h3>
+<p>To safely utilize AI capabilities, enterprises must route all LLM requests through secure, authenticated backend APIs, utilizing environment secrets. In this article, we outline best practices for engineering high-integrity, rate-limited, and safe AI middleware layers.</p>`,
     cover_image: 'https://images.unsplash.com/photo-1527474305487-b87b222841cc?w=800&q=80',
     read_time: '7 min read',
     read_time_minutes: 7,
@@ -581,10 +597,18 @@ const defaultArticles: Article[] = [
     title: 'Cloud Cost Optimization 2026: Strategies That Actually Work',
     description: 'Deep dive into proven cost optimization techniques using modern cloud-native services and serverless patterns for maximum ROI.',
     excerpt: 'Deep dive into proven cost optimization techniques using modern cloud-native services and serverless patterns for maximum ROI.',
+    content: `<h2>Mastering Cloud Cost Optimization</h2>
+<p>Public cloud resources are simple to spin up, which often leads to "cloud sprawl" and astronomical monthly invoices. Optimization is no longer just about shutting down unused machines; it is about active financial engineering (FinOps).</p>
+<h3>Proven Techniques for Reducing Cost</h3>
+<ul>
+  <li><strong>Rightsizing Compute:</strong> Audit CPU and RAM telemetry using CloudWatch or Google Cloud Monitoring to match resource size with actual application workloads.</li>
+  <li><strong>Leveraging Spot/Preemptible Instances:</strong> Use non-critical compute pools for stateless workers at discounts up to 80%.</li>
+  <li><strong>Implementing Autonomic Scale:</strong> Combine serverless databases with auto-scaling compute groups to match real-time demand curves.</li>
+</ul>`,
     cover_image: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=800&q=80',
     read_time: '5 min read',
     read_time_minutes: 5,
-    category: 'Cloud Architecture',
+    category: 'Architecture',
     author_name: 'Priya Nair',
     author_image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
     author_avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
@@ -592,6 +616,126 @@ const defaultArticles: Article[] = [
     published_date: 'Jun 22, 2026',
     published_at: 'Jun 22, 2026',
     display_order: 3,
+    is_active: true
+  },
+  {
+    id: 'art_4',
+    title: 'Architecting Zero Trust Microservices in High-Scale Kubernetes',
+    description: 'Discover how Zero Trust networks prevent internal lateral attacks in modern containerized orchestrations and microservices.',
+    excerpt: 'Discover how Zero Trust networks prevent internal lateral attacks in modern containerized orchestrations and microservices.',
+    content: `<h2>The Philosophy of Zero Trust</h2>
+<p>In traditional network models, everything inside the perimeter firewall is trusted implicitly. However, if a single service is compromised, malicious actors can move laterally across your network unchecked. Zero Trust eliminates implicit trust, requiring continuous authentication and verification at every layer.</p>
+<h3>Implementing Microsegmentation</h3>
+<p>By enforcing strict ingress and egress network security policies inside your Kubernetes cluster, you isolate service boundaries. For example, your public-facing frontend microservice should never be allowed to communicate directly with your main transactional databases.</p>
+<h3>Mutual TLS (mTLS) by Default</h3>
+<p>Using service meshes like Istio or Linkerd, every single API call between your services is encrypted and mutually authenticated via short-lived TLS certificates, keeping internal communications completely secure.</p>`,
+    cover_image: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&q=80',
+    read_time: '8 min read',
+    read_time_minutes: 8,
+    category: 'Security',
+    author_name: 'Rahul Sen',
+    author_image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150',
+    author_avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150',
+    author_designation: 'Principal Security Analyst',
+    published_date: 'Jun 23, 2026',
+    published_at: 'Jun 23, 2026',
+    display_order: 4,
+    is_active: true
+  },
+  {
+    id: 'art_5',
+    title: 'Event-Driven Systems: Transitioning from Monolith to Event Sourcing',
+    description: 'Learn structural principles of event sourcing, CQRS patterns, and highly resilient stream ingestion using Apache Kafka.',
+    excerpt: 'Learn structural principles of event sourcing, CQRS patterns, and highly resilient stream ingestion using Apache Kafka.',
+    content: `<h2>Moving Beyond Relational CRUD</h2>
+<p>Traditional monolithic applications store state exclusively in relational database tables. However, as organizations scale, tracking complex histories and high-concurrency writes becomes a major bottleneck. Event Sourcing models state as a chronological sequence of immutable events.</p>
+<h3>The Power of CQRS</h3>
+<p>Command Query Responsibility Segregation (CQRS) splits your system into write-optimized services (commands) and read-optimized services (queries). This prevents slow search query routines from locking up database write transactions.</p>
+<h3>Stream Processing with Apache Kafka</h3>
+<p>By using Kafka as your distributed write-ahead log, you create a fault-tolerant system capable of ingest rates in the millions of messages per second, enabling real-time stream processing, live dashboards, and robust microservices integration.</p>`,
+    cover_image: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80',
+    read_time: '6 min read',
+    read_time_minutes: 6,
+    category: 'Architecture',
+    author_name: 'Meera Deshpande',
+    author_image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+    author_avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+    author_designation: 'Chief Systems Architect',
+    published_date: 'Jun 24, 2026',
+    published_at: 'Jun 24, 2026',
+    display_order: 5,
+    is_active: true
+  },
+  {
+    id: 'art_6',
+    title: 'Advanced React 19 Hydration Patterns and Server Actions',
+    description: 'Master React 19 server-side rendering updates, concurrent transitions, streaming HTML, and robust partial state hydrations.',
+    excerpt: 'Master React 19 server-side rendering updates, concurrent transitions, streaming HTML, and robust partial state hydrations.',
+    content: `<h2>Hydration and Performance in React 19</h2>
+<p>React 19 brings some of the most fundamental shifts in frontend architecture since React hooks. At the center of these changes are deep performance optimizations around how server-rendered markup is hydrated in the client browser.</p>
+<h3>Server Actions and Progressive Enhancement</h3>
+<p>React 19 Server Actions allow developers to pass client-side form submissions directly to asynchronous server functions. This enables progressive enhancement, where forms are fully interactive and functional even before JavaScript has completed loading on the page.</p>
+<h3>Streaming HTML and Suspense</h3>
+<p>By leveraging HTML streaming, your server can send critical components (like headers and primary content) first, and stream delayed heavy components (like tables or charts) as soon as they finish generating, dramatically improving perceived site speed.</p>`,
+    cover_image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80',
+    read_time: '5 min read',
+    read_time_minutes: 5,
+    category: 'Engineering',
+    author_name: 'Vikram Joshi',
+    author_image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+    author_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+    author_designation: 'Staff Frontend Engineer',
+    published_date: 'Jun 25, 2026',
+    published_at: 'Jun 25, 2026',
+    display_order: 6,
+    is_active: true
+  },
+  {
+    id: 'art_7',
+    title: 'Fine-Tuning Small Language Models (SLMs) for Edge Deployment',
+    description: 'How to distill knowledge from large models to lightweight edge models running locally on mobile devices and IoT.',
+    excerpt: 'How to distill knowledge from large models to lightweight edge models running locally on mobile devices and IoT.',
+    content: `<h2>The Edge AI Paradigm</h2>
+<p>Hosting large-scale AI models in the cloud is expensive and introduces network latency. Small Language Models (SLMs) with 1B to 3B parameters can now be fine-tuned to perform highly specialized tasks (such as sentiment analysis or query parsing) directly on local consumer devices.</p>
+<h3>Knowledge Distillation Explained</h3>
+<p>Knowledge distillation is a machine learning process where a lightweight "student" model is trained to mimic the behavior and outputs of a massive "teacher" model (like Gemini 1.5 Pro). This preserves the majority of the reasoning power while reducing the hardware requirements by orders of magnitude.</p>
+<h3>Quantization for Mobile Chipsets</h3>
+<p>By converting 32-bit floating-point weights to 8-bit or 4-bit integers, developers can run models locally on edge chipsets with minimal loss in accuracy and minimal power consumption.</p>`,
+    cover_image: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80',
+    read_time: '9 min read',
+    read_time_minutes: 9,
+    category: 'AI & Machine Learning',
+    author_name: 'Dr. Sarah Jenkins',
+    author_image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+    author_avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+    author_designation: 'ML Research Lead',
+    published_date: 'Jun 26, 2026',
+    published_at: 'Jun 26, 2026',
+    display_order: 7,
+    is_active: true
+  },
+  {
+    id: 'art_8',
+    title: 'DevSecOps Blueprint: Automating Vulnerability Scans in CI/CD Pipelines',
+    description: 'Integrate automatic static application security testing (SAST), secrets detection, and container scanners cleanly into GitHub Actions CI.',
+    excerpt: 'Integrate automatic static application security testing (SAST), secrets detection, and container scanners cleanly into GitHub Actions CI.',
+    content: `<h2>Automating Security in CI/CD</h2>
+<p>Waiting for manual audits or quarterly security reviews to find security holes is a recipe for disaster. High-performing engineering groups embed security automated tests directly into their continuous integration (CI) workflows, a practice known as DevSecOps.</p>
+<h3>Static Analysis (SAST) and Dependency Auditing</h3>
+<p>Automate security scanning on every Git push. Tools like SonarQube, Snyk, and npm-audit analyze your source code for common anti-patterns (such as SQL injection vectors or insecure packages) before code is merged into production branches.</p>
+<h3>Detecting Hardcoded Secrets</h3>
+<p>Integrate secret scanning tools like GitGuardian or gitleaks into your pipelines to prevent developers from accidentally committing database passwords, AWS credentials, or API keys to public repositories.</p>`,
+    cover_image: 'https://images.unsplash.com/photo-1607799279861-4dd421887fb3?w=800&q=80',
+    read_time: '6 min read',
+    read_time_minutes: 6,
+    category: 'Security',
+    author_name: 'Arjun Mehta',
+    author_image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    author_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    author_designation: 'DevSecOps Specialist',
+    published_date: 'Jun 27, 2026',
+    published_at: 'Jun 27, 2026',
+    display_order: 8,
     is_active: true
   }
 ];
@@ -2048,7 +2192,12 @@ export const db = {
         console.warn('Supabase query failed for articles:', e);
       }
     }
-    return getLocalData<Article[]>('zentriya_articles', defaultArticles).sort((a, b) => a.display_order - b.display_order);
+    const local = getLocalData<Article[]>('zentriya_articles', defaultArticles);
+    if (local.length < defaultArticles.length) {
+      setLocalData('zentriya_articles', defaultArticles);
+      return defaultArticles.sort((a, b) => a.display_order - b.display_order);
+    }
+    return local.sort((a, b) => a.display_order - b.display_order);
   },
 
   async saveArticle(article: Article): Promise<Article> {

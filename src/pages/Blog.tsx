@@ -7,6 +7,7 @@ import {
   Users, Eye, Download, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { AnimatedHeader } from '../components/AnimatedTransitions';
 
 // Container variants for staggered card entry animations
 const containerVariants = {
@@ -473,7 +474,7 @@ export default function Blog() {
       <FloatingParticles />
 
       {/* Hero Header Section */}
-      <div className="py-20 sm:py-24 text-center relative z-10 max-w-5xl mx-auto px-4 space-y-6">
+      <AnimatedHeader className="py-20 sm:py-24 text-center relative z-10 max-w-5xl mx-auto px-4 space-y-6">
         {/* Dynamic Label */}
         <div className="flex items-center justify-center gap-4 text-blue-600 dark:text-emerald-400 font-mono text-xs font-black tracking-[0.25em] uppercase select-none">
           <span className="flex items-center gap-1.5 opacity-80">
@@ -503,7 +504,7 @@ export default function Blog() {
           <div className="w-2 h-2 rounded-full border border-blue-500 dark:border-emerald-500/50" />
           <div className="w-12 h-[1px] bg-gradient-to-l from-transparent to-blue-500 dark:to-emerald-500/50" />
         </div>
-      </div>
+      </AnimatedHeader>
 
       {/* Main Grid Viewport */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-12">
@@ -666,6 +667,64 @@ export default function Blog() {
                   className="text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed space-y-4 prose dark:prose-invert max-w-none prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-blue-600 dark:prose-a:text-emerald-400 hover:prose-a:text-blue-500 dark:hover:prose-a:text-emerald-300 font-light"
                   dangerouslySetInnerHTML={{ __html: activeReadArticle.content || '' }}
                 />
+
+                {/* Related Articles Section */}
+                {(() => {
+                  const related = articles
+                    .filter(a => a.id !== activeReadArticle.id && (
+                      a.category.toLowerCase() === activeReadArticle.category.toLowerCase() ||
+                      a.category.toLowerCase().includes(activeReadArticle.category.toLowerCase()) ||
+                      activeReadArticle.category.toLowerCase().includes(a.category.toLowerCase())
+                    ))
+                    .slice(0, 3);
+
+                  // Fallback to fill up to 3 articles
+                  const finalRelated = [...related];
+                  if (finalRelated.length < 3) {
+                    const extras = articles
+                      .filter(a => a.id !== activeReadArticle.id && !finalRelated.some(r => r.id === a.id))
+                      .slice(0, 3 - finalRelated.length);
+                    finalRelated.push(...extras);
+                  }
+
+                  if (finalRelated.length === 0) return null;
+
+                  return (
+                    <div className="pt-8 border-t border-slate-200 dark:border-slate-800/80 space-y-4">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white font-mono flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-emerald-400" />
+                        Related Tech Insights
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {finalRelated.map((relArt) => (
+                          <div 
+                            key={relArt.id}
+                            onClick={() => {
+                              setActiveReadArticle(relArt);
+                              // Scroll the modal scrollable container back to top
+                              const container = document.querySelector('.max-h-\\[calc\\(90vh-11rem\\)\\]');
+                              if (container) container.scrollTop = 0;
+                            }}
+                            className="group/rel cursor-pointer bg-slate-50 dark:bg-slate-950/40 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 border border-slate-200/60 dark:border-slate-800/60 hover:border-blue-400/50 rounded-2xl p-4 transition-all duration-300 flex flex-col justify-between h-full space-y-3 shadow-sm hover:shadow-md"
+                          >
+                            <div className="space-y-2">
+                              <span className="inline-block text-[8px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-emerald-400">
+                                {relArt.category}
+                              </span>
+                              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover/rel:text-blue-600 dark:group-hover/rel:text-emerald-400 transition-colors line-clamp-2 leading-snug">
+                                {relArt.title}
+                              </h4>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 dark:text-slate-500 font-mono">
+                              <Clock size={10} />
+                              <span>{relArt.read_time || '5 min read'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Bottom Drawer Actions */}

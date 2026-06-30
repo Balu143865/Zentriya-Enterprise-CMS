@@ -1,9 +1,26 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Sun, Moon, LogIn, Send, Sparkles, Mail, Globe } from 'lucide-react';
+import { 
+  Menu, X, Sun, Moon, LogIn, Send, Sparkles, Mail, Globe,
+  Home, Info, Cpu, GraduationCap, BookOpen, Image, Users, Briefcase, FileText,
+  Phone, ArrowRight, Github, Twitter, Linkedin
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../services/db';
 import { WebsiteSettings } from '../types';
+
+const iconMap: Record<string, React.ComponentType<any>> = {
+  Home,
+  Info,
+  Cpu,
+  GraduationCap,
+  BookOpen,
+  Image,
+  Users,
+  Briefcase,
+  FileText,
+  Mail
+};
 
 interface HeaderProps {
   darkMode: boolean;
@@ -32,16 +49,16 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
   }, [location.pathname]);
 
   const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'About', path: '/about' },
-    { name: 'Services', path: '/services' },
-    { name: 'Internships', path: '/internships' },
-    { name: 'Courses', path: '/courses' },
-    { name: 'Gallery', path: '/gallery' },
-    { name: 'Team', path: '/team' },
-    { name: 'Careers', path: '/careers' },
-    { name: 'Blog', path: '/blog' },
-    { name: 'Contact', path: '/contact' }
+    { name: 'Home', path: '/', icon: 'Home' },
+    { name: 'About', path: '/about', icon: 'Info' },
+    { name: 'Services', path: '/services', icon: 'Cpu' },
+    { name: 'Internships', path: '/internships', icon: 'GraduationCap' },
+    { name: 'Courses', path: '/courses', icon: 'BookOpen' },
+    { name: 'Gallery', path: '/gallery', icon: 'Image' },
+    { name: 'Team', path: '/team', icon: 'Users' },
+    { name: 'Careers', path: '/careers', icon: 'Briefcase' },
+    { name: 'Blog', path: '/blog', icon: 'FileText' },
+    { name: 'Contact', path: '/contact', icon: 'Mail' }
   ];
 
   const activeLinkStyle = (path: string) => {
@@ -215,7 +232,7 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
             <button 
               id="mobile-nav-toggle"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 xl:hidden text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg shrink-0 transition-colors"
+              className="p-2 xl:hidden text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg shrink-0 transition-all active:scale-90"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -225,92 +242,132 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown Panel with Framer Motion (Slide-down from header) */}
+        {/* Premium Mobile Navigation Drawer - Slide-in Right with Backdrop Blur & Glassmorphism */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <>
-              {/* Overlay Backdrop */}
+              {/* Overlay Backdrop with blur */}
               <motion.div
                 key="mobile-nav-backdrop"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
+                transition={{ duration: 0.3 }}
                 onClick={() => setMobileMenuOpen(false)}
-                className="xl:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-30"
+                className="xl:hidden fixed inset-0 bg-slate-950/60 backdrop-blur-md z-50"
               />
 
-              {/* Dropdown Menu Panel (Absolute to Header container) */}
+              {/* Glassmorphism Drawer Panel */}
               <motion.div
-                key="mobile-nav-dropdown"
-                initial={{ opacity: 0, y: -15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-                className="xl:hidden absolute top-full left-0 right-0 w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800/80 shadow-2xl z-40 p-5 flex flex-col rounded-b-2xl max-h-[80vh] overflow-y-auto"
-                id="mobile-navigation-dropdown"
+                key="mobile-nav-drawer"
+                initial={{ x: '100%', opacity: 0.9 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: '100%', opacity: 0.9 }}
+                transition={{ type: 'spring', damping: 26, stiffness: 200 }}
+                className="xl:hidden fixed inset-y-0 right-0 w-[85%] max-w-[380px] h-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border-l border-slate-250/50 dark:border-slate-800/50 shadow-2xl z-50 p-6 flex flex-col justify-between overflow-y-auto"
+                id="mobile-navigation-drawer"
               >
-                {/* Header inside Menu */}
-                <div className="flex items-center justify-between mb-4 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="text-blue-600 dark:text-blue-400 w-4 h-4 animate-pulse" />
-                    <span className="font-bold text-xs tracking-wider text-slate-500 dark:text-slate-400 uppercase font-mono">
-                      Navigation Menu
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="p-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-
-                {/* Nav Links Scroller */}
-                <div className="space-y-1.5 py-1 custom-scrollbar">
-                  {navLinks.map((link, idx) => (
-                    <motion.div
-                      key={link.path}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.02, duration: 0.2 }}
+                <div>
+                  {/* Header inside Drawer */}
+                  <div className="flex items-center justify-between pb-5 mb-5 border-b border-slate-100 dark:border-slate-800/80">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gradient-to-tr from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-black text-lg">
+                        Z
+                      </div>
+                      <span className="font-extrabold text-sm tracking-tight text-slate-900 dark:text-white font-display">
+                        ZENTRIYA
+                      </span>
+                    </div>
+                    
+                    <button
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:rotate-90 transition-all duration-350"
+                      aria-label="Close menu"
                     >
-                      <Link 
-                        id={`mob-nav-${link.name.toLowerCase()}`}
-                        to={link.path} 
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`block py-2.5 px-4 rounded-xl text-sm font-bold tracking-tight transition-all duration-200 ${
-                          location.pathname === link.path 
-                            ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' 
-                            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        {link.name}
-                      </Link>
-                    </motion.div>
-                  ))}
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Nav Links Scroller with Stagger and Elegant Hover Effects */}
+                  <div className="space-y-1.5">
+                    {navLinks.map((link, idx) => {
+                      const isActive = location.pathname === link.path;
+                      const IconComponent = iconMap[link.icon] || Sparkles;
+                      
+                      return (
+                        <motion.div
+                          key={link.path}
+                          initial={{ opacity: 0, x: 25 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.035, type: 'spring', stiffness: 160 }}
+                        >
+                          <Link 
+                            id={`mob-nav-${link.name.toLowerCase()}`}
+                            to={link.path} 
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={`flex items-center gap-3.5 py-2.5 px-3.5 rounded-xl text-[13.5px] font-bold tracking-tight transition-all duration-300 group/item active:scale-[0.98] ${
+                              isActive 
+                                ? 'bg-gradient-to-r from-blue-600/10 to-emerald-500/10 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600 pl-3' 
+                                : 'text-slate-750 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850/50 hover:pl-5'
+                            }`}
+                          >
+                            <span className={`p-1.5 rounded-lg transition-colors duration-300 ${isActive ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover/item:bg-blue-500 group-hover/item:text-white'}`}>
+                              <IconComponent size={14} />
+                            </span>
+                            <span className="flex-1">{link.name}</span>
+                            <ArrowRight size={13} className={`opacity-0 group-hover/item:opacity-100 group-hover/item:translate-x-1 transition-all duration-300 text-blue-600 dark:text-blue-400 ${isActive ? 'opacity-80' : ''}`} />
+                          </Link>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* Bottom Actions Row */}
-                <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80 grid grid-cols-2 gap-3 shrink-0">
-                  <Link 
-                    id="mob-nav-admin-btn"
-                    to="/admin/login" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs py-3 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    <LogIn size={14} />
-                    Admin Console
-                  </Link>
-                  <Link 
-                    id="mob-nav-contact-btn"
-                    to="/contact" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-emerald-500 text-white text-xs py-3 rounded-xl font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-md shadow-blue-500/10"
-                  >
-                    <Send size={14} />
-                    Write Us
-                  </Link>
+                {/* Bottom Actions and Contact Info inside Drawer */}
+                <div className="mt-8 pt-5 border-t border-slate-100 dark:border-slate-800/80 space-y-5">
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <Link 
+                      id="mob-nav-admin-btn"
+                      to="/admin/login" 
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs py-2.5 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 active:scale-95 transition-all"
+                    >
+                      <LogIn size={13} />
+                      Admin
+                    </Link>
+                    <Link 
+                      id="mob-nav-contact-btn"
+                      to="/contact" 
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-emerald-500 text-white text-xs py-2.5 rounded-xl font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-md shadow-blue-500/10"
+                    >
+                      <Send size={13} />
+                      Write Us
+                    </Link>
+                  </div>
+
+                  {/* Helpline Details */}
+                  <div className="space-y-1.5 bg-slate-50 dark:bg-slate-800/30 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800/40">
+                    <div className="text-[9px] uppercase tracking-wider font-extrabold text-slate-400 dark:text-slate-500">Corporate Helplines</div>
+                    <div className="space-y-0.5 text-xs font-semibold text-slate-750 dark:text-slate-300">
+                      <a href="tel:+917989270174" className="block hover:text-blue-500 transition-colors">+91 79892 70174</a>
+                      <a href="tel:+919550950705" className="block hover:text-blue-500 transition-colors">+91 95509 50705</a>
+                    </div>
+                  </div>
+
+                  {/* Social links */}
+                  <div className="flex items-center justify-center gap-4 text-slate-400 dark:text-slate-500 pb-1">
+                    <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="hover:text-blue-600 transition-colors">
+                      <Linkedin size={15} />
+                    </a>
+                    <a href="https://twitter.com" target="_blank" rel="noreferrer" className="hover:text-blue-400 transition-colors">
+                      <Twitter size={15} />
+                    </a>
+                    <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-slate-900 dark:hover:text-white transition-colors">
+                      <Github size={15} />
+                    </a>
+                  </div>
                 </div>
               </motion.div>
             </>
