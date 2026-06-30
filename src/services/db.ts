@@ -2088,10 +2088,19 @@ export const db = {
   // SYSTEM ACTIVITY LOGS & NOTIFICATIONS (PERSISTENT METRICS)
   // --------------------------------------------------------------------
   async getActivityLogs(): Promise<ActivityLog[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('activity_logs').select('*').order('timestamp', { ascending: false }).limit(50);
+        if (!error && data) return data as ActivityLog[];
+      } catch (e) {
+        console.warn('Supabase fetch failed for activity_logs:', e);
+      }
+    }
     return getLocalData<ActivityLog[]>('zentriya_activity_logs', defaultActivityLogs);
   },
 
-  logActivity(action: string, details: string) {
+  async logActivity(action: string, details: string) {
     const logs = getLocalData<ActivityLog[]>('zentriya_activity_logs', defaultActivityLogs);
     const activeUser = localStorage.getItem('zentriya_active_user');
     let user: UserProfile = { id: 'usr_admin', name: 'Admin Chief', email: 'admin@zentriya.com', role: 'Super Admin' as UserRole };
@@ -2107,16 +2116,45 @@ export const db = {
       details,
       timestamp: new Date().toISOString()
     };
+    
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('activity_logs').insert(newLog);
+      } catch (e) {
+        console.warn('Supabase insert failed for activity_logs:', e);
+      }
+    }
+
     logs.unshift(newLog);
     setLocalData('zentriya_activity_logs', logs.slice(0, 50)); // cap at 50 logs
   },
 
   async getNotifications(): Promise<SystemNotification[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('notifications').select('*').order('createdAt', { ascending: false }).limit(30);
+        if (!error && data) return data as SystemNotification[];
+      } catch (e) {
+        console.warn('Supabase fetch failed for notifications:', e);
+      }
+    }
     return getLocalData<SystemNotification[]>('zentriya_notifications', defaultNotifications);
   },
 
-  createNotification(not: SystemNotification) {
+  async createNotification(not: SystemNotification) {
     const nots = getLocalData<SystemNotification[]>('zentriya_notifications', defaultNotifications);
+    
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('notifications').insert(not);
+      } catch (e) {
+        console.warn('Supabase insert failed for notifications:', e);
+      }
+    }
+
     nots.unshift(not);
     setLocalData('zentriya_notifications', nots.slice(0, 30));
   },
@@ -2127,6 +2165,15 @@ export const db = {
     if (index >= 0) {
       nots[index].isRead = true;
       setLocalData('zentriya_notifications', nots);
+    }
+
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase.from('notifications').update({ isRead: true }).eq('id', id);
+      } catch (e) {
+        console.warn('Supabase update failed for notifications:', e);
+      }
     }
   },
 

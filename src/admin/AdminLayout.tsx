@@ -105,11 +105,11 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
   if (!user) return null;
 
   const sidebarContent = (
-    <div className="flex flex-col justify-between h-full">
-      <div>
+    <div className="flex flex-col justify-between h-full overflow-hidden">
+      <div className="flex flex-col flex-1 overflow-hidden">
         
         {/* Sidebar Brand */}
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between shrink-0">
           <Link to="/" className="flex items-center gap-3" onClick={() => setSidebarOpen(false)}>
             <img src="/logo.png" alt="Zentriya Logo" className="w-8 h-8 object-contain" />
             <div className="flex flex-col">
@@ -137,7 +137,7 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
         </div>
 
         {/* Nav Link Cluster (Role Filtered) */}
-        <nav className="p-4 space-y-1 overflow-y-auto max-h-[70vh] custom-scrollbar">
+        <nav className="p-4 space-y-1 flex-1 overflow-y-auto custom-scrollbar">
           {modules.map((m) => {
             const permitted = auth.hasAccess(user.role, m.key);
             if (!permitted) return null; // RBAC Lockout
@@ -167,7 +167,7 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
       </div>
 
       {/* User Card & Logout bottom */}
-      <div className="p-4 border-t border-slate-800 space-y-4">
+      <div className="p-4 border-t border-slate-800 space-y-4 shrink-0">
         <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-850">
           <img 
             src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=800&fit=crop&q=80'} 
@@ -196,13 +196,13 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
   );
 
   return (
-    <div id="admin-shell-root" className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col lg:flex-row">
+    <div id="admin-shell-root" className="h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 flex flex-col lg:flex-row">
       
       {/* 1. LEFT SIDEBAR PANEL */}
       {/* Desktop View: Persistent Static Sidebar */}
       <aside 
         id="admin-sidebar-desktop" 
-        className="hidden lg:flex w-72 bg-slate-900 text-slate-300 flex-col justify-between border-r border-slate-800 shrink-0 h-screen sticky top-0"
+        className="hidden lg:flex w-72 bg-slate-900 text-slate-300 flex-col justify-between border-r border-slate-800 shrink-0 h-full overflow-hidden"
       >
         {sidebarContent}
       </aside>
@@ -229,7 +229,7 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 26, stiffness: 220 }}
-              className="fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 text-slate-300 flex flex-col justify-between border-r border-slate-800 shrink-0 lg:hidden"
+              className="fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 text-slate-300 flex flex-col justify-between border-r border-slate-800 shrink-0 lg:hidden overflow-hidden"
             >
               {sidebarContent}
             </motion.aside>
@@ -238,10 +238,10 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
       </AnimatePresence>
 
       {/* 2. MAIN VIEW STAGE */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-full">
         
         {/* Top Header Controls bar */}
-        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800/80 px-6 py-4.5 flex items-center justify-between sticky top-0 z-20 backdrop-blur-md">
+        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800/80 px-6 py-4.5 flex items-center justify-between shrink-0 z-20">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -316,7 +316,7 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
         </header>
 
         {/* Layout Output Panel */}
-        <main className="p-6">
+        <main className="flex-1 overflow-y-auto p-6 custom-scrollbar">
           <Outlet />
         </main>
 

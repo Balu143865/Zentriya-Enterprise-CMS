@@ -59,15 +59,15 @@ const CountUpStat = ({ value, label, icon: IconName }: { value: string, label: s
   const displayVal = count % 1 === 0 ? count : count.toFixed(1);
 
   return (
-    <div id={`insight-stat-${label.replace(/\s+/g, '-').toLowerCase()}`} className="flex flex-col sm:flex-row items-center gap-4 p-5 rounded-2xl bg-white/90 dark:bg-slate-900/40 backdrop-blur border border-slate-200/80 dark:border-slate-800/80 shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:border-blue-200/60 dark:hover:border-blue-900/30 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 flex-1 min-w-[200px] text-center sm:text-left justify-center sm:justify-start">
-      <div className={`p-3.5 rounded-xl border ${getBg()} shrink-0 shadow-sm`}>
+    <div id={`insight-stat-${label.replace(/\s+/g, '-').toLowerCase()}`} className="flex flex-col sm:flex-row items-center gap-4.5 p-5.5 rounded-[22px] bg-white/80 dark:bg-[#070b14]/50 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/50 shadow-[0_4px_24px_rgb(0,0,0,0.015)] hover:border-blue-500/30 dark:hover:border-blue-500/20 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 hover:-translate-y-1 flex-1 min-w-[200px] text-center sm:text-left justify-center sm:justify-start">
+      <div className={`p-3.5 rounded-xl border ${getBg()} shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-105`}>
         {getIcon()}
       </div>
-      <div className="space-y-0.5">
-        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+      <div className="space-y-1">
+        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
           {displayVal}{suffix}
         </div>
-        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-snug">
+        <div className="text-[11px] font-bold text-slate-400 dark:text-slate-400 leading-snug uppercase tracking-wider">
           {label}
         </div>
       </div>
@@ -313,74 +313,96 @@ export default function TechInsights() {
                       style={{
                         flex: `0 0 ${100 / articleCardsToShow}%`,
                       }}
-                      className="px-2.5 shrink-0 snap-center"
+                      className="px-2.5 shrink-0 snap-center py-4"
                     >
                       <div
                         id={`home-article-card-${article.id}`}
-                        className="group bg-white/80 dark:bg-slate-900/65 backdrop-blur-md rounded-[20px] border border-slate-200/60 dark:border-slate-800/40 shadow-[0_6px_24px_rgb(0,0,0,0.02)] hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-200/60 transition-all duration-300 hover:-translate-y-1.5 flex flex-col h-full overflow-hidden max-w-[320px] mx-auto w-full"
+                        className="group relative flex flex-col h-full max-w-[320px] mx-auto w-full transition-all duration-300 cursor-pointer"
                       >
-                        {/* Card Cover Image */}
-                        <div className="relative h-44 w-full overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-950">
-                          <img 
-                            src={article.cover_image || "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&fit=crop&q=80"} 
-                            alt={article.title} 
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            referrerPolicy="no-referrer"
-                          />
-                          {/* Read Time Badge */}
-                          <div className="absolute top-3.5 right-3.5 bg-slate-950/70 backdrop-blur text-white text-[9px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
-                            <Clock size={10} className="text-blue-400" />
-                            {article.read_time_minutes} min read
-                          </div>
-                        </div>
+                        {/* High-end glowing backdrop blur spotlight */}
+                        <div className="absolute -inset-px bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 rounded-[24px] opacity-0 group-hover:opacity-100 transition-all duration-500 blur-md pointer-events-none group-hover:scale-[1.01]" />
+                        
+                        {/* Main Premium Card Frame */}
+                        <div className="relative flex flex-col h-full w-full overflow-hidden rounded-[24px] bg-white dark:bg-[#090e1a] border border-slate-200/70 dark:border-slate-800/60 shadow-[0_8px_30px_rgb(0,0,0,0.015)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] transition-all duration-500 group-hover:border-transparent dark:group-hover:border-transparent group-hover:-translate-y-1.5">
+                          
+                          {/* Inner lighting border */}
+                          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/20 dark:via-blue-400/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
 
-                        {/* Card Info Content */}
-                        <div className="p-4.5 flex-1 flex flex-col justify-between">
-                          <div className="flex-1">
-                            {/* Category Badge */}
-                            <span className={`inline-block text-[8px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-2.5 border ${getCategoryBadgeClass(article.category)}`}>
-                              {article.category}
-                            </span>
+                          {/* Card Cover Image with dark-wash & micro-lens overlay */}
+                          <div className="relative h-44 w-full overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-950">
+                            {/* Linear Gradient mask for elegant title separation */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/45 via-transparent to-transparent z-10 opacity-70 group-hover:opacity-40 transition-opacity duration-300" />
+                            <div className="absolute inset-0 bg-blue-500/5 dark:bg-blue-500/5 mix-blend-overlay z-10" />
                             
-                            {/* Title */}
-                            <h3 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug mb-1.5 font-display">
-                              <Link to="/blog">{article.title}</Link>
-                            </h3>
-
-                            {/* Excerpt */}
-                            <p className="text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs line-clamp-3 mb-4 leading-relaxed">
-                              {article.excerpt || article.description}
-                            </p>
+                            <img 
+                              src={article.cover_image || "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&fit=crop&q=80"} 
+                              alt={article.title} 
+                              className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08] group-hover:rotate-1"
+                              referrerPolicy="no-referrer"
+                            />
+                            
+                            {/* Read Time Badge */}
+                            <div className="absolute top-4 right-4 bg-slate-950/85 backdrop-blur-md text-slate-100 text-[9px] font-extrabold tracking-wider px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/10 z-20">
+                              <Clock size={10} className="text-blue-400 animate-pulse" />
+                              <span className="font-mono uppercase">{article.read_time_minutes} min read</span>
+                            </div>
                           </div>
 
-                          {/* Divider line */}
-                          <div className="w-full h-px bg-slate-100 dark:bg-slate-800/60 my-3" />
-
-                          {/* Author Row */}
-                          <div className="flex items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-2">
-                              <img 
-                                src={article.author_avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80"} 
-                                alt={article.author_name} 
-                                className="w-8 h-8 rounded-full object-cover border border-slate-100 dark:border-slate-800"
-                                referrerPolicy="no-referrer"
-                              />
-                              <div className="flex flex-col text-left">
-                                <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                                  {article.author_name}
-                                </span>
-                                <span className="text-[8px] font-semibold text-slate-400 dark:text-slate-500 leading-none mt-0.5">
-                                  {article.author_designation}
+                          {/* Card Info Content */}
+                          <div className="p-5 flex-1 flex flex-col justify-between relative z-10">
+                            <div className="flex-1">
+                              {/* Category Badge & Live Pulse Indicator */}
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className={`inline-flex items-center gap-1.5 text-[8.5px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest border ${getCategoryBadgeClass(article.category)}`}>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
+                                  {article.category}
                                 </span>
                               </div>
+                              
+                              {/* Title */}
+                              <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm sm:text-base tracking-tight leading-snug mb-2 font-display group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300 line-clamp-2">
+                                <Link to="/blog">{article.title}</Link>
+                              </h3>
+
+                              {/* Excerpt */}
+                              <p className="text-slate-500 dark:text-slate-400 text-xs line-clamp-3 mb-4 leading-relaxed font-medium">
+                                {article.excerpt || article.description}
+                              </p>
                             </div>
-                            
-                            {/* Date Published */}
-                            <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[9px] font-semibold shrink-0 font-mono">
-                              <Calendar size={10} />
-                              <span>{new Date(article.published_at || article.created_at || '').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+
+                            {/* Divider line */}
+                            <div className="w-full h-[1px] bg-slate-100 dark:bg-slate-800/40 my-3.5" />
+
+                            {/* Author Row & Date */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2.5">
+                                <div className="relative shrink-0">
+                                  <div className="absolute -inset-0.5 bg-gradient-to-tr from-blue-500 to-indigo-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]" />
+                                  <img 
+                                    src={article.author_avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80"} 
+                                    alt={article.author_name} 
+                                    className="relative w-8 h-8 rounded-full object-cover border border-slate-100 dark:border-slate-800 shadow-sm"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </div>
+                                <div className="flex flex-col text-left">
+                                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
+                                    {article.author_name}
+                                  </span>
+                                  <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 leading-none mt-0.5">
+                                    {article.author_designation}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {/* Date Published */}
+                              <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[9.5px] font-semibold shrink-0 font-mono">
+                                <Calendar size={10} className="text-slate-400/80 dark:text-slate-600" />
+                                <span>{new Date(article.published_at || article.created_at || '').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                              </div>
                             </div>
                           </div>
+                          
                         </div>
                       </div>
                     </AnimatedCard>
