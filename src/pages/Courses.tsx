@@ -83,9 +83,10 @@ export interface PremiumCourseCardProps {
   expandedSyllabus: string | null;
   toggleSyllabus: (id: string) => void;
   key?: string | number;
+  className?: string;
 }
 
-export function PremiumCourseCard({ course, expandedSyllabus, toggleSyllabus }: PremiumCourseCardProps) {
+export function PremiumCourseCard({ course, expandedSyllabus, toggleSyllabus, className = "" }: PremiumCourseCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -198,7 +199,7 @@ export function PremiumCourseCard({ course, expandedSyllabus, toggleSyllabus }: 
   return (
     <motion.div
       variants={cardVariants}
-      className="h-full flex flex-col"
+      className={`h-full flex flex-col ${className}`}
     >
       <div
         id={`course-item-card-${course.id}`}
@@ -206,26 +207,26 @@ export function PremiumCourseCard({ course, expandedSyllabus, toggleSyllabus }: 
         onMouseMove={handleMouseMove}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`group relative h-full flex flex-col bg-[#0B1220] border ${theme.border} rounded-[24px] overflow-hidden transition-all duration-300 shadow-2xl ${theme.shadowGlow}`}
+        className={`group relative h-full flex flex-col bg-[#0B1220] border ${theme.border} rounded-2xl overflow-hidden transition-all duration-300 shadow-xl ${theme.shadowGlow}`}
         style={{
           transform: isHovered
-            ? 'perspective(1000px) rotateX(var(--rotate-x, 0deg)) rotateY(var(--rotate-y, 0deg)) translateY(-8px)'
+            ? 'perspective(1000px) rotateX(var(--rotate-x, 0deg)) rotateY(var(--rotate-y, 0deg)) translateY(-6px)'
             : 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)',
           transition: isHovered ? 'transform 0.1s ease-out, border-color 0.3s ease' : 'transform 0.5s ease, border-color 0.5s ease'
         }}
       >
         {/* Glowing spotlight effect from cursor */}
         <div
-          className="absolute inset-0 rounded-[24px] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"
+          className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"
           style={{
-            background: `radial-gradient(350px circle at var(--mouse-x, 0px) var(--mouse-y, 0px), ${theme.glow} 0%, transparent 100%)`
+            background: `radial-gradient(280px circle at var(--mouse-x, 0px) var(--mouse-y, 0px), ${theme.glow} 0%, transparent 100%)`
           }}
         />
 
         <div className="flex flex-col h-full justify-between">
           <div>
-            {/* Image Section */}
-            <div className="relative h-52 w-full overflow-hidden rounded-t-[23px] bg-slate-950">
+            {/* Image Section - reduced height from h-52 to h-40 */}
+            <div className="relative h-40 w-full overflow-hidden rounded-t-2xl bg-slate-950">
               <img
                 src={getBannerImage()}
                 alt={course.title}
@@ -240,76 +241,76 @@ export function PremiumCourseCard({ course, expandedSyllabus, toggleSyllabus }: 
               <motion.div
                 animate={{ y: [0, -3, 0] }}
                 transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
-                className="absolute top-4 right-4 z-20 bg-slate-900/80 backdrop-blur-md text-[10px] font-black px-3.5 py-1.5 rounded-full uppercase tracking-widest border border-slate-700/40 text-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.5)] flex items-center gap-1.5"
+                className="absolute top-3 right-3 z-20 bg-slate-900/80 backdrop-blur-md text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border border-slate-700/40 text-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.5)] flex items-center gap-1.5"
               >
                 <span>{course.mode}</span>
                 <span className={`w-1.5 h-1.5 rounded-full ${theme.badgeGlow} animate-pulse`} />
               </motion.div>
 
-              {/* Floating Circular Icon overlapping the border */}
+              {/* Floating Circular Icon overlapping the border - reduced from w-14 h-14 to w-11 h-11 */}
               <motion.div
-                animate={{ y: [0, -3, 0] }}
+                animate={{ y: [0, -2, 0] }}
                 transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-                className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-30 w-14 h-14 rounded-full flex items-center justify-center bg-slate-950/90 border border-slate-800 shadow-[0_0_20px_rgba(0,0,0,0.8)] backdrop-blur-md hover:scale-110 transition-transform duration-300"
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-30 w-11 h-11 rounded-full flex items-center justify-center bg-slate-950/90 border border-slate-800 shadow-[0_0_15px_rgba(0,0,0,0.8)] backdrop-blur-md hover:scale-110 transition-transform duration-300"
               >
                 {/* Visual pulse glow */}
                 <span className={`absolute inset-0 rounded-full bg-gradient-to-tr ${theme.gradient} opacity-20 blur-md`} />
                 <span className="absolute inset-0 rounded-full border border-current opacity-30 animate-ping" style={{ animationDuration: '3s', color: course.id.includes('1') ? '#34d399' : course.id.includes('2') ? '#3b82f6' : '#a855f7' }} />
-                <div className="relative z-10 flex items-center justify-center">
+                <div className="relative z-10 flex items-center justify-center scale-90">
                   {getTechIcon()}
                 </div>
               </motion.div>
             </div>
 
-            {/* Card Body Content */}
-            <div className="p-6 pt-10 space-y-4">
+            {/* Card Body Content - reduced padding and spacing */}
+            <div className="p-5 pt-8 space-y-3">
               {/* Duration and category labels */}
-              <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-slate-400 font-mono">
+              <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">
                 <span className={`${theme.text} font-black`}>{course.category}</span>
-                <span className="flex items-center gap-1.5">
-                  <Clock size={13} className={theme.text} />
+                <span className="flex items-center gap-1">
+                  <Clock size={11} className={theme.text} />
                   Duration: <span className="text-white font-extrabold">{course.duration}</span>
                 </span>
               </div>
 
-              {/* Title */}
-              <h3 className="font-extrabold text-white text-lg sm:text-xl tracking-tight leading-snug group-hover:text-blue-400 transition-colors duration-300">
+              {/* Title - reduced from text-lg sm:text-xl to text-[15px] sm:text-[17px] */}
+              <h3 className="font-extrabold text-white text-[15px] sm:text-[17px] tracking-tight leading-snug group-hover:text-blue-400 transition-colors duration-300 line-clamp-1">
                 {course.title}
               </h3>
 
-              {/* Short Description */}
-              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed font-light line-clamp-3">
+              {/* Short Description - changed line-clamp-3 to line-clamp-2 */}
+              <p className="text-slate-400 text-xs sm:text-[13px] leading-relaxed font-light line-clamp-2">
                 {course.description}
               </p>
 
-              {/* Dynamic Feature Chips (Exactly 3 as required) */}
-              <div className="flex flex-wrap items-center gap-2 pt-2.5">
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${theme.chipBorder} text-[10.5px] font-bold tracking-tight transition-all duration-300 hover:brightness-110`}>
-                  <Briefcase size={12} className={theme.text} />
+              {/* Dynamic Feature Chips - compact padding */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+                <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border ${theme.chipBorder} text-[9.5px] font-bold tracking-tight transition-all duration-300 hover:brightness-110`}>
+                  <Briefcase size={10} className={theme.text} />
                   <span>Live Projects</span>
                 </div>
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${theme.chipBorder} text-[10.5px] font-bold tracking-tight transition-all duration-300 hover:brightness-110`}>
-                  <Users size={12} className={theme.text} />
+                <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border ${theme.chipBorder} text-[9.5px] font-bold tracking-tight transition-all duration-300 hover:brightness-110`}>
+                  <Users size={10} className={theme.text} />
                   <span>Mentor Support</span>
                 </div>
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${theme.chipBorder} text-[10.5px] font-bold tracking-tight transition-all duration-300 hover:brightness-110`}>
-                  <Award size={12} className={theme.text} />
+                <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border ${theme.chipBorder} text-[9.5px] font-bold tracking-tight transition-all duration-300 hover:brightness-110`}>
+                  <Award size={10} className={theme.text} />
                   <span>Certificate</span>
                 </div>
               </div>
 
               {/* Elegant expandable syllabus modules */}
               {course.syllabus && course.syllabus.length > 0 && (
-                <div className="border border-slate-800/80 rounded-2xl overflow-hidden bg-[#0a0f1b]/50 mt-2">
+                <div className="border border-slate-800/80 rounded-xl overflow-hidden bg-[#0a0f1b]/50 mt-1.5">
                   <button 
                     onClick={() => toggleSyllabus(course.id)}
-                    className="w-full px-4 py-3 flex items-center justify-between text-xs font-bold text-slate-300 hover:bg-slate-800/30 transition-colors"
+                    className="w-full px-3 py-2 flex items-center justify-between text-[11px] font-bold text-slate-300 hover:bg-slate-800/30 transition-colors"
                   >
-                    <span className="flex items-center gap-2">
-                      <BookOpen size={13} className={theme.text} />
+                    <span className="flex items-center gap-1.5">
+                      <BookOpen size={12} className={theme.text} />
                       Syllabus Curriculum
                     </span>
-                    {isSyllabusExpanded ? <ChevronUp size={13} className="text-slate-400" /> : <ChevronDown size={13} className="text-slate-400" />}
+                    {isSyllabusExpanded ? <ChevronUp size={11} className="text-slate-400" /> : <ChevronDown size={11} className="text-slate-400" />}
                   </button>
 
                   <AnimatePresence initial={false}>
@@ -320,9 +321,9 @@ export function PremiumCourseCard({ course, expandedSyllabus, toggleSyllabus }: 
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.3, ease: 'easeInOut' }}
                       >
-                        <div className="px-4 pb-4 pt-1 space-y-2 border-t border-slate-800/60 divide-y divide-slate-800/30">
+                        <div className="px-3 pb-3 pt-1 space-y-1.5 border-t border-slate-800/60 divide-y divide-slate-800/30">
                           {course.syllabus.map((syl, idx) => (
-                            <div key={idx} className="text-[11px] text-slate-400 py-2 leading-relaxed font-medium">
+                            <div key={idx} className="text-[10.5px] text-slate-400 py-1.5 leading-relaxed font-medium">
                               {syl}
                             </div>
                           ))}
@@ -335,15 +336,15 @@ export function PremiumCourseCard({ course, expandedSyllabus, toggleSyllabus }: 
             </div>
           </div>
 
-          {/* Enroll CTA (Hiding price altogether) */}
-          <div className="p-6 pt-0 mt-auto">
+          {/* Enroll CTA - reduced vertical padding */}
+          <div className="p-5 pt-0 mt-auto">
             <Link 
               to="/contact"
-              className={`group/cta relative overflow-hidden bg-gradient-to-r ${theme.gradient} text-white text-xs font-black py-3.5 rounded-full transition-all duration-300 flex items-center justify-center gap-1.5 shadow-lg ${theme.shadowGlow} hover:-translate-y-1`}
+              className={`group/cta relative overflow-hidden bg-gradient-to-r ${theme.gradient} text-white text-[11px] font-black py-2.5 rounded-full transition-all duration-300 flex items-center justify-center gap-1.5 shadow-lg ${theme.shadowGlow} hover:-translate-y-1`}
             >
               <span className="absolute inset-0 bg-white/10 opacity-0 group-hover/cta:opacity-100 transition-opacity duration-300" />
               <span>Enroll Now</span>
-              <ArrowRight size={14} className="transform translate-x-0 group-hover/cta:translate-x-1 transition-transform duration-300 shrink-0" />
+              <ArrowRight size={12} className="transform translate-x-0 group-hover/cta:translate-x-1 transition-transform duration-300 shrink-0" />
             </Link>
           </div>
         </div>
@@ -459,7 +460,7 @@ export default function Courses() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-6"
+          className="flex flex-wrap justify-center gap-5 pt-6 max-w-5xl mx-auto"
         >
           {filteredCourses.map((course) => (
             <PremiumCourseCard 
@@ -467,6 +468,7 @@ export default function Courses() {
               course={course}
               expandedSyllabus={expandedSyllabus}
               toggleSyllabus={toggleSyllabus}
+              className="w-full md:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)]"
             />
           ))}
         </motion.div>

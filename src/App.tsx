@@ -5,8 +5,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import About from './pages/About';
 import Services from './pages/Services';
-import Internships from './pages/Internships';
-import Courses from './pages/Courses';
+import Programs from './pages/Programs';
 import Gallery from './pages/Gallery';
 import Team from './pages/Team';
 import Careers from './pages/Careers';
@@ -42,8 +41,9 @@ function PublicLayout({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMod
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
-          <Route path="/internships" element={<Internships />} />
-          <Route path="/courses" element={<Courses />} />
+          <Route path="/internships" element={<Navigate to="/programs" replace />} />
+          <Route path="/courses" element={<Navigate to="/programs" replace />} />
+          <Route path="/programs" element={<Programs />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/team" element={<Team />} />
           <Route path="/careers" element={<Careers />} />

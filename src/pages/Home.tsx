@@ -11,7 +11,8 @@ import { db } from '../services/db';
 import { 
   HeroSlide, WebsiteSettings, ServiceItem, InternshipProgram, CourseItem,
   BlogPost, TestimonialItem, PlacementStat, Placement, ClientPartnerLogo,
-  WhyChooseUsItem, AboutSection, Article, ArticleCategory, ArticleStatistic
+  WhyChooseUsItem, AboutSection, Article, ArticleCategory, ArticleStatistic,
+  ProgramItem
 } from '../types';
 import LucideIcon from '../components/LucideIcon';
 import PremiumServices from '../components/PremiumServices';
@@ -19,7 +20,8 @@ import StudentJourney from '../components/StudentJourney';
 import IndustryNetwork from '../components/IndustryNetwork';
 import CompanyLogo from '../components/CompanyLogo';
 import TechInsights from '../components/TechInsights';
-import { PremiumCourseCard, FloatingParticles } from './Courses';
+import { PremiumProgramCard } from '../components/PremiumProgramCard';
+import { FloatingParticles } from './Programs';
 import { AnimatedHeader, AnimatedCardContainer, AnimatedCard } from '../components/AnimatedTransitions';
 
 const containerVariants = {
@@ -360,7 +362,7 @@ export default function Home() {
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [whyChooseUs, setWhyChooseUs] = useState<WhyChooseUsItem[]>([]);
   const [whyChooseUsTitle, setWhyChooseUsTitle] = useState('Why Choose Us?');
-  const [courses, setCourses] = useState<CourseItem[]>([]);
+  const [programs, setPrograms] = useState<ProgramItem[]>([]);
   const [expandedSyllabus, setExpandedSyllabus] = useState<string | null>(null);
   const toggleSyllabus = (id: string) => {
     setExpandedSyllabus(prev => (prev === id ? null : id));
@@ -467,7 +469,7 @@ export default function Home() {
         const [
           slideData, servData, internData, placementData,
           cpData, testData, blogData, whyChooseData, settingsData,
-          aboutData, courseData
+          aboutData, programData
         ] = await Promise.all([
           db.getHeroSlides(),
           db.getServices(),
@@ -479,13 +481,13 @@ export default function Home() {
           db.getWhyChooseUs(),
           db.getSettings(),
           db.getAbout(),
-          db.getCourses()
+          db.getPrograms()
         ]);
 
         setSlides(slideData);
         setServices(servData.filter(s => s.isActive !== false)); // load all active services
         setInternships(internData.slice(0, 3)); // top 3 internships
-        setCourses(courseData.filter(c => c.isActive).slice(0, 3)); // top 3 premium courses
+        setPrograms(programData.filter(p => p.is_active)); // load all active programs
         const activePlacements = (placementData || [])
           .filter(p => p.is_active !== false)
           .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
@@ -992,7 +994,7 @@ export default function Home() {
       <StudentJourney />
 
       {/* PREMIUM FUTURISTIC COURSES SECTION */}
-      {courses.length > 0 && (
+      {programs.length > 0 && (
         <section id="featured-courses" className="bg-[#040812] py-24 border-y border-slate-900 text-slate-100 relative overflow-hidden">
           {/* Mesh/Grid Background lines and radial light vectors */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_80%,transparent_100%)] pointer-events-none select-none z-0" />
@@ -1040,11 +1042,14 @@ export default function Home() {
             </AnimatedHeader>
 
             {/* Courses Cards Layout */}
-            <AnimatedCardContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {courses.map((course) => (
-                <AnimatedCard key={course.id}>
-                  <PremiumCourseCard 
-                    course={course}
+            <AnimatedCardContainer className="flex flex-wrap justify-center gap-5 max-w-5xl mx-auto">
+              {programs.map((program) => (
+                <AnimatedCard 
+                  key={program.id}
+                  className="w-full md:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)] flex flex-col"
+                >
+                  <PremiumProgramCard 
+                    program={program}
                     expandedSyllabus={expandedSyllabus}
                     toggleSyllabus={toggleSyllabus}
                   />
@@ -1062,14 +1067,14 @@ export default function Home() {
                 </svg>
               </div>
 
-              {/* View All Courses Button with glow effect */}
+              {/* View All Programs Button with glow effect */}
               <Link
-                to="/courses"
+                to="/programs"
                 className="relative px-8 py-4 rounded-full bg-gradient-to-r from-emerald-500 via-emerald-600 to-blue-600 text-white font-extrabold text-xs sm:text-sm tracking-wider shadow-[0_0_25px_rgba(16,185,129,0.3)] hover:shadow-[0_0_35px_rgba(59,130,246,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 group z-10"
               >
                 <span className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <span className="flex items-center gap-2">
-                  View All Courses <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform duration-300" />
+                  View All Programs <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform duration-300" />
                 </span>
               </Link>
 

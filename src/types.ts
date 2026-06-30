@@ -365,5 +365,21 @@ export interface ArticleStatistic {
   created_at?: string;
 }
 
+export interface ProgramItem {
+  id: string;
+  title: string;
+  category: string;
+  duration: string;
+  description: string;
+  cover_image: string;
+  mode: string;
+  syllabus: string[];
+  badges: string[];
+  display_order: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 
 

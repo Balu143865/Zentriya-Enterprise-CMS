@@ -6,7 +6,7 @@ import {
   ContactMessage, BlogPost, FaqItem, DownloadItem, 
   ClientPartnerLogo, PlacementStat, Placement, ActivityLog, SystemNotification, UserProfile, UserRole,
   WhyChooseUsItem, StudentJourneyStep, IndustryPartner,
-  Article, ArticleCategory, ArticleStatistic
+  Article, ArticleCategory, ArticleStatistic, ProgramItem
 } from '../types';
 
 // @ts-ignore
@@ -385,6 +385,132 @@ const defaultCourses: CourseItem[] = [
     isActive: true,
     bannerUrl: 'https://images.unsplash.com/photo-1527474305487-b87b222841cc?w=800&h=500&fit=crop&q=80',
     order: 3
+  },
+  {
+    id: 'course_4',
+    title: 'Cybersecurity & Ethical Hacking',
+    duration: '3 Months',
+    category: 'Cybersecurity',
+    description: 'Learn modern security architectures, network defense mechanisms, penetration testing, and digital forensics.',
+    syllabus: [
+      'Weeks 1-4: Networking Security Protocols & Vulnerability Assessment',
+      'Weeks 5-8: Penetration Testing Methodologies & System Audits',
+      'Weeks 9-12: Incident Response Frameworks & Threat Intel Analysis'
+    ],
+    price: 16000,
+    discountPrice: 12999,
+    mode: 'Online',
+    features: ['Live Projects', 'Mentor Support', 'Certificate'],
+    isActive: true,
+    bannerUrl: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&h=500&fit=crop&q=80',
+    order: 4
+  },
+  {
+    id: 'course_5',
+    title: 'UI/UX Product Design',
+    duration: '3 Months',
+    category: 'Product Design',
+    description: 'Master UI elements, typography, grid layouts, advanced Figma prototyping, and user testing practices.',
+    syllabus: [
+      'Weeks 1-4: Design Principles, Typography & Color Systems',
+      'Weeks 5-8: Advanced Figma Prototyping & Design Systems',
+      'Weeks 9-12: User Testing, Portfolio Case Study & Presentation'
+    ],
+    price: 14000,
+    discountPrice: 10999,
+    mode: 'Hybrid',
+    features: ['Live Projects', 'Mentor Support', 'Certificate'],
+    isActive: true,
+    bannerUrl: 'https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=800&h=500&fit=crop&q=80',
+    order: 5
+  }
+];
+
+const defaultPrograms: ProgramItem[] = [
+  {
+    id: 'prog_1',
+    title: 'Full Stack Web Development',
+    duration: '3 / 6 Months',
+    category: 'Web Development',
+    description: 'An elite, comprehensive coding sprint. Build modern web applications with industry-standard tools and technologies.',
+    cover_image: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&h=500&fit=crop&q=80',
+    mode: 'Hybrid',
+    syllabus: [
+      'Weeks 1-4: Advanced Frontend with React & Tailwind CSS',
+      'Weeks 5-8: Backend Engineering with Node.js, Express & MongoDB',
+      'Weeks 9-12: Production-grade deployments, security, and AWS Cloud integration'
+    ],
+    badges: ['Live Projects', 'Mentor Support', 'Certificate'],
+    display_order: 1,
+    is_active: true
+  },
+  {
+    id: 'prog_2',
+    title: 'Enterprise Cloud & DevOps',
+    duration: '3 Months',
+    category: 'Cloud & DevOps',
+    description: 'Master cloud infrastructure, CI/CD pipelines, Docker, Kubernetes and DevOps best practices from scratch.',
+    cover_image: 'https://images.unsplash.com/photo-1484417894907-623942c8ee29?w=800&h=500&fit=crop&q=80',
+    mode: 'Online',
+    syllabus: [
+      'Weeks 1-4: Cloud Architecture Foundations & AWS Services',
+      'Weeks 5-8: Containerization with Docker & Orchestration with Kubernetes',
+      'Weeks 9-12: CI/CD Pipelines (GitHub Actions) & Infrastructure as Code (Terraform)'
+    ],
+    badges: ['Live Projects', 'Mentor Support', 'Certificate'],
+    display_order: 2,
+    is_active: true
+  },
+  {
+    id: 'prog_3',
+    title: 'Data Science & Machine Learning',
+    duration: '6 Months',
+    category: 'Data Science & ML',
+    description: 'Learn data analysis, machine learning algorithms, and build AI-powered real-world solutions.',
+    cover_image: 'https://images.unsplash.com/photo-1527474305487-b87b222841cc?w=800&h=500&fit=crop&q=80',
+    mode: 'Hybrid',
+    syllabus: [
+      'Weeks 1-8: Data Science Core (Python, Pandas, SQL, & Visualization)',
+      'Weeks 9-16: Machine Learning Models, Regression, and Supervised Learning',
+      'Weeks 17-24: Generative AI, LLM Integrations, and Prompt Engineering'
+    ],
+    badges: ['Live Projects', 'Mentor Support', 'Certificate'],
+    display_order: 3,
+    is_active: true
+  },
+  {
+    id: 'prog_4',
+    title: 'Cybersecurity & Ethical Hacking',
+    duration: '3 Months',
+    category: 'Cybersecurity',
+    description: 'Learn modern security architectures, network defense mechanisms, penetration testing, and digital forensics.',
+    cover_image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&h=500&fit=crop&q=80',
+    mode: 'Online',
+    syllabus: [
+      'Weeks 1-4: Networking Security Protocols & Vulnerability Assessment',
+      'Weeks 5-8: Penetration Testing Methodologies & System Audits',
+      'Weeks 9-12: Incident Response Frameworks & Threat Intel Analysis'
+    ],
+    badges: ['Live Projects', 'Mentor Support', 'Certificate'],
+    display_order: 4,
+    is_active: true
+  },
+  {
+    id: 'prog_5',
+    title: 'UI/UX Product Design',
+    duration: '3 Months',
+    category: 'Product Design',
+    description: 'Master UI elements, typography, grid layouts, advanced Figma prototyping, and user testing practices.',
+    cover_image: 'https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=800&h=500&fit=crop&q=80',
+    mode: 'Hybrid',
+    syllabus: [
+      'Weeks 1-4: Design Principles, Typography & Color Systems',
+      'Weeks 5-8: Advanced Figma Prototyping & Design Systems',
+      'Weeks 9-12: User Testing, Portfolio Case Study & Presentation'
+    ],
+    badges: ['Live Projects', 'Mentor Support', 'Certificate'],
+    display_order: 5,
+    is_active: true
   }
 ];
 
@@ -1315,8 +1441,8 @@ export const db = {
     }
     if (!list || list.length === 0) {
       list = getLocalData<CourseItem[]>('zentriya_courses', defaultCourses);
-      // Self-healing: Reset local cache if it is old
-      if (list.length < 3 || list.some(c => c.title.includes('React & TypeScript') || c.id === 'course_1' && c.title !== 'Full Stack Web Development')) {
+      // Self-healing: Reset local cache if it is old (less than 5 courses or using old image)
+      if (list.length < 5 || list.some(c => c.title.includes('React & TypeScript') || (c.id === 'course_1' && c.title !== 'Full Stack Web Development') || (c.id === 'course_5' && c.bannerUrl.includes('1561070791-26c113006238')))) {
         list = defaultCourses;
         setLocalData('zentriya_courses', defaultCourses);
       }
@@ -1363,6 +1489,66 @@ export const db = {
     }
     setLocalData('zentriya_courses', filtered);
     this.logActivity('Course Deleted', `Deleted course item. ID: ${id}`);
+    return true;
+  },
+
+  // --------------------------------------------------------------------
+  // PROGRAMS
+  // --------------------------------------------------------------------
+  async getPrograms(): Promise<ProgramItem[]> {
+    const supabase = getSupabase();
+    let list: ProgramItem[] = [];
+    if (supabase) {
+      const { data, error } = await supabase.from('programs').select('*');
+      if (!error && data) {
+        list = data as ProgramItem[];
+      }
+    }
+    if (!list || list.length === 0) {
+      list = getLocalData<ProgramItem[]>('zentriya_programs', defaultPrograms);
+    }
+    return list.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+  },
+
+  async saveProgram(program: ProgramItem): Promise<ProgramItem> {
+    const programs = await this.getPrograms();
+    const index = programs.findIndex(p => p.id === program.id);
+    if (index >= 0) {
+      programs[index] = program;
+    } else {
+      if (program.display_order === undefined) {
+        program.display_order = programs.length;
+      }
+      programs.push(program);
+    }
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('programs').upsert(program);
+    }
+    setLocalData('zentriya_programs', programs);
+    this.logActivity('Program Modified', `Program offering "${program.title}" updated.`);
+    return program;
+  },
+
+  async savePrograms(list: ProgramItem[]): Promise<ProgramItem[]> {
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('programs').upsert(list);
+    }
+    setLocalData('zentriya_programs', list);
+    this.logActivity('Programs Reordered', 'Reordered program offerings sequence.');
+    return list;
+  },
+
+  async deleteProgram(id: string): Promise<boolean> {
+    const programs = await this.getPrograms();
+    const filtered = programs.filter(p => p.id !== id);
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('programs').delete().eq('id', id);
+    }
+    setLocalData('zentriya_programs', filtered);
+    this.logActivity('Program Removed', `Deleted program offering. ID: ${id}`);
     return true;
   },
 

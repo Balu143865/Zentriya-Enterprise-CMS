@@ -9,7 +9,7 @@ import {
   TeamMember, TestimonialItem, JobListing, JobApplication, 
   ContactMessage, BlogPost, FaqItem, WhyChooseUsItem,
   StudentJourneyStep, IndustryPartner, Placement,
-  Article, ArticleCategory, ArticleStatistic
+  Article, ArticleCategory, ArticleStatistic, ProgramItem
 } from '../types';
 import { 
   Save, Plus, Trash, Edit, Check, Settings, Image, 
@@ -195,6 +195,7 @@ export default function AdminManage() {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [internships, setInternships] = useState<InternshipProgram[]>([]);
   const [courses, setCourses] = useState<CourseItem[]>([]);
+  const [programs, setPrograms] = useState<ProgramItem[]>([]);
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
@@ -259,6 +260,9 @@ export default function AdminManage() {
           break;
         case 'courses':
           setCourses(await db.getCourses());
+          break;
+        case 'programs':
+          setPrograms(await db.getPrograms());
           break;
         case 'gallery':
           setGalleryItems(await db.getGalleryItems());
@@ -330,6 +334,28 @@ export default function AdminManage() {
 
     await db.saveCourses(updatedList);
     toast('Course order sequence updated.', 'success');
+    loadData();
+  };
+
+  const handleReorderProgram = async (programId: string, direction: 'up' | 'down') => {
+    const currentIndex = programs.findIndex(p => p.id === programId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= programs.length) return;
+
+    const updatedList = [...programs];
+    updatedList.forEach((item, index) => {
+      item.display_order = index;
+    });
+
+    const temp = updatedList[currentIndex].display_order;
+    updatedList[currentIndex].display_order = updatedList[targetIndex].display_order;
+    updatedList[targetIndex].display_order = temp;
+
+    updatedList.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+
+    await db.savePrograms(updatedList);
+    toast('Program order sequence updated.', 'success');
     loadData();
   };
 
@@ -820,7 +846,7 @@ export default function AdminManage() {
                   </div>
 
                   {/* Dynamic context filter dropdown */}
-                  {['services', 'courses', 'gallery', 'blogs', 'careers', 'applications', 'contacts'].includes(activeTab) && (
+                  {['services', 'courses', 'programs', 'gallery', 'blogs', 'careers', 'applications', 'contacts'].includes(activeTab) && (
                     <div className="relative min-w-[150px]">
                       <Filter className="absolute left-3 top-3 text-slate-400" size={14} />
                       <select 
@@ -868,6 +894,14 @@ export default function AdminManage() {
                           <>
                             <option value="Online">Online</option>
                             <option value="Offline">Offline</option>
+                            <option value="Self-Paced">Self-Paced</option>
+                          </>
+                        )}
+                        {activeTab === 'programs' && (
+                          <>
+                            <option value="Online">Online</option>
+                            <option value="Offline">Offline</option>
+                            <option value="Hybrid">Hybrid</option>
                             <option value="Self-Paced">Self-Paced</option>
                           </>
                         )}
@@ -1088,6 +1122,24 @@ export default function AdminManage() {
                               order: editingItem && 'order' in editingItem ? (editingItem.order as number) : undefined
                             };
                             await db.saveCourse(newCourse);
+                            break;
+                          }
+
+                          case 'programs': {
+                            const newProgram: ProgramItem = {
+                              id,
+                              title: fd.get('title') as string,
+                              category: fd.get('category') as string,
+                              duration: fd.get('duration') as string || '3 Months',
+                              description: fd.get('description') as string,
+                              mode: fd.get('mode') as string,
+                              badges: (fd.get('badges') as string || '').split(',').map(b => b.trim()).filter(Boolean),
+                              syllabus: (fd.get('syllabus') as string || '').split(',').map(s => s.trim()).filter(Boolean),
+                              cover_image: uploadedImageUrl || editingItem?.cover_image || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800',
+                              is_active: fd.get('is_active') === 'on',
+                              display_order: editingItem && 'display_order' in editingItem ? (editingItem.display_order as number) : undefined
+                            };
+                            await db.saveProgram(newProgram);
                             break;
                           }
 
@@ -1541,6 +1593,67 @@ export default function AdminManage() {
                               className="w-4 h-4 rounded border-slate-200 dark:border-slate-800 text-blue-600 focus:ring-blue-500 bg-slate-50 dark:bg-slate-950" 
                             />
                             <label htmlFor="courseActive" className="text-xs font-bold text-slate-700 dark:text-slate-300">Is Active / Visible on Website</label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PROGRAMS FORM */}
+                    {activeTab === 'programs' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Program Title *</label>
+                            <input type="text" name="title" defaultValue={editingItem?.title || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Category / Domain *</label>
+                              <input type="text" name="category" defaultValue={editingItem?.category || 'Placement Internship'} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Duration *</label>
+                              <input type="text" name="duration" defaultValue={editingItem?.duration || '3 Months'} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Training Mode *</label>
+                            <select name="mode" defaultValue={editingItem?.mode || 'Offline'} className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-white">
+                              <option value="Online">Online</option>
+                              <option value="Offline">Offline</option>
+                              <option value="Hybrid">Hybrid</option>
+                              <option value="Self-Paced">Self-Paced</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Brief Overview Description *</label>
+                            <textarea rows={2} name="description" defaultValue={editingItem?.description || ''} required className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Syllabus Chapters (comma separated list) *</label>
+                            <input type="text" name="syllabus" defaultValue={editingItem?.syllabus?.join(', ') || ''} required placeholder="Module 1: Java Basics, Module 2: Spring Boot API, Module 3: Microservices" className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Badges (comma separated) *</label>
+                            <input type="text" name="badges" defaultValue={editingItem?.badges?.join(', ') || 'Live Projects, Mentor Support, Global Certifications'} required placeholder="Live Projects, Mentor Support, Global Certifications" className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" />
+                          </div>
+                          <ImageDropzone 
+                            label="Program Cover Image" 
+                            value={uploadedImageUrl || editingItem?.cover_image || ''} 
+                            onChange={setUploadedImageUrl} 
+                          />
+                          <div className="flex items-center gap-2 pt-2">
+                            <input 
+                              type="checkbox" 
+                              name="is_active" 
+                              id="programActive" 
+                              defaultChecked={editingItem ? editingItem.is_active : true} 
+                              className="w-4 h-4 rounded border-slate-200 dark:border-slate-800 text-emerald-600 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-950" 
+                            />
+                            <label htmlFor="programActive" className="text-xs font-bold text-slate-700 dark:text-slate-300">Is Active / Visible on Website</label>
                           </div>
                         </div>
                       </div>
@@ -2704,6 +2817,92 @@ export default function AdminManage() {
                     </div>
                   )}
 
+                  {activeTab === 'programs' && (
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800 animate-fade-in">
+                      {(() => {
+                        const filtered = programs.filter(p => {
+                          const matchesSearch = !searchQuery || 
+                            p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            p.description.toLowerCase().includes(searchQuery.toLowerCase());
+                          const matchesCategory = filterCategory === 'All' || p.mode === filterCategory;
+                          return matchesSearch && matchesCategory;
+                        });
+                        return filtered.length === 0 ? (
+                          <div className="p-16 text-center text-slate-400">No programs found matching the search criteria.</div>
+                        ) : (
+                          paginate(filtered).map((prog, idx) => {
+                            const isFirst = currentPage === 1 && idx === 0;
+                            const isLast = (currentPage - 1) * itemsPerPage + idx === filtered.length - 1;
+                            return (
+                              <div key={prog.id} className="p-6 flex flex-col sm:flex-row items-center gap-6 justify-between">
+                                <div className="flex items-center gap-4 flex-1">
+                                  <img src={prog.cover_image || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=100'} alt={prog.title} className="w-20 h-14 object-cover rounded-xl border" referrerPolicy="no-referrer" />
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{prog.title}</h4>
+                                      <span className="text-[8px] bg-emerald-500/10 text-emerald-500 px-2 rounded font-bold">{prog.mode}</span>
+                                      {prog.is_active ? (
+                                        <span className="text-[8px] bg-blue-500/10 text-blue-500 px-1.5 rounded font-bold uppercase">Active</span>
+                                      ) : (
+                                        <span className="text-[8px] bg-slate-500/10 text-slate-500 px-1.5 rounded font-bold uppercase">Disabled</span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-slate-450 dark:text-slate-400 font-medium">Category: {prog.category} &bull; Duration: {prog.duration} &bull; Order: {prog.display_order ?? 0}</p>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {prog.badges?.map((badge, bidx) => (
+                                        <span key={bidx} className="text-[7.5px] bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-450 px-1.5 py-0.5 rounded border border-slate-200/40 dark:border-slate-800/60 font-semibold">{badge}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {/* Reordering Buttons */}
+                                  <div className="flex items-center gap-1 mr-2 border-r border-slate-200 dark:border-slate-800 pr-2">
+                                    <button
+                                      onClick={() => handleReorderProgram(prog.id, 'up')}
+                                      disabled={isFirst}
+                                      className={`p-1.5 rounded-lg transition-colors ${isFirst ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                      title="Move Up"
+                                    >
+                                      <ArrowUp size={12} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleReorderProgram(prog.id, 'down')}
+                                      disabled={isLast}
+                                      className={`p-1.5 rounded-lg transition-colors ${isLast ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                      title="Move Down"
+                                    >
+                                      <ArrowDown size={12} />
+                                    </button>
+                                  </div>
+                                  <button 
+                                    onClick={() => { setEditingItem(prog); setUploadedImageUrl(prog.cover_image || ''); }}
+                                    className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 rounded-xl text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-800"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  <button 
+                                    onClick={async () => {
+                                      if (confirm(`Delete program: "${prog.title}"?`)) {
+                                        await db.deleteProgram(prog.id);
+                                        toast('Program listing deleted successfully.', 'info');
+                                        loadData();
+                                      }
+                                    }}
+                                    className="p-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 rounded-xl text-red-500 border border-red-100 dark:border-red-900/30"
+                                  >
+                                    <Trash size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })
+                        );
+                      })()}
+                    </div>
+                  )}
+
                   {activeTab === 'gallery' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-6">
                       {galleryItems.length === 0 ? (
@@ -3808,6 +4007,7 @@ export default function AdminManage() {
                           (activeTab === 'services' && services.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'internships' && internships.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'courses' && courses.length <= currentPage * itemsPerPage) ||
+                          (activeTab === 'programs' && programs.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'gallery' && galleryItems.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'blogs' && blogs.length <= currentPage * itemsPerPage) ||
                           (activeTab === 'articles' && adminArticles.length <= currentPage * itemsPerPage) ||

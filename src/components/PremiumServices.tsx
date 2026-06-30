@@ -186,7 +186,7 @@ export default function PremiumServices({ services, onSelectService }: PremiumSe
         variants={cardVariants}
         onMouseMove={(e) => handleMouseMove(srv.id, e)}
         onMouseLeave={() => handleMouseLeave(srv.id)}
-        className={`group relative rounded-[24px] overflow-hidden bg-[#070D19]/90 border ${theme.border} p-8 flex flex-col h-full justify-between transition-all duration-500 shadow-2xl hover:-translate-y-2.5`}
+        className={`group relative rounded-2xl overflow-hidden bg-[#070D19]/90 border ${theme.border} p-5 sm:p-6 flex flex-col h-full justify-between transition-all duration-500 shadow-xl hover:-translate-y-2 hover:shadow-2xl`}
         style={{
           perspective: '1000px',
         }}
@@ -195,7 +195,7 @@ export default function PremiumServices({ services, onSelectService }: PremiumSe
         {/* Dynamic Card Inner Light Glow Follower */}
         {hasCoords && (
           <div
-            className="absolute inset-0 pointer-events-none transition-opacity duration-300 rounded-[24px] opacity-100 z-10"
+            className="absolute inset-0 pointer-events-none transition-opacity duration-300 rounded-2xl opacity-100 z-10"
             style={{
               background: `radial-gradient(280px circle at ${x}px ${y}px, ${theme.glowColor}, transparent 80%)`,
             }}
@@ -207,21 +207,21 @@ export default function PremiumServices({ services, onSelectService }: PremiumSe
           <div>
             {/* Top Line Cluster: Glowing circular Icon & Matrix Dots */}
             <div className="flex justify-between items-start">
-              {/* Large circular glowing icon */}
+              {/* Circular glowing icon */}
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                className={`w-16 h-16 rounded-full flex items-center justify-center border transition-all duration-500 shrink-0 ${theme.iconBg}`}
+                className={`w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center border transition-all duration-500 shrink-0 ${theme.iconBg}`}
               >
-                <LucideIcon name={srv.icon} size={26} />
+                <LucideIcon name={srv.icon} size={22} />
               </motion.div>
 
-              {/* Decorative 6x4 glowing dots matrix */}
-              <div className="grid grid-cols-6 gap-1.5 opacity-25 group-hover:opacity-45 transition-all duration-300">
-                {[...Array(24)].map((_, i) => (
+              {/* Decorative 5x3 glowing dots matrix */}
+              <div className="grid grid-cols-5 gap-1 opacity-20 group-hover:opacity-35 transition-all duration-300">
+                {[...Array(15)].map((_, i) => (
                   <div
                     key={i}
-                    className={`w-1 h-1 rounded-full ${
-                      i < 6 || i % 4 === 0 ? theme.dotColor : 'bg-slate-800'
+                    className={`w-0.5 h-0.5 rounded-full ${
+                      i < 5 || i % 3 === 0 ? theme.dotColor : 'bg-slate-800'
                     }`}
                   />
                 ))}
@@ -229,29 +229,29 @@ export default function PremiumServices({ services, onSelectService }: PremiumSe
             </div>
 
             {/* Service Name */}
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-6 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-slate-300 transition-all duration-300 font-display">
+            <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight mt-4 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-slate-300 transition-all duration-300 font-display">
               {srv.title}
             </h3>
 
             {/* Description */}
-            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed mt-4 font-light">
+            <p className="text-slate-400 text-xs sm:text-[13px] leading-relaxed mt-2.5 font-light line-clamp-2">
               {srv.description}
             </p>
 
             {/* Divider Line */}
-            <div className="h-px bg-white/5 my-6 w-full" />
+            <div className="h-px bg-white/5 my-4 w-full" />
 
             {/* Feature Points list */}
-            <ul className="space-y-4">
+            <ul className="space-y-2">
               {((srv.features && srv.features.length > 0) ? srv.features : [
                 'Placement Readiness Mentorship',
                 'Collaborative Group Projects',
                 'Accredited Practical Learning',
                 'Global Certifications Prep'
               ]).slice(0, 4).map((feat, i) => (
-                <li key={i} className="flex items-center gap-3 text-xs sm:text-sm text-slate-300 group/item transition-colors duration-300 hover:text-white">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${theme.checkBorder} ${theme.checkBg} shrink-0 transition-transform duration-300 group-hover/item:scale-110`}>
-                    <Check size={10} className={`${theme.text} stroke-[2.5px]`} />
+                <li key={i} className="flex items-center gap-2.5 text-xs text-slate-300 group/item transition-colors duration-300 hover:text-white">
+                  <div className={`w-4.5 h-4.5 rounded-full flex items-center justify-center border ${theme.checkBorder} ${theme.checkBg} shrink-0 transition-transform duration-300 group-hover/item:scale-105`}>
+                    <Check size={9} className={`${theme.text} stroke-[2.5px]`} />
                   </div>
                   <span className="font-light tracking-wide truncate">{feat}</span>
                 </li>
@@ -260,10 +260,10 @@ export default function PremiumServices({ services, onSelectService }: PremiumSe
           </div>
 
           {/* Card Footer with CTA Text Link */}
-          <div className="mt-8 pt-4">
-            <div className={`flex items-center gap-2 ${theme.text} font-bold text-xs sm:text-sm group/btn transition-transform duration-300`}>
+          <div className="mt-5 pt-2">
+            <div className={`flex items-center gap-1.5 ${theme.text} font-bold text-xs group/btn transition-transform duration-300`}>
               <span>View Domain Services</span>
-              <span className="transform group-hover/btn:translate-x-1.5 transition-transform duration-300">→</span>
+              <span className="transform group-hover/btn:translate-x-1 transition-transform duration-300">→</span>
             </div>
           </div>
         </div>
@@ -280,10 +280,10 @@ export default function PremiumServices({ services, onSelectService }: PremiumSe
       <div className="absolute -top-40 left-1/4 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute top-1/2 right-1/4 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="max-w-[1650px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 relative z-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* SECTION HEADER */}
-        <AnimatedHeader className="text-center max-w-4xl mx-auto mb-20 space-y-4">
+        <AnimatedHeader className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           
           {/* Custom vector header ornament exactly like reference */}
           <div className="flex items-center justify-center gap-4">
@@ -306,11 +306,11 @@ export default function PremiumServices({ services, onSelectService }: PremiumSe
             </div>
           </div>
 
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-none font-display pt-2">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-none font-display pt-2">
             Solutions That <span className="text-[#3B82F6]">Drive</span> Your Growth
           </h2>
 
-          <p className="text-slate-400 text-sm sm:text-base md:text-lg font-light leading-relaxed max-w-3xl mx-auto pt-1">
+          <p className="text-slate-400 text-xs sm:text-sm md:text-base font-light leading-relaxed max-w-2xl mx-auto pt-1">
             End-to-end IT training, development, and innovation services designed to empower individuals and organizations.
           </p>
         </AnimatedHeader>
@@ -321,16 +321,16 @@ export default function PremiumServices({ services, onSelectService }: PremiumSe
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-100px' }}
-          className="space-y-8"
+          className="space-y-6"
         >
           {/* Desktop First Row (4 items) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 xl:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {row1.map(srv => renderCard(srv))}
           </div>
 
           {/* Desktop Second Row (remaining items, beautifully centered) */}
           {row2.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8 max-w-[1220px] mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-[850px] mx-auto">
               {row2.map(srv => renderCard(srv))}
             </div>
           )}

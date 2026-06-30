@@ -109,13 +109,13 @@ export default function Footer() {
                 <Link to="/services" className="hover:text-emerald-400 transition-colors">Custom Software Development</Link>
               </li>
               <li>
-                <Link to="/internships" className="hover:text-emerald-400 transition-colors">Placement Internships</Link>
+                <Link to="/programs" className="hover:text-emerald-400 transition-colors">Placement Internships</Link>
               </li>
               <li>
                 <Link to="/services" className="hover:text-emerald-400 transition-colors">Cloud Consulting & DevOps</Link>
               </li>
               <li>
-                <Link to="/courses" className="hover:text-emerald-400 transition-colors">Advanced Tech Bootcamps</Link>
+                <Link to="/programs" className="hover:text-emerald-400 transition-colors">Advanced Tech Bootcamps</Link>
               </li>
               <li>
                 <Link to="/gallery" className="hover:text-emerald-400 transition-colors">Student Success Gallery</Link>
