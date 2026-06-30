@@ -969,6 +969,8 @@ export default function AdminManage() {
                               icon: fd.get('icon') as string || 'Lightbulb',
                               display_order: Number(fd.get('display_order')) || whyChooseUs.length + 1,
                               is_active: fd.get('is_active') === 'true',
+                              description: fd.get('description') as string || '',
+                              bottom_badge: fd.get('bottom_badge') as string || '',
                               created_at: editingItem?.created_at || new Date().toISOString(),
                               updated_at: new Date().toISOString()
                             };
@@ -1931,6 +1933,28 @@ export default function AdminManage() {
                             <option value="Code">💻 Code (Practical Exposure)</option>
                             <option value="Zap">⚡ Zap (Innovation-Driven)</option>
                           </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Supporting Description *</label>
+                          <textarea 
+                            name="description" 
+                            defaultValue={editingItem?.description || ''} 
+                            required 
+                            rows={3}
+                            placeholder="e.g. Hands-on training with live industry projects..."
+                            className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Bottom Feature Badge *</label>
+                          <input 
+                            type="text" 
+                            name="bottom_badge" 
+                            defaultValue={editingItem?.bottom_badge || ''} 
+                            required 
+                            placeholder="e.g. Live Projects"
+                            className="w-full bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white" 
+                          />
                         </div>
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Display Order (Sorting)</label>
@@ -3371,9 +3395,19 @@ export default function AdminManage() {
                                       {item.is_active ? 'Active' : 'Disabled'}
                                     </span>
                                   </div>
-                                  <p className="text-[10px] text-slate-400 font-mono">
-                                    Display Order: {item.display_order} • Icon: {item.icon}
+                                  <p className="text-xs text-slate-500 max-w-lg leading-snug">
+                                    {item.description || 'No description provided.'}
                                   </p>
+                                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                                    {item.bottom_badge && (
+                                      <span className="inline-block text-[10px] bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-100/40 dark:border-blue-900/30 px-2 py-0.5 rounded-full font-bold">
+                                        Badge: {item.bottom_badge}
+                                      </span>
+                                    )}
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                      Order: {item.display_order} • Icon: {item.icon}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
 

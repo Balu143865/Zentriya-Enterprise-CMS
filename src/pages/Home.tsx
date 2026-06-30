@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   ArrowRight, Award, GraduationCap, CheckCircle2, 
-  ChevronLeft, ChevronRight, TrendingUp, Sparkles, Send, Building,
+  ChevronLeft, ChevronRight, ChevronDown, TrendingUp, Sparkles, Send, Building,
   Trophy, Users, ShieldCheck, Briefcase, Clock, Calendar, BookOpen, 
   Cloud, Cpu, Shield, Layout, Settings, Eye, Download, Star, ExternalLink
 } from 'lucide-react';
@@ -374,6 +374,32 @@ export default function Home() {
   const [testCardsToShow, setTestCardsToShow] = useState(3);
   const [expandedTestimonials, setExpandedTestimonials] = useState<Record<string, boolean>>({});
 
+  // Touch Swipe Gesture Handlers for Testimonials Carousel on Mobile
+  const [testTouchStart, setTestTouchStart] = useState<number | null>(null);
+  const [testTouchEnd, setTestTouchEnd] = useState<number | null>(null);
+
+  const handleTestTouchStart = (e: React.TouchEvent) => {
+    setTestTouchStart(e.targetTouches[0].clientX);
+    setTestTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTestTouchMove = (e: React.TouchEvent) => {
+    setTestTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTestTouchEnd = () => {
+    if (testTouchStart === null || testTouchEnd === null) return;
+    const diffX = testTouchStart - testTouchEnd;
+    const minSwipeDistance = 40; // minimum swipe distance to register
+    if (diffX > minSwipeDistance) {
+      setTestIndex((prev) => (prev + 1) % testimonials.length);
+    } else if (diffX < -minSwipeDistance) {
+      setTestIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+    }
+    setTestTouchStart(null);
+    setTestTouchEnd(null);
+  };
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
@@ -513,128 +539,224 @@ export default function Home() {
   return (
     <div id="landing-page-root" className="bg-slate-50 dark:bg-slate-950 overflow-x-hidden">
       
-      {/* 1. HERO SLIDER */}
+      {/* 1. PREMIUM ENTERPRISE HERO LANDING */}
       {slides.length > 0 && (
-        <section id="hero-slider" className="relative h-[80vh] md:h-[85vh] w-full overflow-hidden bg-slate-900">
+        <section id="hero-slider" className="relative min-h-screen lg:h-screen w-full overflow-hidden bg-slate-950 flex flex-col justify-center items-center">
+          
+          {/* Slides Carousel container */}
           {slides.map((slide, idx) => (
             <div 
               key={slide.id}
-              className={`absolute top-0 left-0 w-full h-full transition-all duration-1000 transform ${
+              className={`absolute inset-0 w-full h-full transition-all duration-1000 transform ${
                 idx === activeSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-105 pointer-events-none'
               }`}
             >
-              {/* Overlay shading */}
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-900/60 to-slate-950/80 z-10" />
-              <img 
+              {/* Premium Multi-layered Dark Overlays */}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/45 z-10" />
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/60 to-transparent z-10" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.18),transparent_50%)] z-10 animate-pulse" style={{ animationDuration: '8s' }} />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.15),transparent_40%)] z-10" />
+
+              {/* Ken Burns zoom on active background slide */}
+              <motion.img 
                 src={slide.imageUrl} 
                 alt={slide.title} 
-                className="w-full h-full object-cover"
+                initial={{ scale: 1.05 }}
+                animate={idx === activeSlide ? { scale: 1.15 } : { scale: 1.05 }}
+                transition={{ duration: 12, ease: "easeOut" }}
+                className="w-full h-full object-cover select-none"
                 referrerPolicy="no-referrer"
               />
-              
-              {/* Content Card layout */}
-              <div className="absolute inset-0 z-20 flex items-center justify-start">
-                <motion.div 
-                  className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 text-left"
-                  initial="hidden"
-                  animate={idx === activeSlide ? "visible" : "hidden"}
-                  variants={containerVariants}
-                >
-                  <motion.div 
-                    variants={badgeVariants}
-                    className="inline-flex items-center gap-2.5 bg-blue-500/15 border border-blue-500/30 text-blue-400 px-4 py-1.5 rounded-full text-xs font-semibold mb-6 tracking-wider uppercase"
-                  >
-                    <img src="/logo.png" alt="Zentriya Logo" className="w-5 h-5 object-contain shrink-0" />
-                    Zentriya Technical Ecosystem
-                  </motion.div>
-                  
-                  <motion.h1 
-                    variants={titleContainerVariants}
-                    className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-6 max-w-3xl font-display flex flex-wrap"
-                  >
-                    {slide.title.split(' ').map((word, wordIdx) => (
-                      <span key={wordIdx} className="inline-block overflow-hidden mr-[0.25em] py-1">
-                        <motion.span
-                          variants={titleWordVariants}
-                          className="inline-block origin-left"
-                        >
-                          {word}
-                        </motion.span>
-                      </span>
-                    ))}
-                  </motion.h1>
-                  
-                  <motion.p 
-                    variants={subtitleContainerVariants}
-                    className="text-base sm:text-lg md:text-xl text-slate-300 mb-8 max-w-2xl font-light leading-relaxed flex flex-wrap"
-                  >
-                    {slide.subtitle.split(' ').map((word, wordIdx) => (
-                      <span key={wordIdx} className="inline-block overflow-hidden mr-[0.22em] py-0.5">
-                        <motion.span
-                          variants={subtitleWordVariants}
-                          className="inline-block"
-                        >
-                          {word}
-                        </motion.span>
-                      </span>
-                    ))}
-                  </motion.p>
-                  
-                  <motion.div 
-                    variants={buttonsVariants}
-                    className="flex flex-wrap gap-4"
-                  >
-                    <Link 
-                      to={slide.ctaLink}
-                      className="bg-gradient-to-r from-blue-600 to-emerald-500 hover:brightness-110 text-white text-sm sm:text-base font-bold px-6 py-3 rounded-lg shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 hover:scale-105 duration-200"
-                    >
-                      {slide.ctaText}
-                      <ArrowRight size={16} />
-                    </Link>
-                    <Link 
-                      to="/contact"
-                      className="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-white text-sm sm:text-base font-semibold px-6 py-3 rounded-lg backdrop-blur-sm transition-all"
-                    >
-                      Partner Relations
-                    </Link>
-                  </motion.div>
-                </motion.div>
-              </div>
             </div>
           ))}
 
-          {/* Slide navigation controls */}
+          {/* Floating Ambient Glow Fields */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
+            <motion.div 
+              animate={{ 
+                x: [0, 60, -30, 0], 
+                y: [0, -50, 30, 0] 
+              }}
+              transition={{ repeat: Infinity, duration: 16, ease: "easeInOut" }}
+              className="absolute top-[15%] left-[10%] w-72 h-72 rounded-full bg-blue-500/8 dark:bg-blue-600/4 blur-3xl"
+            />
+            <motion.div 
+              animate={{ 
+                x: [0, -40, 60, 0], 
+                y: [0, 30, -60, 0] 
+              }}
+              transition={{ repeat: Infinity, duration: 20, ease: "easeInOut" }}
+              className="absolute bottom-[25%] right-[10%] w-96 h-96 rounded-full bg-emerald-500/8 dark:bg-emerald-600/4 blur-3xl"
+            />
+          </div>
+
+          {/* Core Content Area */}
+          <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 z-20 flex flex-col justify-center items-start pt-24 pb-28 md:py-0 h-full">
+            <AnimatePresence mode="wait">
+              {slides.map((slide, idx) => {
+                if (idx !== activeSlide) return null;
+                
+                // Dynamic Highlighting of keywords to emulate high-end platforms (Vercel, Apple)
+                const highlightKeywords = (text: string) => {
+                  const keywords = [
+                    'internship', 'internships', 'career', 'careers', 'future', 'ecosystem', 
+                    'industry', 'technical', 'training', 'professional', 'placement', 'placements', 
+                    'courses', 'skills', 'global', 'opportunities', 'success', 'excellence', 'transform'
+                  ];
+                  return text.split(' ').map((word, wIdx) => {
+                    const cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").toLowerCase();
+                    const isKeyword = keywords.includes(cleanWord);
+                    if (isKeyword) {
+                      return (
+                        <span key={wIdx} className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-300 to-emerald-400 font-extrabold mr-[0.25em] inline-block tracking-tight drop-shadow-[0_2px_15px_rgba(59,130,246,0.1)]">
+                          {word}
+                        </span>
+                      );
+                    }
+                    return <span key={wIdx} className="text-white mr-[0.25em] inline-block font-bold">{word}</span>;
+                  });
+                };
+
+                return (
+                  <motion.div 
+                    key={slide.id}
+                    className="w-full max-w-4xl text-left"
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    variants={containerVariants}
+                  >
+                    {/* Live Tech Pill Tag */}
+                    <motion.div 
+                      variants={badgeVariants}
+                      className="inline-flex items-center gap-2.5 bg-slate-900/80 hover:bg-slate-850/80 border border-slate-800/80 backdrop-blur-md text-slate-300 px-4 py-1.5 rounded-full text-xs font-semibold mb-6 tracking-wide shadow-2xl shadow-emerald-500/5 group cursor-pointer select-none"
+                    >
+                      <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span className="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent font-bold">Live:</span> 
+                      <span>Zentriya Technical Ecosystem</span>
+                      <ArrowRight size={12} className="text-slate-400 group-hover:translate-x-1 transition-transform" />
+                    </motion.div>
+                    
+                    {/* Main Headline */}
+                    <motion.h1 
+                      variants={titleContainerVariants}
+                      className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.08] mb-6 max-w-4xl font-display flex flex-wrap"
+                    >
+                      {highlightKeywords(slide.title)}
+                    </motion.h1>
+                    
+                    {/* Subtitle */}
+                    <motion.p 
+                      variants={subtitleContainerVariants}
+                      className="text-base sm:text-lg md:text-xl text-slate-300/90 mb-8 max-w-3xl font-light leading-relaxed flex flex-wrap tracking-wide"
+                    >
+                      {slide.subtitle.split(' ').map((word, wIdx) => (
+                        <span key={wIdx} className="inline-block overflow-hidden mr-[0.22em] py-0.5">
+                          <motion.span
+                            variants={subtitleWordVariants}
+                            className="inline-block"
+                          >
+                            {word}
+                          </motion.span>
+                        </span>
+                      ))}
+                    </motion.p>
+                    
+                    {/* Premium CTA Buttons Container */}
+                    <motion.div 
+                      variants={buttonsVariants}
+                      className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto"
+                    >
+                      <Link 
+                        to="/internships"
+                        className="relative group overflow-hidden bg-gradient-to-r from-blue-600 to-emerald-500 text-white text-sm sm:text-base font-bold px-8 py-4 rounded-xl shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] duration-250 select-none"
+                      >
+                        <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-emerald-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <span className="relative z-10">Apply for Internship</span>
+                        <GraduationCap size={18} className="relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                      </Link>
+                      <Link 
+                        to="/courses"
+                        className="relative group overflow-hidden bg-slate-900/60 hover:bg-slate-855/80 border border-slate-800 backdrop-blur-md text-white text-sm sm:text-base font-semibold px-8 py-4 rounded-xl transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] duration-250 hover:border-slate-700 shadow-xl select-none"
+                      >
+                        <span>Explore Programs</span>
+                        <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform duration-300" />
+                      </Link>
+                    </motion.div>
+
+                    {/* Integrated Enterprise Statistics bento strip */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-12 pt-10 border-t border-slate-900/60 dark:border-slate-800/40 w-full max-w-4xl">
+                      {[
+                        { value: "5000+", label: "Students Trained", icon: Users, color: "from-blue-400 to-indigo-400" },
+                        { value: "1200+", label: "Internships", icon: Briefcase, color: "from-teal-400 to-emerald-400" },
+                        { value: "250+", label: "Hiring Partners", icon: Building, color: "from-amber-400 to-orange-400" },
+                        { value: "98%", label: "Placement Rate", icon: Trophy, color: "from-purple-400 to-pink-400" },
+                      ].map((stat, sIdx) => {
+                        const StatIcon = stat.icon;
+                        return (
+                          <motion.div
+                            key={sIdx}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.6 + sIdx * 0.1, duration: 0.6 }}
+                            className="p-4 rounded-2xl bg-slate-900/30 dark:bg-slate-950/15 backdrop-blur-md border border-slate-900/50 hover:border-slate-800/80 hover:bg-slate-900/60 transition-all duration-300 group"
+                          >
+                            <div className="flex items-center gap-2.5 mb-1.5">
+                              <div className="p-1.5 rounded-lg bg-slate-900/50 text-slate-400 group-hover:text-white transition-colors">
+                                <StatIcon size={14} />
+                              </div>
+                              <span className={`text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r ${stat.color} tracking-tight font-display`}>
+                                {stat.value}
+                              </span>
+                            </div>
+                            <p className="text-[11px] font-semibold text-slate-400 tracking-normal group-hover:text-slate-300 transition-colors">
+                              {stat.label}
+                            </p>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+
+          {/* Slide Indicator Dots (Right aligned or center) */}
           {slides.length > 1 && (
-            <>
-              <button 
-                onClick={handlePrevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-lg bg-slate-900/60 hover:bg-emerald-600 hover:text-white text-slate-300 border border-slate-700 transition-colors"
-                aria-label="Previous Slide"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button 
-                onClick={handleNextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-lg bg-slate-900/60 hover:bg-blue-600 hover:text-white text-slate-300 border border-slate-700 transition-colors"
-                aria-label="Next Slide"
-              >
-                <ChevronRight size={20} />
-              </button>
-              
-              {/* Dot Markers */}
-              <div className="absolute bottom-6 left-0 w-full flex justify-center gap-2.5 z-30">
-                {slides.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveSlide(idx)}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      idx === activeSlide ? 'w-8 bg-blue-500' : 'w-2 bg-slate-600 hover:bg-slate-400'
-                    }`}
-                  />
-                ))}
-              </div>
-            </>
+            <div className="absolute right-8 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-3">
+              {slides.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveSlide(idx)}
+                  className={`h-2.5 rounded-full transition-all duration-300 ${
+                    idx === activeSlide ? 'h-8 w-2.5 bg-blue-500 shadow-md shadow-blue-500/50' : 'w-2.5 h-2.5 bg-slate-800 hover:bg-slate-700'
+                  }`}
+                  aria-label={`Slide ${idx + 1}`}
+                />
+              ))}
+            </div>
           )}
+
+          {/* Custom Scroll Down indicator */}
+          <div 
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 cursor-pointer select-none group"
+            onClick={() => document.getElementById('about-us-preview')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            <span className="text-[9px] font-bold tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors uppercase font-mono">
+              Scroll to Explore
+            </span>
+            <motion.div 
+              animate={{ y: [0, 6, 0] }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+              className="w-5 h-8 rounded-full border border-slate-800 flex justify-center p-1 group-hover:border-slate-700 transition-colors"
+            >
+              <div className="w-1 h-1.5 bg-emerald-500 rounded-full" />
+            </motion.div>
+          </div>
         </section>
       )}
 
@@ -758,98 +880,102 @@ export default function Home() {
 
       {/* WHY CHOOSE US SECTION */}
       {whyChooseUs.length > 0 && (
-        <section id="why-choose-us" className="py-24 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-emerald-500/5 to-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+        <section id="why-choose-us" className="py-24 bg-slate-50 dark:bg-slate-950 border-b border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden">
+          {/* Subtle radial gradients & light abstract blobs for elegant background */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.02),transparent_65%)] pointer-events-none" />
+          <div className="absolute top-1/4 left-[10%] w-72 h-72 rounded-full bg-blue-500/[0.015] dark:bg-blue-600/[0.01] blur-3xl pointer-events-none" />
+          <div className="absolute bottom-1/4 right-[10%] w-96 h-96 rounded-full bg-emerald-500/[0.015] dark:bg-emerald-600/[0.01] blur-3xl pointer-events-none" />
           
-          {/* SVG Definition for Card Border Gradient */}
-          <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
-            <defs>
-              <linearGradient id="why-choose-us-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#059669" />
-                <stop offset="50%" stopColor="#3b82f6" />
-                <stop offset="100%" stopColor="#10b981" />
-              </linearGradient>
-            </defs>
-          </svg>
-
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             {/* Section Header */}
             <AnimatedHeader className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold tracking-widest text-xs uppercase block font-mono">
-                Corporate Distinction
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-emerald-500 font-extrabold tracking-widest text-xs uppercase block font-mono">
+                WHY ZENTRIYA
               </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight font-display">
                 {whyChooseUsTitle}
               </h2>
-              <div className="h-1 w-20 bg-gradient-to-r from-emerald-500 to-blue-600 mx-auto rounded-full" />
+              {/* Elegant blue-green gradient divider below heading */}
+              <div className="h-1 w-24 bg-gradient-to-r from-blue-500 via-teal-400 to-emerald-500 mx-auto rounded-full shadow-sm" />
             </AnimatedHeader>
 
-            {/* Features Grid */}
+            {/* Features Grid with equal spacing - exactly 3 feature cards */}
             <motion.div 
               variants={{
                 hidden: { opacity: 0 },
                 show: {
                   opacity: 1,
                   transition: {
-                    staggerChildren: 0.15
+                    staggerChildren: 0.2
                   }
                 }
               }}
               initial="hidden"
               whileInView="show"
-              viewport={{ once: true, margin: "-100px" }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              viewport={{ once: true, margin: "-80px" }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto"
             >
-              {whyChooseUs.map((item) => (
+              {whyChooseUs.filter(item => item.is_active).slice(0, 3).map((item) => (
                 <motion.div
                   key={item.id}
                   variants={{
-                    hidden: { opacity: 0, y: 30 },
-                    show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } }
+                    hidden: { opacity: 0, y: 50, scale: 0.95 },
+                    show: { 
+                      opacity: 1, 
+                      y: 0, 
+                      scale: 1,
+                      transition: { 
+                        type: "spring", 
+                        stiffness: 80, 
+                        damping: 15, 
+                        duration: 0.8 
+                      } 
+                    }
                   }}
-                  className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200/60 dark:border-slate-800/80 shadow-md hover:shadow-2xl hover:-translate-y-2 hover:border-transparent dark:hover:border-transparent transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden"
+                  className="relative p-[1px] rounded-[24px] bg-gradient-to-br from-blue-500/15 via-slate-200/40 to-emerald-500/15 dark:from-blue-500/25 dark:via-slate-800/40 dark:to-emerald-500/25 overflow-hidden group hover:from-blue-500 hover:via-teal-400 hover:to-emerald-500 transition-all duration-500 shadow-md hover:shadow-2xl hover:shadow-blue-500/10 dark:hover:shadow-emerald-500/5 hover:-translate-y-2 hover:scale-[1.02] flex flex-col justify-stretch"
                 >
-                  {/* Subtle top indicator bar */}
-                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-500 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-                  
-                  {/* SVG glowing rotating border sweep */}
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none rounded-2xl" fill="none">
-                    <motion.rect
-                      x="0"
-                      y="0"
-                      width="100%"
-                      height="100%"
-                      rx="16"
-                      ry="16"
-                      stroke="url(#why-choose-us-gradient)"
-                      strokeWidth="2"
-                      vectorEffect="non-scaling-stroke"
-                      initial={{ strokeDasharray: "150 450", strokeDashoffset: 0, opacity: 0 }}
-                      whileHover={{ 
-                        strokeDashoffset: -600, 
-                        opacity: 1,
-                        transition: {
-                          strokeDashoffset: { repeat: Infinity, duration: 4, ease: "linear" },
-                          opacity: { duration: 0.3 }
-                        }
-                      }}
-                    />
-                  </svg>
+                  {/* Internal card structure with premium glassmorphism */}
+                  <div className="w-full bg-white/95 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[23px] flex flex-col items-center text-center relative z-10 flex-1 min-h-[340px] md:h-[350px] justify-between">
+                    
+                    {/* Top Icon circular container with gradient pulse behind */}
+                    <div className="relative mb-6 shrink-0">
+                      {/* Gradient glow behind icon */}
+                      <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-emerald-500 opacity-20 blur-xl rounded-full scale-125 group-hover:scale-150 group-hover:opacity-40 transition-all duration-500" />
+                      
+                      {/* Subtly animated pulse ring */}
+                      <div className="absolute -inset-1.5 rounded-full border border-blue-500/20 dark:border-emerald-500/20 animate-pulse" style={{ animationDuration: '3s' }} />
 
-                  {/* Inner background hover glow */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/[0.02] to-blue-500/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-
-                  {/* Circular Icon Container */}
-                  <div className="w-20 h-20 rounded-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center mb-6 border border-slate-200/80 dark:border-slate-800/80 group-hover:border-emerald-500/30 group-hover:bg-gradient-to-tr group-hover:from-blue-500/10 group-hover:to-emerald-500/10 transition-all duration-300 shrink-0 shadow-inner relative z-10">
-                    <div className="text-blue-600 dark:text-blue-400 group-hover:text-emerald-500 group-hover:scale-110 transition-all duration-300">
-                      <LucideIcon name={item.icon} size={32} />
+                      {/* Main Circular Glass container (70-80px) */}
+                      <div className="w-20 h-20 rounded-full bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/80 shadow-inner flex items-center justify-center relative z-10 transition-colors duration-300 group-hover:bg-slate-50/40 dark:group-hover:bg-slate-950/40">
+                        <div className="text-blue-600 dark:text-blue-400 group-hover:text-emerald-500 group-hover:scale-110 transition-all duration-300">
+                          <LucideIcon name={item.icon} size={36} />
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Title */}
-                  <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-white leading-relaxed font-display relative z-10">
-                    {item.title}
-                  </h3>
+                    {/* Feature Title: maximum two lines */}
+                    <div className="flex-1 flex flex-col justify-start w-full">
+                      <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white tracking-tight leading-snug font-display line-clamp-2 min-h-[50px] flex items-center justify-center">
+                        {item.title}
+                      </h3>
+                      
+                      {/* Supporting Description */}
+                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-normal mt-2 line-clamp-3">
+                        {item.description}
+                      </p>
+                    </div>
+
+                    {/* Premium Rounded Badge at the bottom */}
+                    {item.bottom_badge && (
+                      <div className="mt-6 shrink-0">
+                        <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-blue-500/20 dark:border-emerald-500/20 text-blue-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider shadow-sm select-none transition-all duration-300 group-hover:from-blue-500/15 group-hover:to-emerald-500/15">
+                          <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                          <span>{item.bottom_badge}</span>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
                 </motion.div>
               ))}
             </motion.div>
@@ -1270,8 +1396,13 @@ export default function Home() {
             {/* Carousel Container */}
             <div className="relative px-4 sm:px-12">
               
-              {/* Carousel Viewport Wrapper */}
-              <div className="overflow-hidden py-4">
+              {/* Carousel Viewport Wrapper with Swipe Support */}
+              <div 
+                className="overflow-hidden py-4 touch-pan-y"
+                onTouchStart={handleTestTouchStart}
+                onTouchMove={handleTestTouchMove}
+                onTouchEnd={handleTestTouchEnd}
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-center items-stretch min-h-[380px]">
                   <AnimatePresence mode="popLayout" initial={false}>
                     {(() => {

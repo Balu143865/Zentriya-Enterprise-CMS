@@ -112,6 +112,32 @@ export default function TechInsights() {
   const [articleCardsToShow, setArticleCardsToShow] = useState(3);
   const [isHovered, setIsHovered] = useState(false);
 
+  // Swipe gesture handling for mobile screens
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.targetTouches[0].clientX);
+    setTouchEndX(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX === null || touchEndX === null) return;
+    const diffX = touchStartX - touchEndX;
+    const minSwipeDistance = 40; // minimum swipe distance to register
+    if (diffX > minSwipeDistance) {
+      nextArticle();
+    } else if (diffX < -minSwipeDistance) {
+      prevArticle();
+    }
+    setTouchStartX(null);
+    setTouchEndX(null);
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -262,10 +288,15 @@ export default function TechInsights() {
                 </>
               )}
 
-              {/* Carousel Window */}
-              <div className="overflow-hidden w-full py-4">
+              {/* Carousel Window with Swipe Support */}
+              <div 
+                className="overflow-x-auto md:overflow-hidden w-full py-4 touch-pan-x snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
                 <AnimatedCardContainer 
-                  className="flex gap-0 transition-all duration-500 ease-out"
+                  className="flex flex-nowrap gap-0 transition-all duration-500 ease-out"
                   style={{
                     transform: `translateX(-${articleIndex * (100 / articleCardsToShow)}%)`,
                     width: '100%'
@@ -274,10 +305,15 @@ export default function TechInsights() {
                   {filtered.map((article) => (
                     <AnimatedCard
                       key={article.id}
+                      variants={undefined}
+                      initial={{ opacity: 0.4, y: 12, scale: 0.98 }}
+                      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                      viewport={{ once: false, amount: 0.15 }}
+                      transition={{ duration: 0.45, ease: "easeOut" }}
                       style={{
                         flex: `0 0 ${100 / articleCardsToShow}%`,
                       }}
-                      className="px-2.5 shrink-0"
+                      className="px-2.5 shrink-0 snap-center"
                     >
                       <div
                         id={`home-article-card-${article.id}`}

@@ -298,6 +298,8 @@ export interface WhyChooseUsItem {
   icon: string;
   display_order: number;
   is_active: boolean;
+  description?: string;
+  bottom_badge?: string;
   created_at?: string;
   updated_at?: string;
 }

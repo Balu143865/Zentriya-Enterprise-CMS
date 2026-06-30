@@ -804,21 +804,27 @@ const defaultWhyChooseUs: WhyChooseUsItem[] = [
     title: 'Industry-Oriented Training with Real-Time Practical Exposure',
     icon: 'Lightbulb',
     display_order: 1,
-    is_active: true
+    is_active: true,
+    description: 'Hands-on training with live industry projects and practical exposure.',
+    bottom_badge: 'Live Projects'
   },
   {
     id: 'wcu_02',
     title: 'Strong Placement Support through MNC & Academic Collaborations',
     icon: 'Target',
     display_order: 2,
-    is_active: true
+    is_active: true,
+    description: 'Dedicated placement guidance through industry collaborations and career mentoring.',
+    bottom_badge: 'Placement Support'
   },
   {
     id: 'wcu_03',
     title: 'Innovation-Driven Learning with Internships, Workshops & Hackathons',
     icon: 'TrendingUp',
     display_order: 3,
-    is_active: true
+    is_active: true,
+    description: 'Learn through internships, workshops, hackathons, and real-world case studies.',
+    bottom_badge: 'Industry Mentors'
   }
 ];
 
@@ -1943,12 +1949,30 @@ export const db = {
   // --------------------------------------------------------------------
   async getWhyChooseUs(): Promise<WhyChooseUsItem[]> {
     const supabase = getSupabase();
+    let dataFromDb: WhyChooseUsItem[] | null = null;
     if (supabase) {
-      const { data, error } = await supabase.from('why_choose_us').select('*').order('display_order', { ascending: true });
-      if (!error && data && data.length > 0) return data as WhyChooseUsItem[];
+      try {
+        const { data, error } = await supabase.from('why_choose_us').select('*').order('display_order', { ascending: true });
+        if (!error && data && data.length > 0) {
+          dataFromDb = data as WhyChooseUsItem[];
+        }
+      } catch (e) {
+        console.warn("Supabase query error, falling back to local:", e);
+      }
     }
-    const local = getLocalData<WhyChooseUsItem[]>('zentriya_why_choose_us', defaultWhyChooseUs);
-    return local.sort((a, b) => a.display_order - b.display_order);
+    const items = dataFromDb || getLocalData<WhyChooseUsItem[]>('zentriya_why_choose_us', defaultWhyChooseUs);
+    
+    // Back-fill / merge defaults for description & bottom_badge to protect against legacy schema
+    const merged = items.map(item => {
+      const defaultItem = defaultWhyChooseUs.find(d => d.id === item.id || d.title === item.title);
+      return {
+        ...item,
+        description: item.description || defaultItem?.description || 'Hands-on training and expert mentoring matching enterprise guidelines.',
+        bottom_badge: item.bottom_badge || defaultItem?.bottom_badge || 'Verified Program'
+      };
+    });
+    
+    return merged.sort((a, b) => a.display_order - b.display_order);
   },
 
   async saveWhyChooseUsItem(item: WhyChooseUsItem): Promise<WhyChooseUsItem> {
@@ -1958,7 +1982,11 @@ export const db = {
     else items.push(item);
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('why_choose_us').upsert(item);
+      try {
+        await supabase.from('why_choose_us').upsert(item);
+      } catch (e) {
+        console.warn("Supabase upsert warning, updating local first:", e);
+      }
     }
     setLocalData('zentriya_why_choose_us', items);
     return item;
