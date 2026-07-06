@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { db } from '../services/db';
+import GenericCMS, { CMSField } from '../components/GenericCMS';
 import { auth } from '../services/auth';
 import LucideIcon from '../components/LucideIcon';
+import { uploadFileToSupabase } from '../lib/supabase';
 import { 
   WebsiteSettings, HeroSlide, AboutSection, ServiceItem, 
   InternshipProgram, CourseItem, GalleryItem, 
@@ -31,19 +33,29 @@ interface ImageDropzoneProps {
 
 function ImageDropzone({ value, onChange, label = "Upload Image" }: ImageDropzoneProps) {
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert("Please upload a valid image file.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        onChange(e.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+    setIsUploading(true);
+    try {
+      const publicUrl = await uploadFileToSupabase(file);
+      onChange(publicUrl);
+    } catch (err) {
+      console.warn('Supabase storage upload failed, falling back to local base64:', err);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          onChange(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -61,11 +73,14 @@ function ImageDropzone({ value, onChange, label = "Upload Image" }: ImageDropzon
           }
         }}
         className={`border-2 border-dashed rounded-2xl p-5 text-center transition-all cursor-pointer ${
-          isDragActive 
-            ? 'border-emerald-500 bg-emerald-500/5 dark:bg-emerald-500/10' 
-            : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-950/40'
+          isUploading
+            ? 'border-emerald-400 bg-slate-50 dark:bg-slate-900 animate-pulse'
+            : isDragActive 
+              ? 'border-emerald-500 bg-emerald-500/5 dark:bg-emerald-500/10' 
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-950/40'
         }`}
         onClick={() => {
+          if (isUploading) return;
           const input = document.createElement('input');
           input.type = 'file';
           input.accept = 'image/*';
@@ -78,7 +93,13 @@ function ImageDropzone({ value, onChange, label = "Upload Image" }: ImageDropzon
           input.click();
         }}
       >
-        {value ? (
+        {isUploading ? (
+          <div className="py-4 space-y-1">
+            <RefreshCw className="mx-auto text-emerald-500 animate-spin mb-1" size={24} />
+            <div className="text-emerald-500 font-bold text-xs">Uploading to Storage...</div>
+            <div className="text-[10px] text-slate-400">Please wait while the image is saved in real time.</div>
+          </div>
+        ) : value ? (
           <div className="space-y-3">
             <img 
               src={value} 
@@ -97,7 +118,7 @@ function ImageDropzone({ value, onChange, label = "Upload Image" }: ImageDropzon
         )}
       </div>
 
-      {value && (
+      {value && !isUploading && (
         <button 
           type="button"
           onClick={() => onChange('')}
@@ -186,7 +207,7 @@ export default function AdminManage() {
   // Connection config
   const [supabaseUrl, setSupabaseUrl] = useState('');
   const [supabaseAnonKey, setSupabaseAnonKey] = useState('');
-  const [useMockDb, setUseMockDb] = useState(true);
+  const [useMockDb, setUseMockDb] = useState(false);
 
   // Data states
   const [settings, setSettings] = useState<WebsiteSettings | null>(null);
@@ -211,6 +232,7 @@ export default function AdminManage() {
   const [adminArticles, setAdminArticles] = useState<Article[]>([]);
   const [adminCategories, setAdminCategories] = useState<ArticleCategory[]>([]);
   const [adminStats, setAdminStats] = useState<ArticleStatistic[]>([]);
+  const [selectedCmsTable, setSelectedCmsTable] = useState('hero');
 
   // Search, Filter, Pagination
   const [searchQuery, setSearchQuery] = useState('');
@@ -304,6 +326,8 @@ export default function AdminManage() {
           break;
         case 'placements':
           setAdminPlacements(await db.getPlacements());
+          break;
+        case 'live_cms':
           break;
         default:
           break;
@@ -501,61 +525,219 @@ export default function AdminManage() {
         <div className="space-y-6">
           
           {/* =========================================================================
+              TAB: UNIVERSAL SUPABASE LIVE CMS
+              ========================================================================= */}
+          {activeTab === 'live_cms' && (() => {
+            const cmsTablesConfig: Record<string, {
+              title: string;
+              description: string;
+              gridDisplay?: boolean;
+              searchField?: string;
+              orderByField?: string;
+              orderAscending?: boolean;
+              fields: CMSField[];
+            }> = {
+              hero: {
+                title: "Hero Slides",
+                description: "Manage high-impact homepage slider assets and messaging.",
+                orderByField: "order",
+                orderAscending: true,
+                fields: [
+                  { name: 'title', label: 'Slide Title', type: 'text', required: true },
+                  { name: 'subtitle', label: 'Slide Subtitle', type: 'text', required: true },
+                  { name: 'imageUrl', label: 'Slide Cover Image', type: 'image', required: true },
+                  { name: 'order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 }
+                ]
+              },
+              about: {
+                title: "About Us",
+                description: "Configure corporate vision statement details and values.",
+                fields: [
+                  { name: 'title', label: 'Heading Title', type: 'text', required: true },
+                  { name: 'subtitle', label: 'Sub-heading Caption', type: 'text', required: true },
+                  { name: 'description', label: 'Full Narrative', type: 'textarea', required: true },
+                  { name: 'imageUrl', label: 'Action Image', type: 'image', required: true },
+                  { name: 'experienceYears', label: 'Years of Experience', type: 'number', required: true, defaultValue: 10 }
+                ]
+              },
+              why_choose_us: {
+                title: "Why Choose Us",
+                description: "Edit unique selling points and institutional capabilities.",
+                orderByField: "order",
+                orderAscending: true,
+                fields: [
+                  { name: 'title', label: 'Feature Title', type: 'text', required: true },
+                  { name: 'description', label: 'Detailed Explanation', type: 'textarea', required: true },
+                  { name: 'icon', label: 'Lucide Icon Name', type: 'text', required: true, placeholder: "e.g. Award, Shield, Users" },
+                  { name: 'order', label: 'Display Order', type: 'number', required: true, defaultValue: 1 }
+                ]
+              },
+              services: {
+                title: "Services Portfolio",
+                description: "Administer consulting and engineering service offerings.",
+                orderByField: "order",
+                orderAscending: true,
+                fields: [
+                  { name: 'title', label: 'Service Heading', type: 'text', required: true },
+                  { name: 'description', label: 'Service Description Summary', type: 'textarea', required: true },
+                  { name: 'icon', label: 'Lucide Icon Name', type: 'text', required: true, placeholder: "e.g. Layers, Code, Settings" },
+                  { name: 'isActive', label: 'Service Is Active', type: 'boolean', required: true, defaultValue: true },
+                  { name: 'order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 }
+                ]
+              },
+              programs: {
+                title: "Academic Programs",
+                description: "Publish career training and skill bootcamp programs.",
+                fields: [
+                  { name: 'title', label: 'Program Name', type: 'text', required: true },
+                  { name: 'subtitle', label: 'Short Hook Subtitle', type: 'text', required: true },
+                  { name: 'description', label: 'Course Curriculum Description', type: 'textarea', required: true },
+                  { name: 'cover_image', label: 'Curriculum Cover Photo', type: 'image', required: true },
+                  { name: 'duration', label: 'Track Duration', type: 'text', required: true, placeholder: "e.g. 6 Months, 1 Year" },
+                  { name: 'badges', label: 'Marketing Badges (Comma Separated)', type: 'tags', required: true, placeholder: "Live Projects, Mentor Support" }
+                ]
+              },
+              placements: {
+                title: "Student Placements",
+                description: "Celebrate graduate records and hire success statistics.",
+                orderByField: "display_order",
+                orderAscending: true,
+                fields: [
+                  { name: 'student_name', label: 'Student Full Name', type: 'text', required: true },
+                  { name: 'company', label: 'Hiring Company Corporate Name', type: 'text', required: true },
+                  { name: 'role', label: 'Job Profile Title Offered', type: 'text', required: true },
+                  { name: 'package_details', label: 'Salary Package Tier (LPA)', type: 'text', required: true, placeholder: "e.g. 14 LPA, 8.5 LPA" },
+                  { name: 'photo', label: 'Graduate Professional Portrait', type: 'image', required: true },
+                  { name: 'display_order', label: 'Display Order Score', type: 'number', required: true, defaultValue: 1 }
+                ]
+              },
+              industry_partners: {
+                title: "Industry Partners",
+                description: "Manage client logos and corporate hiring network.",
+                orderByField: "display_order",
+                orderAscending: true,
+                fields: [
+                  { name: 'name', label: 'Company Brand Name', type: 'text', required: true },
+                  { name: 'logo', label: 'Company Logo Graphic', type: 'image', required: true },
+                  { name: 'display_order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 }
+                ]
+              },
+              testimonials: {
+                title: "Testimonials Feed",
+                description: "Manage peer feedback, student success and review quotes.",
+                fields: [
+                  { name: 'name', label: 'Reviewer Name', type: 'text', required: true },
+                  { name: 'role', label: 'Reviewer Job Title', type: 'text', required: true },
+                  { name: 'company', label: 'Employer / University', type: 'text', required: true },
+                  { name: 'content', label: 'Testimonial Content Statement', type: 'textarea', required: true },
+                  { name: 'avatarUrl', label: 'Professional Avatar URL', type: 'image', required: true },
+                  { name: 'rating', label: 'Star Rating Index (1-5)', type: 'number', required: true, defaultValue: 5 }
+                ]
+              },
+              team: {
+                title: "Team Members",
+                description: "Manage corporate profiles of teachers and administrators.",
+                fields: [
+                  { name: 'name', label: 'Member Name', type: 'text', required: true },
+                  { name: 'role', label: 'Designation Role', type: 'text', required: true },
+                  { name: 'department', label: 'Division / Department', type: 'text', required: true, placeholder: "e.g. Technology, Admissions, Operations" },
+                  { name: 'photoUrl', label: 'Member Headshot Photo', type: 'image', required: true },
+                  { name: 'bio', label: 'Short Personal Description', type: 'textarea', required: true }
+                ]
+              },
+              gallery: {
+                title: "Media Gallery",
+                description: "Curate event highlights and academic camp posters.",
+                fields: [
+                  { name: 'title', label: 'Media Display Name', type: 'text', required: true },
+                  { name: 'url', label: 'Static Photo Asset', type: 'image', required: true },
+                  { name: 'type', label: 'Asset Content Type', type: 'select', required: true, options: [{ label: 'Image', value: 'image' }, { label: 'Video', value: 'video' }], defaultValue: 'image' },
+                  { name: 'category', label: 'Gallery Division Group', type: 'text', required: true, placeholder: "e.g. Workshops, Awards, Campus" }
+                ]
+              },
+              blogs: {
+                title: "Blog Posts",
+                description: "Oversee company news columns and dynamic content feeds.",
+                fields: [
+                  { name: 'title', label: 'Article Headline', type: 'text', required: true },
+                  { name: 'excerpt', label: 'Short Lead Intro Description', type: 'text', required: true },
+                  { name: 'content', label: 'Full Blog Post content Markdown', type: 'textarea', required: true },
+                  { name: 'cover_image', label: 'Article Main Banner Image', type: 'image', required: true },
+                  { name: 'author', label: 'Author Full Name', type: 'text', required: true },
+                  { name: 'category', label: 'Blog Topic Category', type: 'text', required: true, placeholder: "e.g. Careers, Technology, Placement" },
+                  { name: 'published', label: 'Publish Article Online', type: 'boolean', required: true, defaultValue: true }
+                ]
+              },
+              contacts: {
+                title: "Contact Messages",
+                description: "Review public contact queries and feedback submissions.",
+                fields: [
+                  { name: 'name', label: 'Sender Full Name', type: 'text', required: true },
+                  { name: 'email', label: 'Sender Email Address', type: 'text', required: true },
+                  { name: 'phone', label: 'Sender Phone Number', type: 'text' },
+                  { name: 'subject', label: 'Inquiry Subject Header', type: 'text', required: true },
+                  { name: 'message', label: 'Inquiry Narrative Body', type: 'textarea', required: true },
+                  { name: 'isRead', label: 'Message Checked & Resolved', type: 'boolean', required: true, defaultValue: false }
+                ]
+              },
+              settings: {
+                title: "Website Configuration",
+                description: "Manage global company identity parameters in Supabase.",
+                fields: [
+                  { name: 'companyName', label: 'Company Enterprise Name', type: 'text', required: true },
+                  { name: 'logo', label: 'Branding Logo URL', type: 'image', required: true },
+                  { name: 'favicon', label: 'Favicon Icon (32x32) URL', type: 'image', required: true },
+                  { name: 'email', label: 'Corporate Support Email', type: 'text', required: true },
+                  { name: 'phone', label: 'Helpdesk Call Number', type: 'text', required: true },
+                  { name: 'address', label: 'Physical Corporate Headquarters Address', type: 'textarea', required: true }
+                ]
+              }
+            };
+
+            const selectedConfig = cmsTablesConfig[selectedCmsTable] || cmsTablesConfig.hero;
+
+            return (
+              <div className="space-y-6">
+                {/* Table selector pill list */}
+                <div className="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 px-1 font-mono">Select Active Supabase Live Table</h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.keys(cmsTablesConfig).map((key) => {
+                      const isActive = selectedCmsTable === key;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setSelectedCmsTable(key)}
+                          className={`px-3 py-1.5 text-[11px] font-bold rounded-xl transition-all border ${
+                            isActive
+                              ? 'bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white border-emerald-500'
+                              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-450 hover:text-slate-900 dark:hover:text-white border-slate-200 dark:border-slate-800'
+                          }`}
+                        >
+                          {cmsTablesConfig[key].title}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <GenericCMS
+                  tableName={selectedCmsTable}
+                  title={selectedConfig.title}
+                  description={selectedConfig.description}
+                  fields={selectedConfig.fields}
+                  orderByField={selectedConfig.orderByField}
+                  orderAscending={selectedConfig.orderAscending}
+                />
+              </div>
+            );
+          })()}
+
+          {/* =========================================================================
               TAB: WEBSITE SETTINGS
               ========================================================================= */}
           {activeTab === 'settings' && settings && (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-8">
-              
-              {/* Connection Configurations */}
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 text-white space-y-4">
-                <h3 className="font-extrabold text-xs tracking-wider flex items-center gap-2 text-emerald-400 uppercase border-b border-slate-850 pb-2">
-                  <Globe size={14} />
-                  Supabase Endpoint Synchronizer
-                </h3>
-                
-                <form onSubmit={handleSaveDbConfig} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                  <div className="md:col-span-4 space-y-1">
-                    <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Supabase Project URL</label>
-                    <input 
-                      type="url" 
-                      placeholder="https://xyz.supabase.co" 
-                      value={supabaseUrl}
-                      onChange={(e) => setSupabaseUrl(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-850 p-2 rounded-lg text-xs outline-none text-slate-100"
-                    />
-                  </div>
-                  
-                  <div className="md:col-span-4 space-y-1">
-                    <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Supabase Anon Key</label>
-                    <input 
-                      type="password" 
-                      placeholder="eyJhbG..." 
-                      value={supabaseAnonKey}
-                      onChange={(e) => setSupabaseAnonKey(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-850 p-2 rounded-lg text-xs outline-none text-slate-100"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2 space-y-1">
-                    <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Database Fallback</label>
-                    <select 
-                      value={useMockDb ? 'true' : 'false'}
-                      onChange={(e) => setUseMockDb(e.target.value === 'true')}
-                      className="w-full bg-slate-900 border border-slate-850 p-2 rounded-lg text-xs outline-none text-slate-300"
-                    >
-                      <option value="true">Offline Mock DB (Local)</option>
-                      <option value="false">Supabase DB (Live)</option>
-                    </select>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold p-2.5 rounded-lg text-xs flex items-center justify-center gap-1 transition-all">
-                      <Save size={13} />
-                      Sync Keys
-                    </button>
-                  </div>
-                </form>
-              </div>
 
               {/* Settings Form */}
               <div className="space-y-6">

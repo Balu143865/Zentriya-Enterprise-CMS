@@ -15,11 +15,14 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+let toastCounter = 0;
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const toast = useCallback((text: string, type: ToastType = 'info') => {
-    const id = Date.now().toString();
+    toastCounter++;
+    const id = `${Date.now()}_${toastCounter}_${Math.random().toString(36).substring(2, 7)}`;
     setToasts(prev => [...prev, { id, text, type }]);
     
     // Auto remove after 4 seconds

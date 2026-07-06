@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth } from '../services/auth';
-import { db } from '../services/db';
+import { db, getSupabase } from '../services/db';
 import { UserProfile, SystemNotification } from '../types';
 import { 
   LayoutDashboard, Settings, FileText, GraduationCap, 
@@ -19,6 +19,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps) {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
   const [showNots, setShowNots] = useState(false);
   const navigate = useNavigate();
@@ -27,18 +28,75 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const profile = auth.getCurrentUser();
-    if (!profile) {
-      navigate('/admin/login');
-      toast('Access Denied: Please authenticate to access the Admin Console.', 'error');
-    } else if (profile.role !== 'OWNER') {
-      auth.logout();
-      navigate('/admin/login');
-      toast('Access Denied: Only the company OWNER has console permission clearance.', 'error');
-    } else {
+    const checkSession = async () => {
+      setLoading(true);
+      const supabase = getSupabase();
+      if (!supabase) {
+        const localUser = auth.getCurrentUser();
+        if (localUser && localUser.role === 'OWNER') {
+          setUser(localUser);
+          db.getNotifications().then(setNotifications);
+          setLoading(false);
+          return;
+        }
+        navigate('/admin/login');
+        toast('Access Denied: Supabase configuration not found.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // 1. Fetch real Supabase session
+      const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+      
+      if (sessionErr || !session || !session.user) {
+        await auth.logout();
+        navigate('/admin/login');
+        toast('Access Denied: Please authenticate to access the Admin Console.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Query the admins table with the authenticated user ID
+      const { data: dbAdmin, error: dbErr } = await supabase
+        .from('admins')
+        .select('role, email')
+        .eq('user_id', session.user.id)
+        .single();
+
+      if (dbErr || !dbAdmin) {
+        await supabase.auth.signOut();
+        await auth.logout();
+        navigate('/admin/login');
+        toast('Access Denied: Your account is not registered in the administrator database.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // 3. Verify owner permissions (lowercase in database)
+      if (dbAdmin.role !== 'owner') {
+        await supabase.auth.signOut();
+        await auth.logout();
+        navigate('/admin/login');
+        toast('Access Denied: Only company OWNER roles possess administrative access.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      const profile: UserProfile = {
+        id: session.user.id,
+        email: session.user.email || dbAdmin.email,
+        name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || dbAdmin.email.split('@')[0].toUpperCase(),
+        role: 'OWNER',
+        avatarUrl: '/logo.png',
+      };
+
       setUser(profile);
+      localStorage.setItem('zentriya_active_user', JSON.stringify(profile));
       db.getNotifications().then(setNotifications);
-    }
+      setLoading(false);
+    };
+
+    checkSession();
   }, [navigate, location.pathname]);
 
   // Session Timeout after 15 minutes of inactivity (900,000 ms)
@@ -66,10 +124,19 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
     };
   }, [user, navigate]);
 
-  const handleLogout = () => {
-    auth.logout();
-    toast('Session terminated successfully.', 'info');
-    navigate('/admin/login');
+  const handleLogout = async () => {
+    try {
+      const supabase = getSupabase();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch (e) {
+      console.error('Error during Supabase signOut:', e);
+    } finally {
+      await auth.logout();
+      toast('Session terminated successfully.', 'info');
+      navigate('/');
+    }
   };
 
   const markRead = async (id: string) => {
@@ -82,6 +149,7 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
   // Sidebar modules configuration
   const modules = [
     { name: 'Dashboard Overview', key: 'dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Universal Live CMS', key: 'live_cms', path: '/admin/manage?tab=live_cms', icon: Database },
     { name: 'Website Settings', key: 'settings', path: '/admin/manage?tab=settings', icon: Settings },
     { name: 'Hero Slides', key: 'home', path: '/admin/manage?tab=hero', icon: Image },
     { name: 'Why Choose Us', key: 'why_choose_us', path: '/admin/manage?tab=why_choose_us', icon: Award },
@@ -101,6 +169,15 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
     { name: 'Contact Inquiries', key: 'contacts', path: '/admin/manage?tab=contacts', icon: MessageSquare },
     { name: 'FAQs Center', key: 'faqs', path: '/admin/manage?tab=faqs', icon: HelpCircle }
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#040812] flex flex-col items-center justify-center gap-4">
+        <div className="w-10 h-10 rounded-full border-4 border-slate-800 border-t-emerald-500 animate-spin" />
+        <span className="text-slate-400 text-[10px] font-bold tracking-widest uppercase animate-pulse">Verifying Security Session...</span>
+      </div>
+    );
+  }
 
   if (!user) return null;
 
@@ -170,7 +247,7 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
       <div className="p-4 border-t border-slate-800 space-y-4 shrink-0">
         <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-850">
           <img 
-            src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=800&fit=crop&q=80'} 
+            src={user.avatarUrl || '/logo.png'} 
             alt={user.name} 
             className="w-9 h-9 rounded-full object-cover ring-2 ring-emerald-500/20"
             referrerPolicy="no-referrer"
@@ -311,6 +388,16 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
             <span className="text-xs font-bold bg-slate-900 text-white dark:bg-slate-800 px-3.5 py-1.5 rounded-xl uppercase tracking-wider">
               {user.role} Control
             </span>
+
+            {/* Logout button */}
+            <button
+              onClick={handleLogout}
+              className="p-1.5 sm:p-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 rounded-xl transition-all hover:scale-105 flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold cursor-pointer"
+              title="Terminate Admin Session"
+            >
+              <LogOut size={14} />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
 
           </div>
         </header>

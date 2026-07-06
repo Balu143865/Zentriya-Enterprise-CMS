@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { 
   WebsiteSettings, HeroSlide, AboutSection, ServiceItem, 
@@ -38,37 +39,195 @@ export interface DbConfig {
 }
 
 export function getDbConfig(): DbConfig {
-  const meta = import.meta as any;
-  const url = localStorage.getItem(SUPABASE_URL_KEY) || (meta && meta.env && meta.env.VITE_SUPABASE_URL) || '';
-  const anonKey = localStorage.getItem(SUPABASE_ANON_KEY) || (meta && meta.env && meta.env.VITE_SUPABASE_ANON_KEY) || '';
-  const useMock = localStorage.getItem(USE_MOCK_DB_KEY) !== 'false'; // default to true to guarantee preview works first-time
-  return { url, anonKey, useMock: useMock || !url || !anonKey };
+  const url = localStorage.getItem(SUPABASE_URL_KEY) || import.meta.env.VITE_SUPABASE_URL || '';
+  const anonKey = localStorage.getItem(SUPABASE_ANON_KEY) || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  const useMock = localStorage.getItem(USE_MOCK_DB_KEY) === 'true';
+  return { url, anonKey, useMock };
 }
 
 export function saveDbConfig(config: DbConfig) {
-  if (config.url) localStorage.setItem(SUPABASE_URL_KEY, config.url);
-  else localStorage.removeItem(SUPABASE_URL_KEY);
-
-  if (config.anonKey) localStorage.setItem(SUPABASE_ANON_KEY, config.anonKey);
-  else localStorage.removeItem(SUPABASE_ANON_KEY);
-
+  localStorage.setItem(SUPABASE_URL_KEY, config.url);
+  localStorage.setItem(SUPABASE_ANON_KEY, config.anonKey);
   localStorage.setItem(USE_MOCK_DB_KEY, config.useMock ? 'true' : 'false');
-  
-  // Reload to apply changes
-  window.location.reload();
+  supabaseInstance = null;
+}
+
+// Runtime fallback flag in case of connection timeouts or explicit mock request
+let useMockFallback = false;
+let pingPromise: Promise<boolean> | null = null;
+
+export function setMockFallback(value: boolean) {
+  useMockFallback = value;
+  if (value) {
+    supabaseInstance = null;
+  }
+}
+
+export function isMockFallbackActive(): boolean {
+  return useMockFallback;
+}
+
+export async function checkDatabaseConnection(): Promise<boolean> {
+  if (useMockFallback) return false;
+  if (pingPromise) return pingPromise;
+
+  const config = getDbConfig();
+  if (config.useMock || !config.url || !config.anonKey) {
+    setMockFallback(true);
+    return false;
+  }
+  if (config.url.includes('placeholder') || config.url.includes('your-') || config.url.includes('example.com')) {
+    setMockFallback(true);
+    return false;
+  }
+
+  const client = getRawSupabase();
+  if (!client) {
+    setMockFallback(true);
+    return false;
+  }
+
+  // Try querying website_settings (or the active schema) with a tight 2000ms timeout
+  const timeoutPromise = new Promise<boolean>((resolve) =>
+    setTimeout(() => {
+      if (!useMockFallback) {
+        console.warn('Database connection check timed out. Falling back to mock data.');
+        setMockFallback(true);
+      }
+      resolve(false);
+    }, 2000)
+  );
+
+  const queryPromise = Promise.resolve(
+    client.from('website_settings').select('id').limit(1)
+  ).then(({ error }) => {
+    // If we have a network fetch error, we are offline or blocked.
+    // If we have other errors (e.g., table not found etc), the database is alive and reachable.
+    if (error && (error.message.includes('FetchError') || error.message.includes('Failed to fetch') || error.message.includes('network'))) {
+      if (!useMockFallback) {
+        console.warn('Database query network error. Falling back to mock data:', error);
+        setMockFallback(true);
+      }
+      return false;
+    }
+    return true;
+  }).catch((err) => {
+    if (!useMockFallback) {
+      console.warn('Database check failed. Falling back to mock data:', err);
+      setMockFallback(true);
+    }
+    return false;
+  });
+
+  pingPromise = Promise.race([queryPromise, timeoutPromise]);
+  return pingPromise;
+}
+
+// Self-healing Supabase Query Timeout Proxy
+function wrapThenable(builder: any): any {
+  return new Proxy(builder, {
+    get(target, prop) {
+      if (prop === 'then') {
+        return function(onfulfilled: any, onrejected: any) {
+          if (useMockFallback) {
+            return Promise.resolve({ data: null, error: { message: 'Fallback active', details: 'Using mock data' } }).then(onfulfilled, onrejected);
+          }
+          const timeoutPromise = new Promise((resolve) =>
+            setTimeout(() => {
+              if (!useMockFallback) {
+                console.warn('Supabase query timed out. Enabling mock fallback mode.');
+                setMockFallback(true);
+              }
+              resolve({ data: null, error: { message: 'Query timed out', details: 'Fallback activated' } });
+            }, 2000)
+          );
+          const originalPromise = new Promise((resolve, reject) => {
+            target.then(resolve, reject);
+          });
+          return Promise.race([
+            originalPromise,
+            timeoutPromise
+          ]).then(onfulfilled, onrejected);
+        };
+      }
+      const val = target[prop];
+      if (typeof val === 'function') {
+        return function(...args: any[]) {
+          const result = val.apply(target, args);
+          if (result && typeof result.then === 'function') {
+            return wrapThenable(result);
+          }
+          return result;
+        };
+      }
+      return val;
+    }
+  });
+}
+
+function wrapSupabaseClient(client: SupabaseClient): SupabaseClient {
+  return new Proxy(client, {
+    get(target, prop) {
+      if (prop === 'from') {
+        return function(relation: string) {
+          const builder = target.from(relation);
+          return wrapThenable(builder);
+        };
+      }
+      if (prop === 'rpc') {
+        return function(fn: string, args?: any) {
+          const builder = target.rpc(fn, args);
+          return wrapThenable(builder);
+        };
+      }
+      const val = (target as any)[prop];
+      if (typeof val === 'function') {
+        return val.bind(target);
+      }
+      return val;
+    }
+  }) as any;
 }
 
 // Lazy Supabase Client Initialization
+let rawSupabaseInstance: SupabaseClient | null = null;
 let supabaseInstance: SupabaseClient | null = null;
 
-export function getSupabase(): SupabaseClient | null {
+export function getRawSupabase(): SupabaseClient | null {
   const config = getDbConfig();
-  if (config.useMock || !config.url || !config.anonKey) {
+  if (!config.url || !config.anonKey) {
+    return null;
+  }
+  if (config.url.includes('placeholder') || config.url.includes('your-') || config.url.includes('example.com')) {
+    return null;
+  }
+  if (!rawSupabaseInstance) {
+    try {
+      rawSupabaseInstance = createClient(config.url, config.anonKey);
+    } catch (e) {
+      console.warn('Failed to create raw Supabase client:', e);
+      return null;
+    }
+  }
+  return rawSupabaseInstance;
+}
+
+export function getSupabase(): SupabaseClient | null {
+  if (useMockFallback) {
+    return null;
+  }
+  const config = getDbConfig();
+  if (config.useMock) {
+    return null;
+  }
+  const rawClient = getRawSupabase();
+  if (!rawClient) {
     return null;
   }
   if (!supabaseInstance) {
     try {
-      supabaseInstance = createClient(config.url, config.anonKey);
+      // Wrap client with our query proxy to prevent infinite hangs and implement graceful timeouts
+      supabaseInstance = wrapSupabaseClient(rawClient);
     } catch (e) {
       console.error('Failed to initialize Supabase client:', e);
       return null;
@@ -1208,55 +1367,90 @@ function setLocalData<T>(key: string, data: T) {
 // ----------------------------------------------------------------------
 
 export const db = {
+  setMockFallback(value: boolean) {
+    setMockFallback(value);
+  },
+  isMockFallbackActive(): boolean {
+    return isMockFallbackActive();
+  },
+  async checkDatabaseConnection(): Promise<boolean> {
+    return checkDatabaseConnection();
+  },
   // --------------------------------------------------------------------
   // SETTINGS
   // --------------------------------------------------------------------
   async getSettings(): Promise<WebsiteSettings> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('settings').select('*').single();
-      if (!error && data) {
-        const dbSettings = data as WebsiteSettings;
-        if (dbSettings.contactEmail !== 'info.zentriya@gmail.com' || dbSettings.contactPhones?.length !== 3 || dbSettings.contactPhones?.[0] !== '+91 7989270174') {
-          dbSettings.contactEmail = 'info.zentriya@gmail.com';
-          dbSettings.contactPhones = ['+91 7989270174', '+91 95509 50705', '+91 6301550330'];
-          dbSettings.whatsappNumber = '+917989270174';
-          dbSettings.address = '';
-          dbSettings.googleMapEmbedUrl = '';
+      try {
+        const { data, error } = await supabase.from('website_settings').select('*').maybeSingle();
+        if (!error && data) {
+          return {
+            id: data.id,
+            companyName: data.company_name,
+            logoUrl: data.logo_url,
+            faviconUrl: data.favicon_url,
+            primaryColor: data.primary_color,
+            secondaryColor: data.secondary_color,
+            whatsappNumber: data.whatsapp_number,
+            contactEmail: data.contact_email,
+            contactPhones: data.contact_phones || [],
+            address: data.address || '',
+            googleMapEmbedUrl: data.google_map_embed_url || '',
+            popupBannerUrl: data.popup_banner_url || '',
+            popupBannerActive: data.popup_banner_active ?? false,
+            announcementText: data.announcement_text || '',
+            announcementActive: data.announcement_active ?? false,
+            whyChooseUsTitle: data.why_choose_us_title || 'Why Choose Us?',
+            socialLinks: data.social_links || {},
+            seo: {
+              metaTitle: data.seo_settings?.metaTitle || data.seo_settings?.meta_title || '',
+              metaDescription: data.seo_settings?.metaDescription || data.seo_settings?.meta_description || '',
+              metaKeywords: data.seo_settings?.metaKeywords || data.seo_settings?.meta_keywords || '',
+              ogImage: data.seo_settings?.ogImage || data.seo_settings?.og_image || ''
+            }
+          } as WebsiteSettings;
         }
-        if (!dbSettings.whyChooseUsTitle) {
-          dbSettings.whyChooseUsTitle = 'Why Choose Us?';
-        }
-        return dbSettings;
+      } catch (e) {
+        console.warn('Failed to fetch website_settings:', e);
       }
     }
-    const settings = getLocalData<WebsiteSettings>('zentriya_settings', defaultSettings);
-    if (settings.contactEmail !== 'info.zentriya@gmail.com' || settings.contactPhones?.length !== 3 || settings.contactPhones?.[0] !== '+91 7989270174' || settings.address !== '') {
-      settings.contactEmail = 'info.zentriya@gmail.com';
-      settings.contactPhones = ['+91 7989270174', '+91 95509 50705', '+91 6301550330'];
-      settings.whatsappNumber = '+917989270174';
-      settings.address = '';
-      settings.googleMapEmbedUrl = '';
-      setLocalData('zentriya_settings', settings);
-    }
-    if (!settings.whyChooseUsTitle) {
-      settings.whyChooseUsTitle = 'Why Choose Us?';
-      setLocalData('zentriya_settings', settings);
-    }
-    if (settings.logoUrl.includes('unsplash.com') || settings.logoUrl === '') {
-      settings.logoUrl = '/logo.png';
-      settings.faviconUrl = '/logo.png';
-      setLocalData('zentriya_settings', settings);
-    }
-    return settings;
+    return defaultSettings;
   },
 
   async updateSettings(settings: WebsiteSettings): Promise<WebsiteSettings> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('settings').upsert(settings);
+      try {
+        const dbData = {
+          company_name: settings.companyName,
+          logo_url: settings.logoUrl,
+          favicon_url: settings.faviconUrl,
+          primary_color: settings.primaryColor,
+          secondary_color: settings.secondaryColor,
+          whatsapp_number: settings.whatsappNumber,
+          contact_email: settings.contactEmail,
+          contact_phones: settings.contactPhones,
+          address: settings.address,
+          google_map_embed_url: settings.googleMapEmbedUrl,
+          popup_banner_url: settings.popupBannerUrl,
+          popup_banner_active: settings.popupBannerActive,
+          announcement_text: settings.announcementText,
+          announcement_active: settings.announcementActive,
+          why_choose_us_title: settings.whyChooseUsTitle,
+          social_links: settings.socialLinks,
+          seo_settings: {
+            meta_title: settings.seo.metaTitle,
+            meta_description: settings.seo.metaDescription,
+            meta_keywords: settings.seo.metaKeywords,
+            og_image: settings.seo.ogImage
+          }
+        };
+        await supabase.from('website_settings').upsert({ id: settings.id, ...dbData });
+      } catch (e) {
+        console.warn('Failed to update website_settings:', e);
+      }
     }
-    setLocalData('zentriya_settings', settings);
     this.logActivity('Settings Modified', 'Global corporate contact, theme, and SEO fields updated.');
     return settings;
   },
@@ -1267,19 +1461,46 @@ export const db = {
   async getHeroSlides(): Promise<HeroSlide[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('hero').select('*').order('order', { ascending: true });
-      if (!error && data) return data as HeroSlide[];
+      try {
+        const { data, error } = await supabase.from('hero_slides').select('*').order('display_order', { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data.map(row => ({
+            id: row.id,
+            title: row.title,
+            subtitle: row.subtitle,
+            imageUrl: row.image_url,
+            ctaText: row.cta_text || '',
+            ctaLink: row.cta_link || '',
+            order: row.display_order ?? 0
+          })) as HeroSlide[];
+        }
+      } catch (e) {
+        console.warn('Failed to fetch hero_slides:', e);
+      }
     }
-    return getLocalData<HeroSlide[]>('zentriya_hero', defaultHeroSlides).sort((a, b) => a.order - b.order);
+    return defaultHeroSlides;
   },
 
   async saveHeroSlides(slides: HeroSlide[]): Promise<HeroSlide[]> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('hero').delete().neq('id', 'keep_all');
-      await supabase.from('hero').insert(slides);
+      try {
+        await supabase.from('hero_slides').delete().neq('id', 'keep_all');
+        const dbSlides = slides.map(slide => ({
+          id: slide.id,
+          title: slide.title,
+          subtitle: slide.subtitle,
+          image_url: slide.imageUrl,
+          cta_text: slide.ctaText,
+          cta_link: slide.ctaLink,
+          display_order: slide.order,
+          is_active: true
+        }));
+        await supabase.from('hero_slides').insert(dbSlides);
+      } catch (e) {
+        console.warn('Failed to save hero_slides:', e);
+      }
     }
-    setLocalData('zentriya_hero', slides);
     this.logActivity('Hero Slides Updated', `Reordered and updated ${slides.length} home banner slides.`);
     return slides;
   },
@@ -1290,23 +1511,41 @@ export const db = {
   async getAbout(): Promise<AboutSection> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('about').select('*').single();
-      if (!error && data && data.title && data.description) return data as AboutSection;
+      try {
+        const { data, error } = await supabase.from('about_section').select('*').maybeSingle();
+        if (!error && data) {
+          return {
+            id: data.id,
+            title: data.title,
+            description: data.description,
+            image: data.image_url,
+            is_active: data.is_active,
+            created_at: data.created_at,
+            updated_at: data.updated_at
+          } as AboutSection;
+        }
+      } catch (e) {
+        console.warn('Failed to fetch about_section:', e);
+      }
     }
-    const local = getLocalData<any>('zentriya_about', defaultAbout);
-    if (!local || typeof local !== 'object' || !local.title || !local.description) {
-      setLocalData('zentriya_about', defaultAbout);
-      return defaultAbout;
-    }
-    return local as AboutSection;
+    return defaultAbout;
   },
 
   async updateAbout(about: AboutSection): Promise<AboutSection> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('about').upsert(about);
+      try {
+        const dbData = {
+          title: about.title,
+          description: about.description,
+          image_url: about.image,
+          is_active: about.is_active
+        };
+        await supabase.from('about_section').upsert({ id: about.id, ...dbData });
+      } catch (e) {
+        console.warn('Failed to update about_section:', e);
+      }
     }
-    setLocalData('zentriya_about', about);
     this.logActivity('About Section Modified', 'Updated company vision, mission, and historic milestones.');
     return about;
   },
@@ -1317,42 +1556,79 @@ export const db = {
   async getServices(): Promise<ServiceItem[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('services').select('*').order('order', { ascending: true });
-      if (!error && data) return data as ServiceItem[];
+      try {
+        const { data, error } = await supabase.from('services').select('*').order('display_order', { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data.map(row => ({
+            id: row.id,
+            title: row.title,
+            description: row.description,
+            detailedDescription: row.detailed_description || '',
+            icon: row.icon,
+            imageUrl: row.image_url,
+            features: row.features || [],
+            benefits: row.benefits || [],
+            order: row.display_order ?? 0,
+            isActive: row.is_active ?? true,
+            galleryUrls: []
+          })) as ServiceItem[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            const dbServices = defaultServices.map(s => ({
+              id: s.id,
+              title: s.title,
+              description: s.description,
+              detailed_description: s.detailedDescription,
+              icon: s.icon,
+              image_url: s.imageUrl,
+              features: s.features || [],
+              benefits: s.benefits || [],
+              display_order: s.order || 0,
+              is_active: s.isActive !== false
+            }));
+            await supabase.from('services').insert(dbServices);
+          } catch (e) {
+            console.warn('Failed to seed services table:', e);
+          }
+          return defaultServices;
+        }
+      } catch (err) {
+        console.warn('getServices error:', err);
+      }
     }
-    const list = getLocalData<ServiceItem[]>('zentriya_services', defaultServices);
-    if (list.length < 7 || !list.some(s => s.id === 'service_7')) {
-      setLocalData('zentriya_services', defaultServices);
-      return defaultServices;
-    }
-    return list.sort((a, b) => (a.order || 0) - (b.order || 0));
+    return defaultServices;
   },
 
   async saveService(service: ServiceItem): Promise<ServiceItem> {
-    const services = await this.getServices();
-    const index = services.findIndex(s => s.id === service.id);
-    if (index >= 0) {
-      services[index] = service;
-    } else {
-      services.push(service);
-    }
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('services').upsert(service);
+      try {
+        const dbData = {
+          title: service.title,
+          description: service.description,
+          detailed_description: service.detailedDescription,
+          icon: service.icon,
+          image_url: service.imageUrl,
+          features: service.features || [],
+          benefits: service.benefits || [],
+          display_order: service.order || 0,
+          is_active: service.isActive !== false
+        };
+        await supabase.from('services').upsert({ id: service.id, ...dbData });
+      } catch (err) {
+        console.warn('Failed to save service:', err);
+      }
     }
-    setLocalData('zentriya_services', services);
     this.logActivity('Service Configured', `Created/Modified IT Service: "${service.title}".`);
     return service;
   },
 
   async deleteService(id: string): Promise<boolean> {
-    const services = await this.getServices();
-    const filtered = services.filter(s => s.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('services').delete().eq('id', id);
     }
-    setLocalData('zentriya_services', filtered);
     this.logActivity('Service Removed', `Deleted service item reference. ID: ${id}`);
     return true;
   },
@@ -1360,9 +1636,24 @@ export const db = {
   async saveServices(services: ServiceItem[]): Promise<ServiceItem[]> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('services').upsert(services);
+      try {
+        const dbData = services.map(s => ({
+          id: s.id,
+          title: s.title,
+          description: s.description,
+          detailed_description: s.detailedDescription,
+          icon: s.icon,
+          image_url: s.imageUrl,
+          features: s.features || [],
+          benefits: s.benefits || [],
+          display_order: s.order || 0,
+          is_active: s.isActive !== false
+        }));
+        await supabase.from('services').upsert(dbData);
+      } catch (err) {
+        console.warn('Failed to save services:', err);
+      }
     }
-    setLocalData('zentriya_services', services);
     this.logActivity('Services Reordered', 'Reordered Services directory items.');
     return services;
   },
@@ -1372,35 +1663,32 @@ export const db = {
   // --------------------------------------------------------------------
   async getInternships(): Promise<InternshipProgram[]> {
     const supabase = getSupabase();
-    let list: InternshipProgram[] = [];
     if (supabase) {
-      const { data, error } = await supabase.from('internships').select('*');
-      if (!error && data) {
-        list = data as InternshipProgram[];
+      try {
+        const { data, error } = await supabase.from('internships').select('*');
+        if (!error && data && data.length > 0) {
+          return data as InternshipProgram[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('internships').insert(defaultInternships);
+          } catch (e) {
+            console.warn('Failed to seed internships table:', e);
+          }
+          return defaultInternships;
+        }
+      } catch (err) {
+        console.warn('getInternships error:', err);
       }
     }
-    if (!list || list.length === 0) {
-      list = getLocalData<InternshipProgram[]>('zentriya_internships', defaultInternships);
-    }
-    return list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return defaultInternships;
   },
 
   async saveInternship(internship: InternshipProgram): Promise<InternshipProgram> {
-    const internships = await this.getInternships();
-    const index = internships.findIndex(i => i.id === internship.id);
-    if (index >= 0) {
-      internships[index] = internship;
-    } else {
-      if (internship.order === undefined) {
-        internship.order = internships.length;
-      }
-      internships.push(internship);
-    }
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('internships').upsert(internship);
     }
-    setLocalData('zentriya_internships', internships);
     this.logActivity('Internship Modified', `Syllabus/Pricing for "${internship.title}" updated.`);
     return internship;
   },
@@ -1410,19 +1698,15 @@ export const db = {
     if (supabase) {
       await supabase.from('internships').upsert(list);
     }
-    setLocalData('zentriya_internships', list);
     this.logActivity('Internships Reordered', 'Reordered internship items sequence.');
     return list;
   },
 
   async deleteInternship(id: string): Promise<boolean> {
-    const internships = await this.getInternships();
-    const filtered = internships.filter(i => i.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('internships').delete().eq('id', id);
     }
-    setLocalData('zentriya_internships', filtered);
     this.logActivity('Internship Removed', `Deleted internship offering. ID: ${id}`);
     return true;
   },
@@ -1432,40 +1716,28 @@ export const db = {
   // --------------------------------------------------------------------
   async getCourses(): Promise<CourseItem[]> {
     const supabase = getSupabase();
-    let list: CourseItem[] = [];
     if (supabase) {
       const { data, error } = await supabase.from('courses').select('*');
-      if (!error && data) {
-        list = data as CourseItem[];
+      if (!error && data && data.length > 0) {
+        return data as CourseItem[];
+      }
+      if (!error && data && data.length === 0) {
+        try {
+          await supabase.from('courses').insert(defaultCourses);
+        } catch (e) {
+          console.warn('Failed to seed courses table:', e);
+        }
+        return defaultCourses;
       }
     }
-    if (!list || list.length === 0) {
-      list = getLocalData<CourseItem[]>('zentriya_courses', defaultCourses);
-      // Self-healing: Reset local cache if it is old (less than 5 courses or using old image)
-      if (list.length < 5 || list.some(c => c.title.includes('React & TypeScript') || (c.id === 'course_1' && c.title !== 'Full Stack Web Development') || (c.id === 'course_5' && c.bannerUrl.includes('1561070791-26c113006238')))) {
-        list = defaultCourses;
-        setLocalData('zentriya_courses', defaultCourses);
-      }
-    }
-    return list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return defaultCourses;
   },
 
   async saveCourse(course: CourseItem): Promise<CourseItem> {
-    const courses = await this.getCourses();
-    const index = courses.findIndex(c => c.id === course.id);
-    if (index >= 0) {
-      courses[index] = course;
-    } else {
-      if (course.order === undefined) {
-        course.order = courses.length;
-      }
-      courses.push(course);
-    }
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('courses').upsert(course);
     }
-    setLocalData('zentriya_courses', courses);
     this.logActivity('Course Updated', `Enterprise training course "${course.title}" updated.`);
     return course;
   },
@@ -1475,19 +1747,15 @@ export const db = {
     if (supabase) {
       await supabase.from('courses').upsert(list);
     }
-    setLocalData('zentriya_courses', list);
     this.logActivity('Courses Reordered', 'Reordered courses items sequence.');
     return list;
   },
 
   async deleteCourse(id: string): Promise<boolean> {
-    const courses = await this.getCourses();
-    const filtered = courses.filter(c => c.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('courses').delete().eq('id', id);
     }
-    setLocalData('zentriya_courses', filtered);
     this.logActivity('Course Deleted', `Deleted course item. ID: ${id}`);
     return true;
   },
@@ -1497,35 +1765,81 @@ export const db = {
   // --------------------------------------------------------------------
   async getPrograms(): Promise<ProgramItem[]> {
     const supabase = getSupabase();
-    let list: ProgramItem[] = [];
     if (supabase) {
-      const { data, error } = await supabase.from('programs').select('*');
-      if (!error && data) {
-        list = data as ProgramItem[];
+      try {
+        const { data, error } = await supabase.from('programs').select('*').order('display_order', { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data.map(row => ({
+            id: row.id,
+            title: row.title,
+            category: row.category,
+            duration: row.duration,
+            description: row.description,
+            cover_image: row.banner_image_url,
+            mode: row.learning_mode,
+            syllabus: Array.isArray(row.syllabus) ? row.syllabus : [],
+            badges: row.highlights || [],
+            display_order: row.display_order ?? 0,
+            is_active: row.is_active ?? true,
+            created_at: row.created_at,
+            updated_at: row.updated_at
+          })) as ProgramItem[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            const dbPrograms = defaultPrograms.map(p => ({
+              id: p.id,
+              title: p.title,
+              category: p.category,
+              duration: p.duration,
+              description: p.description,
+              banner_image_url: p.cover_image,
+              learning_mode: p.mode,
+              syllabus: p.syllabus || [],
+              highlights: p.badges || [],
+              display_order: p.display_order,
+              is_active: p.is_active !== false,
+              technology: 'General IT',
+              eligibility: 'Open to all background levels',
+              fee_structure: {}
+            }));
+            await supabase.from('programs').insert(dbPrograms);
+          } catch (e) {
+            console.warn('Failed to seed programs table:', e);
+          }
+          return defaultPrograms;
+        }
+      } catch (err) {
+        console.warn('getPrograms error:', err);
       }
     }
-    if (!list || list.length === 0) {
-      list = getLocalData<ProgramItem[]>('zentriya_programs', defaultPrograms);
-    }
-    return list.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    return defaultPrograms;
   },
 
   async saveProgram(program: ProgramItem): Promise<ProgramItem> {
-    const programs = await this.getPrograms();
-    const index = programs.findIndex(p => p.id === program.id);
-    if (index >= 0) {
-      programs[index] = program;
-    } else {
-      if (program.display_order === undefined) {
-        program.display_order = programs.length;
-      }
-      programs.push(program);
-    }
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('programs').upsert(program);
+      try {
+        const dbData = {
+          title: program.title,
+          category: program.category,
+          duration: program.duration,
+          description: program.description,
+          banner_image_url: program.cover_image,
+          learning_mode: program.mode,
+          syllabus: program.syllabus || [],
+          highlights: program.badges || [],
+          display_order: program.display_order,
+          is_active: program.is_active !== false,
+          technology: 'General IT',
+          eligibility: 'Open to all background levels',
+          fee_structure: {}
+        };
+        await supabase.from('programs').upsert({ id: program.id, ...dbData });
+      } catch (err) {
+        console.warn('Failed to save program:', err);
+      }
     }
-    setLocalData('zentriya_programs', programs);
     this.logActivity('Program Modified', `Program offering "${program.title}" updated.`);
     return program;
   },
@@ -1533,21 +1847,37 @@ export const db = {
   async savePrograms(list: ProgramItem[]): Promise<ProgramItem[]> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('programs').upsert(list);
+      try {
+        const dbData = list.map(program => ({
+          id: program.id,
+          title: program.title,
+          category: program.category,
+          duration: program.duration,
+          description: program.description,
+          banner_image_url: program.cover_image,
+          learning_mode: program.mode,
+          syllabus: program.syllabus || [],
+          highlights: program.badges || [],
+          display_order: program.display_order,
+          is_active: program.is_active !== false,
+          technology: 'General IT',
+          eligibility: 'Open to all background levels',
+          fee_structure: {}
+        }));
+        await supabase.from('programs').upsert(dbData);
+      } catch (err) {
+        console.warn('Failed to save programs:', err);
+      }
     }
-    setLocalData('zentriya_programs', list);
     this.logActivity('Programs Reordered', 'Reordered program offerings sequence.');
     return list;
   },
 
   async deleteProgram(id: string): Promise<boolean> {
-    const programs = await this.getPrograms();
-    const filtered = programs.filter(p => p.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('programs').delete().eq('id', id);
     }
-    setLocalData('zentriya_programs', filtered);
     this.logActivity('Program Removed', `Deleted program offering. ID: ${id}`);
     return true;
   },
@@ -1559,38 +1889,35 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       const { data, error } = await supabase.from('albums').select('*');
-      if (!error && data) return data as GalleryAlbum[];
+      if (!error && data && data.length > 0) {
+        return data as GalleryAlbum[];
+      }
+      if (!error && data && data.length === 0) {
+        try {
+          await supabase.from('albums').insert(defaultGalleryAlbums);
+        } catch (e) {
+          console.warn('Failed to seed albums table:', e);
+        }
+        return defaultGalleryAlbums;
+      }
     }
-    const albums = getLocalData<GalleryAlbum[]>('zentriya_albums', defaultGalleryAlbums);
-    if (albums.some(a => a.id === 'album_1' || a.coverImageUrl.includes('unsplash.com'))) {
-      setLocalData('zentriya_albums', defaultGalleryAlbums);
-      return defaultGalleryAlbums;
-    }
-    return albums;
+    return defaultGalleryAlbums;
   },
 
   async saveGalleryAlbum(album: GalleryAlbum): Promise<GalleryAlbum> {
-    const albums = await this.getGalleryAlbums();
-    const index = albums.findIndex(a => a.id === album.id);
-    if (index >= 0) albums[index] = album;
-    else albums.push(album);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('albums').upsert(album);
     }
-    setLocalData('zentriya_albums', albums);
     this.logActivity('Gallery Album Saved', `Created/Modified photo album "${album.title}".`);
     return album;
   },
 
   async deleteGalleryAlbum(id: string): Promise<boolean> {
-    const albums = await this.getGalleryAlbums();
-    const filtered = albums.filter(a => a.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('albums').delete().eq('id', id);
     }
-    setLocalData('zentriya_albums', filtered);
     return true;
   },
 
@@ -1598,37 +1925,34 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       const { data, error } = await supabase.from('gallery').select('*');
-      if (!error && data) return data as GalleryItem[];
+      if (!error && data && data.length > 0) {
+        return data as GalleryItem[];
+      }
+      if (!error && data && data.length === 0) {
+        try {
+          await supabase.from('gallery').insert(defaultGalleryItems);
+        } catch (e) {
+          console.warn('Failed to seed gallery table:', e);
+        }
+        return defaultGalleryItems;
+      }
     }
-    const items = getLocalData<GalleryItem[]>('zentriya_gallery', defaultGalleryItems);
-    if (items.some(item => item.id === 'gal_1' && !item.url.includes('workshop_banner')) || items.length < 8 || items.some(item => item.url && item.url.includes('unsplash.5Fcom') || (item.url && item.url.includes('unsplash.com')))) {
-      setLocalData('zentriya_gallery', defaultGalleryItems);
-      return defaultGalleryItems;
-    }
-    return items;
+    return defaultGalleryItems;
   },
 
   async saveGalleryItem(item: GalleryItem): Promise<GalleryItem> {
-    const items = await this.getGalleryItems();
-    const index = items.findIndex(i => i.id === item.id);
-    if (index >= 0) items[index] = item;
-    else items.push(item);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('gallery').upsert(item);
     }
-    setLocalData('zentriya_gallery', items);
     return item;
   },
 
   async deleteGalleryItem(id: string): Promise<boolean> {
-    const items = await this.getGalleryItems();
-    const filtered = items.filter(i => i.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('gallery').delete().eq('id', id);
     }
-    setLocalData('zentriya_gallery', filtered);
     return true;
   },
 
@@ -1638,34 +1962,61 @@ export const db = {
   async getTeam(): Promise<TeamMember[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('team').select('*').order('order', { ascending: true });
-      if (!error && data) return data as TeamMember[];
+      try {
+        const { data, error } = await supabase.from('team_members').select('*').order('display_order', { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data.map(row => ({
+            id: row.id,
+            name: row.name,
+            designation: row.role,
+            photoUrl: row.avatar_url,
+            bio: row.bio || '',
+            socialLinks: {
+              linkedin: row.linkedin_url || '',
+              twitter: row.twitter_url || ''
+            },
+            order: row.display_order ?? 0
+          })) as TeamMember[];
+        }
+      } catch (err) {
+        console.warn('Failed to fetch team_members:', err);
+      }
     }
-    return getLocalData<TeamMember[]>('zentriya_team', defaultTeam).sort((a, b) => a.order - b.order);
+    return defaultTeam;
   },
 
   async saveTeamMember(member: TeamMember): Promise<TeamMember> {
-    const team = await this.getTeam();
-    const index = team.findIndex(t => t.id === member.id);
-    if (index >= 0) team[index] = member;
-    else team.push(member);
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('team').upsert(member);
+      try {
+        const dbData = {
+          name: member.name,
+          role: member.designation,
+          avatar_url: member.photoUrl,
+          bio: member.bio,
+          linkedin_url: member.socialLinks?.linkedin || '',
+          twitter_url: member.socialLinks?.twitter || '',
+          display_order: member.order,
+          is_active: true
+        };
+        await supabase.from('team_members').upsert({ id: member.id, ...dbData });
+      } catch (err) {
+        console.warn('Failed to save team_member:', err);
+      }
     }
-    setLocalData('zentriya_team', team);
     this.logActivity('Team Member Saved', `Added or updated team sheet for ${member.name}.`);
     return member;
   },
 
   async deleteTeamMember(id: string): Promise<boolean> {
-    const team = await this.getTeam();
-    const filtered = team.filter(t => t.id !== id);
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('team').delete().eq('id', id);
+      try {
+        await supabase.from('team_members').delete().eq('id', id);
+      } catch (err) {
+        console.warn('Failed to delete team_member:', err);
+      }
     }
-    setLocalData('zentriya_team', filtered);
     return true;
   },
 
@@ -1675,34 +2026,40 @@ export const db = {
   async getTestimonials(): Promise<TestimonialItem[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('testimonials').select('*');
-      if (!error && data) return data as TestimonialItem[];
+      try {
+        const { data, error } = await supabase.from('testimonials').select('*');
+        if (!error && data && data.length > 0) {
+          return data as TestimonialItem[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('testimonials').insert(defaultTestimonials);
+          } catch (e) {
+            console.warn('Failed to seed testimonials table:', e);
+          }
+          return defaultTestimonials;
+        }
+      } catch (err) {
+        console.warn('getTestimonials error:', err);
+      }
     }
-    return getLocalData<TestimonialItem[]>('zentriya_testimonials', defaultTestimonials);
+    return defaultTestimonials;
   },
 
   async saveTestimonial(testimonial: TestimonialItem): Promise<TestimonialItem> {
-    const testimonials = await this.getTestimonials();
-    const index = testimonials.findIndex(t => t.id === testimonial.id);
-    if (index >= 0) testimonials[index] = testimonial;
-    else testimonials.push(testimonial);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('testimonials').upsert(testimonial);
     }
-    setLocalData('zentriya_testimonials', testimonials);
     this.logActivity('Testimonial Added', `Saved review from "${testimonial.name}".`);
     return testimonial;
   },
 
   async deleteTestimonial(id: string): Promise<boolean> {
-    const testimonials = await this.getTestimonials();
-    const filtered = testimonials.filter(t => t.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('testimonials').delete().eq('id', id);
     }
-    setLocalData('zentriya_testimonials', filtered);
     return true;
   },
 
@@ -1713,33 +2070,35 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       const { data, error } = await supabase.from('jobs').select('*').order('createdAt', { ascending: false });
-      if (!error && data) return data as JobListing[];
+      if (!error && data && data.length > 0) {
+        return data as JobListing[];
+      }
+      if (!error && data && data.length === 0) {
+        try {
+          await supabase.from('jobs').insert(defaultJobs);
+        } catch (e) {
+          console.warn('Failed to seed jobs table:', e);
+        }
+        return defaultJobs;
+      }
     }
-    return getLocalData<JobListing[]>('zentriya_jobs', defaultJobs);
+    return defaultJobs;
   },
 
   async saveJob(job: JobListing): Promise<JobListing> {
-    const jobs = await this.getJobs();
-    const index = jobs.findIndex(j => j.id === job.id);
-    if (index >= 0) jobs[index] = job;
-    else jobs.push(job);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('jobs').upsert(job);
     }
-    setLocalData('zentriya_jobs', jobs);
     this.logActivity('Career Job Configured', `Saved recruitment post for "${job.title}".`);
     return job;
   },
 
   async deleteJob(id: string): Promise<boolean> {
-    const jobs = await this.getJobs();
-    const filtered = jobs.filter(j => j.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('jobs').delete().eq('id', id);
     }
-    setLocalData('zentriya_jobs', filtered);
     return true;
   },
 
@@ -1750,19 +2109,26 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       const { data, error } = await supabase.from('applications').select('*').order('createdAt', { ascending: false });
-      if (!error && data) return data as JobApplication[];
+      if (!error && data && data.length > 0) {
+        return data as JobApplication[];
+      }
+      if (!error && data && data.length === 0) {
+        try {
+          await supabase.from('applications').insert(defaultApplications);
+        } catch (e) {
+          console.warn('Failed to seed applications table:', e);
+        }
+        return defaultApplications;
+      }
     }
-    return getLocalData<JobApplication[]>('zentriya_applications', defaultApplications);
+    return defaultApplications;
   },
 
   async createApplication(app: JobApplication): Promise<JobApplication> {
-    const apps = await this.getApplications();
-    apps.push(app);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('applications').insert(app);
     }
-    setLocalData('zentriya_applications', apps);
 
     // Create system notification
     this.createNotification({
@@ -1778,29 +2144,19 @@ export const db = {
   },
 
   async updateApplicationStatus(id: string, status: JobApplication['status']): Promise<boolean> {
-    const apps = await this.getApplications();
-    const index = apps.findIndex(a => a.id === id);
-    if (index >= 0) {
-      apps[index].status = status;
-      const supabase = getSupabase();
-      if (supabase) {
-        await supabase.from('applications').update({ status }).eq('id', id);
-      }
-      setLocalData('zentriya_applications', apps);
-      this.logActivity('Application Processed', `Updated applicant status to ${status} for ${apps[index].fullName}.`);
-      return true;
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('applications').update({ status }).eq('id', id);
     }
-    return false;
+    this.logActivity('Application Processed', `Updated applicant status to ${status}.`);
+    return true;
   },
 
   async deleteApplication(id: string): Promise<boolean> {
-    const apps = await this.getApplications();
-    const filtered = apps.filter(a => a.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('applications').delete().eq('id', id);
     }
-    setLocalData('zentriya_applications', filtered);
     this.logActivity('Application Deleted', `Removed application reference. ID: ${id}`);
     return true;
   },
@@ -1812,19 +2168,26 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       const { data, error } = await supabase.from('contacts').select('*').order('createdAt', { ascending: false });
-      if (!error && data) return data as ContactMessage[];
+      if (!error && data && data.length > 0) {
+        return data as ContactMessage[];
+      }
+      if (!error && data && data.length === 0) {
+        try {
+          await supabase.from('contacts').insert(defaultContacts);
+        } catch (e) {
+          console.warn('Failed to seed contacts table:', e);
+        }
+        return defaultContacts;
+      }
     }
-    return getLocalData<ContactMessage[]>('zentriya_contacts', defaultContacts);
+    return defaultContacts;
   },
 
   async createContactMessage(msg: ContactMessage): Promise<ContactMessage> {
-    const msgs = await this.getContactMessages();
-    msgs.push(msg);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('contacts').insert(msg);
     }
-    setLocalData('zentriya_contacts', msgs);
 
     // Notification
     this.createNotification({
@@ -1840,28 +2203,18 @@ export const db = {
   },
 
   async markContactMessageRead(id: string): Promise<boolean> {
-    const msgs = await this.getContactMessages();
-    const index = msgs.findIndex(m => m.id === id);
-    if (index >= 0) {
-      msgs[index].isRead = true;
-      const supabase = getSupabase();
-      if (supabase) {
-        await supabase.from('contacts').update({ isRead: true }).eq('id', id);
-      }
-      setLocalData('zentriya_contacts', msgs);
-      return true;
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('contacts').update({ isRead: true }).eq('id', id);
     }
-    return false;
+    return true;
   },
 
   async deleteContactMessage(id: string): Promise<boolean> {
-    const msgs = await this.getContactMessages();
-    const filtered = msgs.filter(m => m.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('contacts').delete().eq('id', id);
     }
-    setLocalData('zentriya_contacts', filtered);
     this.logActivity('Contact Inquiry Deleted', `Removed support ticket ID: ${id}`);
     return true;
   },
@@ -1872,34 +2225,93 @@ export const db = {
   async getBlogs(): Promise<BlogPost[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('blogs').select('*').order('createdAt', { ascending: false });
-      if (!error && data) return data as BlogPost[];
+      try {
+        const { data, error } = await supabase.from('blogs').select('*').order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          return data.map(row => ({
+            id: row.id,
+            title: row.title,
+            slug: row.slug,
+            content: row.content,
+            excerpt: row.excerpt,
+            category: row.category,
+            tags: row.tags || [],
+            imageUrl: row.cover_image_url,
+            featured: row.is_featured,
+            seoTitle: row.seo_title || '',
+            seoDescription: row.seo_description || '',
+            author: row.author_name,
+            createdAt: row.created_at
+          })) as BlogPost[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            const dbBlogs = defaultBlogs.map(b => ({
+              id: b.id,
+              title: b.title,
+              slug: b.slug,
+              content: b.content,
+              excerpt: b.excerpt,
+              category: b.category,
+              tags: b.tags || [],
+              cover_image_url: b.imageUrl,
+              is_featured: b.featured !== false,
+              author_name: b.author,
+              author_avatar_url: '/logo.png',
+              author_designation: 'Editor',
+              read_time_minutes: 5,
+              seo_title: b.seoTitle || '',
+              seo_description: b.seoDescription || '',
+              is_active: true
+            }));
+            await supabase.from('blogs').insert(dbBlogs);
+          } catch (e) {
+            console.warn('Failed to seed blogs table:', e);
+          }
+          return defaultBlogs;
+        }
+      } catch (err) {
+        console.warn('getBlogs error:', err);
+      }
     }
-    return getLocalData<BlogPost[]>('zentriya_blogs', defaultBlogs);
+    return defaultBlogs;
   },
 
   async saveBlogPost(post: BlogPost): Promise<BlogPost> {
-    const blogs = await this.getBlogs();
-    const index = blogs.findIndex(b => b.id === post.id);
-    if (index >= 0) blogs[index] = post;
-    else blogs.push(post);
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('blogs').upsert(post);
+      try {
+        const dbData = {
+          title: post.title,
+          slug: post.slug,
+          content: post.content,
+          excerpt: post.excerpt,
+          category: post.category,
+          tags: post.tags || [],
+          cover_image_url: post.imageUrl,
+          is_featured: post.featured !== false,
+          author_name: post.author || 'Zentriya Admin',
+          author_avatar_url: '/logo.png',
+          author_designation: 'Administrator',
+          read_time_minutes: Math.ceil(post.content.split(/\s+/).length / 200) || 5,
+          seo_title: post.seoTitle || '',
+          seo_description: post.seoDescription || '',
+          is_active: true
+        };
+        await supabase.from('blogs').upsert({ id: post.id, ...dbData });
+      } catch (err) {
+        console.warn('Failed to save blog post:', err);
+      }
     }
-    setLocalData('zentriya_blogs', blogs);
     this.logActivity('Blog Post Written', `Published blog post: "${post.title}".`);
     return post;
   },
 
   async deleteBlogPost(id: string): Promise<boolean> {
-    const blogs = await this.getBlogs();
-    const filtered = blogs.filter(b => b.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('blogs').delete().eq('id', id);
     }
-    setLocalData('zentriya_blogs', filtered);
     return true;
   },
 
@@ -1909,33 +2321,39 @@ export const db = {
   async getFaqs(): Promise<FaqItem[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('faqs').select('*');
-      if (!error && data) return data as FaqItem[];
+      try {
+        const { data, error } = await supabase.from('faqs').select('*');
+        if (!error && data && data.length > 0) {
+          return data as FaqItem[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('faqs').insert(defaultFaqs);
+          } catch (e) {
+            console.warn('Failed to seed faqs table:', e);
+          }
+          return defaultFaqs;
+        }
+      } catch (err) {
+        console.warn('getFaqs error:', err);
+      }
     }
-    return getLocalData<FaqItem[]>('zentriya_faqs', defaultFaqs);
+    return defaultFaqs;
   },
 
   async saveFaq(faq: FaqItem): Promise<FaqItem> {
-    const faqs = await this.getFaqs();
-    const index = faqs.findIndex(f => f.id === faq.id);
-    if (index >= 0) faqs[index] = faq;
-    else faqs.push(faq);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('faqs').upsert(faq);
     }
-    setLocalData('zentriya_faqs', faqs);
     return faq;
   },
 
   async deleteFaq(id: string): Promise<boolean> {
-    const faqs = await this.getFaqs();
-    const filtered = faqs.filter(f => f.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('faqs').delete().eq('id', id);
     }
-    setLocalData('zentriya_faqs', filtered);
     return true;
   },
 
@@ -1945,22 +2363,30 @@ export const db = {
   async getDownloads(): Promise<DownloadItem[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('downloads').select('*');
-      if (!error && data) return data as DownloadItem[];
+      try {
+        const { data, error } = await supabase.from('downloads').select('*');
+        if (!error && data && data.length > 0) {
+          return data as DownloadItem[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('downloads').insert(defaultDownloads);
+          } catch (e) {
+            console.warn('Failed to seed downloads table:', e);
+          }
+          return defaultDownloads;
+        }
+      } catch (err) {
+        console.warn('getDownloads error:', err);
+      }
     }
-    return getLocalData<DownloadItem[]>('zentriya_downloads', defaultDownloads);
+    return defaultDownloads;
   },
 
   async incrementDownload(id: string): Promise<void> {
-    const items = await this.getDownloads();
-    const index = items.findIndex(i => i.id === id);
-    if (index >= 0) {
-      items[index].downloadsCount += 1;
-      const supabase = getSupabase();
-      if (supabase) {
-        await supabase.rpc('increment_download_count', { item_id: id });
-      }
-      setLocalData('zentriya_downloads', items);
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.rpc('increment_download_count', { item_id: id });
     }
   },
 
@@ -1970,33 +2396,39 @@ export const db = {
   async getPlacementStats(): Promise<PlacementStat[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('placement_stats').select('*');
-      if (!error && data) return data as PlacementStat[];
+      try {
+        const { data, error } = await supabase.from('placement_stats').select('*');
+        if (!error && data && data.length > 0) {
+          return data as PlacementStat[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('placement_stats').insert(defaultPlacementStats);
+          } catch (e) {
+            console.warn('Failed to seed placement_stats table:', e);
+          }
+          return defaultPlacementStats;
+        }
+      } catch (err) {
+        console.warn('getPlacementStats error:', err);
+      }
     }
-    return getLocalData<PlacementStat[]>('zentriya_placement_stats', defaultPlacementStats);
+    return defaultPlacementStats;
   },
 
   async savePlacementStat(stat: PlacementStat): Promise<PlacementStat> {
-    const stats = await this.getPlacementStats();
-    const index = stats.findIndex(s => s.id === stat.id);
-    if (index >= 0) stats[index] = stat;
-    else stats.push(stat);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('placement_stats').upsert(stat);
     }
-    setLocalData('zentriya_placement_stats', stats);
     return stat;
   },
 
   async deletePlacementStat(id: string): Promise<boolean> {
-    const stats = await this.getPlacementStats();
-    const filtered = stats.filter(s => s.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('placement_stats').delete().eq('id', id);
     }
-    setLocalData('zentriya_placement_stats', filtered);
     return true;
   },
 
@@ -2004,40 +2436,43 @@ export const db = {
   async getPlacements(): Promise<Placement[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase
-        .from('placements')
-        .select('*')
-        .order('display_order', { ascending: true });
-      if (!error && data) return data as Placement[];
+      try {
+        const { data, error } = await supabase
+          .from('placements')
+          .select('*')
+          .order('display_order', { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data as Placement[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('placements').insert(defaultPlacements);
+          } catch (e) {
+            console.warn('Failed to seed placements table:', e);
+          }
+          return defaultPlacements;
+        }
+      } catch (err) {
+        console.warn('getPlacements error:', err);
+      }
     }
-    const local = getLocalData<Placement[]>('zentriya_placements', defaultPlacements);
-    return local.sort((a, b) => a.display_order - b.display_order);
+    return defaultPlacements;
   },
 
   async savePlacement(placement: Placement): Promise<Placement> {
-    const list = await this.getPlacements();
-    const index = list.findIndex(p => p.id === placement.id);
-    if (index >= 0) list[index] = placement;
-    else list.push(placement);
-    
     const supabase = getSupabase();
     if (supabase) {
       const { error } = await supabase.from('placements').upsert(placement);
       if (error) console.error('Supabase savePlacement failed:', error);
     }
-    setLocalData('zentriya_placements', list);
     return placement;
   },
 
   async deletePlacement(id: string): Promise<boolean> {
-    const list = await this.getPlacements();
-    const filtered = list.filter(p => p.id !== id);
-    
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('placements').delete().eq('id', id);
     }
-    setLocalData('zentriya_placements', filtered);
     return true;
   },
 
@@ -2048,39 +2483,44 @@ export const db = {
         await supabase.from('placements').upsert(item);
       }
     }
-    setLocalData('zentriya_placements', items);
   },
 
   async getClientPartners(): Promise<ClientPartnerLogo[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('client_partners').select('*');
-      if (!error && data) return data as ClientPartnerLogo[];
+      try {
+        const { data, error } = await supabase.from('client_partners').select('*');
+        if (!error && data && data.length > 0) {
+          return data as ClientPartnerLogo[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('client_partners').insert(defaultClientPartners);
+          } catch (e) {
+            console.warn('Failed to seed client_partners table:', e);
+          }
+          return defaultClientPartners;
+        }
+      } catch (err) {
+        console.warn('getClientPartners error:', err);
+      }
     }
-    return getLocalData<ClientPartnerLogo[]>('zentriya_client_partners', defaultClientPartners);
+    return defaultClientPartners;
   },
 
   async saveClientPartner(cp: ClientPartnerLogo): Promise<ClientPartnerLogo> {
-    const items = await this.getClientPartners();
-    const index = items.findIndex(i => i.id === cp.id);
-    if (index >= 0) items[index] = cp;
-    else items.push(cp);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('client_partners').upsert(cp);
     }
-    setLocalData('zentriya_client_partners', items);
     return cp;
   },
 
   async deleteClientPartner(id: string): Promise<boolean> {
-    const items = await this.getClientPartners();
-    const filtered = items.filter(i => i.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('client_partners').delete().eq('id', id);
     }
-    setLocalData('zentriya_client_partners', filtered);
     return true;
   },
 
@@ -2092,16 +2532,25 @@ export const db = {
     if (supabase) {
       try {
         const { data, error } = await supabase.from('activity_logs').select('*').order('timestamp', { ascending: false }).limit(50);
-        if (!error && data) return data as ActivityLog[];
+        if (!error && data && data.length > 0) {
+          return data as ActivityLog[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('activity_logs').insert(defaultActivityLogs);
+          } catch (e) {
+            console.warn('Failed to seed activity_logs table:', e);
+          }
+          return defaultActivityLogs;
+        }
       } catch (e) {
         console.warn('Supabase fetch failed for activity_logs:', e);
       }
     }
-    return getLocalData<ActivityLog[]>('zentriya_activity_logs', defaultActivityLogs);
+    return defaultActivityLogs;
   },
 
   async logActivity(action: string, details: string) {
-    const logs = getLocalData<ActivityLog[]>('zentriya_activity_logs', defaultActivityLogs);
     const activeUser = localStorage.getItem('zentriya_active_user');
     let user: UserProfile = { id: 'usr_admin', name: 'Admin Chief', email: 'admin@zentriya.com', role: 'Super Admin' as UserRole };
     if (activeUser) {
@@ -2125,9 +2574,6 @@ export const db = {
         console.warn('Supabase insert failed for activity_logs:', e);
       }
     }
-
-    logs.unshift(newLog);
-    setLocalData('zentriya_activity_logs', logs.slice(0, 50)); // cap at 50 logs
   },
 
   async getNotifications(): Promise<SystemNotification[]> {
@@ -2135,17 +2581,25 @@ export const db = {
     if (supabase) {
       try {
         const { data, error } = await supabase.from('notifications').select('*').order('createdAt', { ascending: false }).limit(30);
-        if (!error && data) return data as SystemNotification[];
+        if (!error && data && data.length > 0) {
+          return data as SystemNotification[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('notifications').insert(defaultNotifications);
+          } catch (e) {
+            console.warn('Failed to seed notifications table:', e);
+          }
+          return defaultNotifications;
+        }
       } catch (e) {
         console.warn('Supabase fetch failed for notifications:', e);
       }
     }
-    return getLocalData<SystemNotification[]>('zentriya_notifications', defaultNotifications);
+    return defaultNotifications;
   },
 
   async createNotification(not: SystemNotification) {
-    const nots = getLocalData<SystemNotification[]>('zentriya_notifications', defaultNotifications);
-    
     const supabase = getSupabase();
     if (supabase) {
       try {
@@ -2154,19 +2608,9 @@ export const db = {
         console.warn('Supabase insert failed for notifications:', e);
       }
     }
-
-    nots.unshift(not);
-    setLocalData('zentriya_notifications', nots.slice(0, 30));
   },
 
   async markNotificationRead(id: string): Promise<void> {
-    const nots = getLocalData<SystemNotification[]>('zentriya_notifications', defaultNotifications);
-    const index = nots.findIndex(n => n.id === id);
-    if (index >= 0) {
-      nots[index].isRead = true;
-      setLocalData('zentriya_notifications', nots);
-    }
-
     const supabase = getSupabase();
     if (supabase) {
       try {
@@ -2182,57 +2626,44 @@ export const db = {
   // --------------------------------------------------------------------
   async getWhyChooseUs(): Promise<WhyChooseUsItem[]> {
     const supabase = getSupabase();
-    let dataFromDb: WhyChooseUsItem[] | null = null;
     if (supabase) {
       try {
         const { data, error } = await supabase.from('why_choose_us').select('*').order('display_order', { ascending: true });
         if (!error && data && data.length > 0) {
-          dataFromDb = data as WhyChooseUsItem[];
+          return data as WhyChooseUsItem[];
+        }
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('why_choose_us').insert(defaultWhyChooseUs);
+          } catch (e) {
+            console.warn('Failed to seed why_choose_us table:', e);
+          }
+          return defaultWhyChooseUs;
         }
       } catch (e) {
-        console.warn("Supabase query error, falling back to local:", e);
+        console.warn("Supabase query error:", e);
       }
     }
-    const items = dataFromDb || getLocalData<WhyChooseUsItem[]>('zentriya_why_choose_us', defaultWhyChooseUs);
-    
-    // Back-fill / merge defaults for description & bottom_badge to protect against legacy schema
-    const merged = items.map(item => {
-      const defaultItem = defaultWhyChooseUs.find(d => d.id === item.id || d.title === item.title);
-      return {
-        ...item,
-        description: item.description || defaultItem?.description || 'Hands-on training and expert mentoring matching enterprise guidelines.',
-        bottom_badge: item.bottom_badge || defaultItem?.bottom_badge || 'Verified Program'
-      };
-    });
-    
-    return merged.sort((a, b) => a.display_order - b.display_order);
+    return defaultWhyChooseUs;
   },
 
   async saveWhyChooseUsItem(item: WhyChooseUsItem): Promise<WhyChooseUsItem> {
-    const items = await this.getWhyChooseUs();
-    const index = items.findIndex(i => i.id === item.id);
-    if (index >= 0) items[index] = item;
-    else items.push(item);
     const supabase = getSupabase();
     if (supabase) {
       try {
         await supabase.from('why_choose_us').upsert(item);
       } catch (e) {
-        console.warn("Supabase upsert warning, updating local first:", e);
+        console.warn("Supabase upsert warning:", e);
       }
     }
-    setLocalData('zentriya_why_choose_us', items);
     return item;
   },
 
   async deleteWhyChooseUsItem(id: string): Promise<boolean> {
-    const items = await this.getWhyChooseUs();
-    const filtered = items.filter(i => i.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('why_choose_us').delete().eq('id', id);
     }
-    setLocalData('zentriya_why_choose_us', filtered);
     return true;
   },
 
@@ -2247,7 +2678,6 @@ export const db = {
         await supabase.from('why_choose_us').upsert(item);
       }
     }
-    setLocalData('zentriya_why_choose_us', updated);
   },
 
   // --------------------------------------------------------------------
@@ -2258,32 +2688,31 @@ export const db = {
     if (supabase) {
       const { data, error } = await supabase.from('student_journey').select('*').order('display_order', { ascending: true });
       if (!error && data && data.length > 0) return data as StudentJourneyStep[];
+      if (!error && data && data.length === 0) {
+        try {
+          await supabase.from('student_journey').insert(defaultStudentJourneySteps);
+        } catch (e) {
+          console.warn('Failed to seed student_journey table:', e);
+        }
+        return defaultStudentJourneySteps;
+      }
     }
-    const local = getLocalData<StudentJourneyStep[]>('zentriya_student_journey', defaultStudentJourneySteps);
-    return local.sort((a, b) => a.display_order - b.display_order);
+    return defaultStudentJourneySteps;
   },
 
   async saveStudentJourneyStep(step: StudentJourneyStep): Promise<StudentJourneyStep> {
-    const items = await this.getStudentJourneySteps();
-    const index = items.findIndex(i => i.id === step.id);
-    if (index >= 0) items[index] = step;
-    else items.push(step);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('student_journey').upsert(step);
     }
-    setLocalData('zentriya_student_journey', items);
     return step;
   },
 
   async deleteStudentJourneyStep(id: string): Promise<boolean> {
-    const items = await this.getStudentJourneySteps();
-    const filtered = items.filter(i => i.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       await supabase.from('student_journey').delete().eq('id', id);
     }
-    setLocalData('zentriya_student_journey', filtered);
     return true;
   },
 
@@ -2298,7 +2727,6 @@ export const db = {
         await supabase.from('student_journey').upsert(item);
       }
     }
-    setLocalData('zentriya_student_journey', updated);
   },
 
   // --------------------------------------------------------------------
@@ -2306,123 +2734,57 @@ export const db = {
   // --------------------------------------------------------------------
   async getIndustryPartners(): Promise<IndustryPartner[]> {
     const supabase = getSupabase();
-    let partners: IndustryPartner[] = [];
-    let isSupabase = false;
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('industry_partners').select('*').order('display_order', { ascending: true });
+        const { data, error } = await supabase.from('industry_network').select('*').order('display_order', { ascending: true });
         if (!error && data && data.length > 0) {
-          partners = data as IndustryPartner[];
-          isSupabase = true;
+          return data.map(row => ({
+            id: row.id,
+            company_name: row.company_name,
+            logo: row.logo_url,
+            website_url: row.website_url || '',
+            display_order: row.display_order ?? 0,
+            is_active: row.is_active
+          })) as IndustryPartner[];
+        }
+        if (!error && data && data.length === 0) {
+          return defaultIndustryPartners;
         }
       } catch (e) {
         console.error('Supabase query failed:', e);
       }
     }
-    
-    if (partners.length === 0) {
-      partners = getLocalData<IndustryPartner[]>('zentriya_industry_partners', defaultIndustryPartners);
-    }
-
-    const logoMap: { [key: string]: string } = {
-      'microsoft': 'https://logo.clearbit.com/microsoft.com',
-      'google': 'https://logo.clearbit.com/google.com',
-      'amazon': 'https://logo.clearbit.com/amazon.com',
-      'aws': 'https://logo.clearbit.com/amazon.com',
-      'ibm': 'https://logo.clearbit.com/ibm.com',
-      'infosys': 'https://logo.clearbit.com/infosys.com',
-      'tata': 'https://logo.clearbit.com/tcs.com',
-      'tcs': 'https://logo.clearbit.com/tcs.com',
-      'accenture': 'https://logo.clearbit.com/accenture.com',
-      'cognizant': 'https://logo.clearbit.com/cognizant.com',
-      'wipro': 'https://logo.clearbit.com/wipro.com',
-      'capgemini': 'https://logo.clearbit.com/capgemini.com',
-      'oracle': 'https://logo.clearbit.com/oracle.com',
-      'cisco': 'https://logo.clearbit.com/cisco.com',
-      'dell': 'https://logo.clearbit.com/dell.com',
-      'hcl': 'https://logo.clearbit.com/hcltech.com',
-      'hcltech': 'https://logo.clearbit.com/hcltech.com'
-    };
-
-    let logoMigrated = false;
-    partners = partners.map(partner => {
-      const nameLower = partner.company_name.toLowerCase();
-      let matchedLogo = '';
-      for (const [key, val] of Object.entries(logoMap)) {
-        if (nameLower.includes(key)) {
-          matchedLogo = val;
-          break;
-        }
-      }
-      if (matchedLogo && partner.logo !== matchedLogo) {
-        logoMigrated = true;
-        return { ...partner, logo: matchedLogo };
-      }
-      return partner;
-    });
-
-    if (logoMigrated) {
-      setLocalData('zentriya_industry_partners', partners);
-    }
-
-    // Merge missing default partners to make sure TCS, Cognizant, Wipro, and HCLTech are always present and visible
-    let updated = logoMigrated;
-    const currentList = [...partners];
-    for (const def of defaultIndustryPartners) {
-      const exists = currentList.some(p => 
-        p.id === def.id || 
-        p.company_name.toLowerCase().replace(/\s+/g, '') === def.company_name.toLowerCase().replace(/\s+/g, '') ||
-        p.company_name.toLowerCase().includes('tcs') && def.company_name.toLowerCase().includes('tcs') ||
-        p.company_name.toLowerCase().includes('cognizant') && def.company_name.toLowerCase().includes('cognizant') ||
-        p.company_name.toLowerCase().includes('wipro') && def.company_name.toLowerCase().includes('wipro') ||
-        p.company_name.toLowerCase().includes('hcl') && def.company_name.toLowerCase().includes('hcl')
-      );
-      if (!exists) {
-        currentList.push(def);
-        updated = true;
-      }
-    }
-
-    if (updated) {
-      currentList.sort((a, b) => a.display_order - b.display_order);
-      setLocalData('zentriya_industry_partners', currentList);
-      if (supabase) {
-        // Safely push missing/updated ones to Supabase in the background
-        for (const item of currentList) {
-          try {
-            await supabase.from('industry_partners').upsert(item);
-          } catch (e) {
-            console.error('Failed to sync partner to Supabase:', e);
-          }
-        }
-      }
-      partners = currentList;
-    }
-
-    return partners.sort((a, b) => a.display_order - b.display_order);
+    return defaultIndustryPartners;
   },
 
   async saveIndustryPartner(partner: IndustryPartner): Promise<IndustryPartner> {
-    const items = await this.getIndustryPartners();
-    const index = items.findIndex(i => i.id === partner.id);
-    if (index >= 0) items[index] = partner;
-    else items.push(partner);
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('industry_partners').upsert(partner);
+      try {
+        const dbData = {
+          company_name: partner.company_name,
+          logo_url: partner.logo,
+          website_url: partner.website_url || '',
+          display_order: partner.display_order,
+          is_active: partner.is_active
+        };
+        await supabase.from('industry_network').upsert({ id: partner.id, ...dbData });
+      } catch (err) {
+        console.warn('Failed to save industry_network:', err);
+      }
     }
-    setLocalData('zentriya_industry_partners', items);
     return partner;
   },
 
   async deleteIndustryPartner(id: string): Promise<boolean> {
-    const items = await this.getIndustryPartners();
-    const filtered = items.filter(i => i.id !== id);
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('industry_partners').delete().eq('id', id);
+      try {
+        await supabase.from('industry_network').delete().eq('id', id);
+      } catch (err) {
+        console.warn('Failed to delete industry_network:', err);
+      }
     }
-    setLocalData('zentriya_industry_partners', filtered);
     return true;
   },
 
@@ -2433,15 +2795,25 @@ export const db = {
     }));
     const supabase = getSupabase();
     if (supabase) {
-      for (const item of updated) {
-        await supabase.from('industry_partners').upsert(item);
+      try {
+        for (const item of updated) {
+          const dbData = {
+            company_name: item.company_name,
+            logo_url: item.logo,
+            website_url: item.website_url || '',
+            display_order: item.display_order,
+            is_active: item.is_active
+          };
+          await supabase.from('industry_network').upsert({ id: item.id, ...dbData });
+        }
+      } catch (err) {
+        console.warn('Failed to save industry_network order:', err);
       }
     }
-    setLocalData('zentriya_industry_partners', updated);
   },
 
   // --------------------------------------------------------------------
-  // TECH ARTICLES (SUPABASE & LOCAL STORAGE MODE)
+  // TECH ARTICLES (SUPABASE MODE)
   // --------------------------------------------------------------------
   async getArticles(): Promise<Article[]> {
     const supabase = getSupabase();
@@ -2449,23 +2821,22 @@ export const db = {
       try {
         const { data, error } = await supabase.from('articles').select('*').order('display_order', { ascending: true });
         if (!error && data && data.length > 0) return data as Article[];
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('articles').insert(defaultArticles);
+          } catch (e) {
+            console.warn('Failed to seed articles table:', e);
+          }
+          return defaultArticles;
+        }
       } catch (e) {
         console.warn('Supabase query failed for articles:', e);
       }
     }
-    const local = getLocalData<Article[]>('zentriya_articles', defaultArticles);
-    if (local.length < defaultArticles.length) {
-      setLocalData('zentriya_articles', defaultArticles);
-      return defaultArticles.sort((a, b) => a.display_order - b.display_order);
-    }
-    return local.sort((a, b) => a.display_order - b.display_order);
+    return defaultArticles;
   },
 
   async saveArticle(article: Article): Promise<Article> {
-    const items = await this.getArticles();
-    const index = items.findIndex(i => i.id === article.id);
-    if (index >= 0) items[index] = article;
-    else items.push(article);
     const supabase = getSupabase();
     if (supabase) {
       try {
@@ -2474,14 +2845,11 @@ export const db = {
         console.warn('Supabase upsert failed for article:', e);
       }
     }
-    setLocalData('zentriya_articles', items);
     this.logActivity('Article Saved', `Saved tech article: "${article.title}".`);
     return article;
   },
 
   async deleteArticle(id: string): Promise<boolean> {
-    const items = await this.getArticles();
-    const filtered = items.filter(i => i.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       try {
@@ -2490,7 +2858,6 @@ export const db = {
         console.warn('Supabase delete failed for article:', e);
       }
     }
-    setLocalData('zentriya_articles', filtered);
     this.logActivity('Article Deleted', `Deleted tech article with ID: ${id}`);
     return true;
   },
@@ -2510,11 +2877,10 @@ export const db = {
         console.warn('Supabase upsert order failed for articles:', e);
       }
     }
-    setLocalData('zentriya_articles', updated);
   },
 
   // --------------------------------------------------------------------
-  // ARTICLE CATEGORIES (SUPABASE & LOCAL STORAGE MODE)
+  // ARTICLE CATEGORIES (SUPABASE MODE)
   // --------------------------------------------------------------------
   async getArticleCategories(): Promise<ArticleCategory[]> {
     const supabase = getSupabase();
@@ -2522,18 +2888,22 @@ export const db = {
       try {
         const { data, error } = await supabase.from('article_categories').select('*').order('display_order', { ascending: true });
         if (!error && data && data.length > 0) return data as ArticleCategory[];
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('article_categories').insert(defaultArticleCategories);
+          } catch (e) {
+            console.warn('Failed to seed article_categories table:', e);
+          }
+          return defaultArticleCategories;
+        }
       } catch (e) {
         console.warn('Supabase query failed for article_categories:', e);
       }
     }
-    return getLocalData<ArticleCategory[]>('zentriya_article_categories', defaultArticleCategories).sort((a, b) => a.display_order - b.display_order);
+    return defaultArticleCategories;
   },
 
   async saveArticleCategory(category: ArticleCategory): Promise<ArticleCategory> {
-    const items = await this.getArticleCategories();
-    const index = items.findIndex(i => i.id === category.id);
-    if (index >= 0) items[index] = category;
-    else items.push(category);
     const supabase = getSupabase();
     if (supabase) {
       try {
@@ -2542,13 +2912,10 @@ export const db = {
         console.warn('Supabase upsert failed for category:', e);
       }
     }
-    setLocalData('zentriya_article_categories', items);
     return category;
   },
 
   async deleteArticleCategory(id: string): Promise<boolean> {
-    const items = await this.getArticleCategories();
-    const filtered = items.filter(i => i.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       try {
@@ -2557,12 +2924,11 @@ export const db = {
         console.warn('Supabase delete failed for category:', e);
       }
     }
-    setLocalData('zentriya_article_categories', filtered);
     return true;
   },
 
   // --------------------------------------------------------------------
-  // ARTICLE STATISTICS (SUPABASE & LOCAL STORAGE MODE)
+  // ARTICLE STATISTICS (SUPABASE MODE)
   // --------------------------------------------------------------------
   async getArticleStatistics(): Promise<ArticleStatistic[]> {
     const supabase = getSupabase();
@@ -2570,18 +2936,22 @@ export const db = {
       try {
         const { data, error } = await supabase.from('article_statistics').select('*').order('display_order', { ascending: true });
         if (!error && data && data.length > 0) return data as ArticleStatistic[];
+        if (!error && data && data.length === 0) {
+          try {
+            await supabase.from('article_statistics').insert(defaultArticleStatistics);
+          } catch (e) {
+            console.warn('Failed to seed article_statistics table:', e);
+          }
+          return defaultArticleStatistics;
+        }
       } catch (e) {
         console.warn('Supabase query failed for article_statistics:', e);
       }
     }
-    return getLocalData<ArticleStatistic[]>('zentriya_article_statistics', defaultArticleStatistics).sort((a, b) => a.display_order - b.display_order);
+    return defaultArticleStatistics;
   },
 
   async saveArticleStatistic(stat: ArticleStatistic): Promise<ArticleStatistic> {
-    const items = await this.getArticleStatistics();
-    const index = items.findIndex(i => i.id === stat.id);
-    if (index >= 0) items[index] = stat;
-    else items.push(stat);
     const supabase = getSupabase();
     if (supabase) {
       try {
@@ -2590,13 +2960,10 @@ export const db = {
         console.warn('Supabase upsert failed for statistic:', e);
       }
     }
-    setLocalData('zentriya_article_statistics', items);
     return stat;
   },
 
   async deleteArticleStatistic(id: string): Promise<boolean> {
-    const items = await this.getArticleStatistics();
-    const filtered = items.filter(i => i.id !== id);
     const supabase = getSupabase();
     if (supabase) {
       try {
@@ -2605,7 +2972,6 @@ export const db = {
         console.warn('Supabase delete failed for statistic:', e);
       }
     }
-    setLocalData('zentriya_article_statistics', filtered);
     return true;
   },
 

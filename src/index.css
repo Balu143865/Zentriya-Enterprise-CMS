@@ -113,3 +113,20 @@ body {
   transition: all 0.9s cubic-bezier(0.19, 1, 0.22, 1);
 }
 
+/* Hide scrollbars but allow scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+/* Ensure mobile menu wrapper never triggers horizontal overflow */
+#mobile-menu-wrapper {
+  overflow: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+  height: 100dvh !important;
+}
+

@@ -1,381 +1,225 @@
--- ==========================================
--- ZENTRIYA DATABASE INITIALIZATION SCHEMA
--- ==========================================
--- This script creates all 28 tables required for the Zentriya Admin & Website,
--- along with appropriate foreign keys, check constraints, default values, and indexes.
+-- =========================================================
+-- PRODUCTION-READY DATABASE INITIALIZATION SCHEMA (SECURED)
+-- =========================================================
+-- This script provisions a secure, performant database schema 
+-- for the Zentriya website using Supabase PostgreSQL.
+--
+-- Security Model:
+-- 1. All tables have Row Level Security (RLS) enabled.
+-- 2. Visitors have SELECT-only access to public website content.
+-- 3. Visitors can INSERT into `contact_messages` (public contact form submissions).
+-- 4. Only authenticated users listed in the `admins` table can INSERT, UPDATE, or DELETE website data.
+-- 5. Only admins with the role of 'owner' can manage the `admins` table.
 --
 -- Instructions:
--- 1. Log in to your Supabase Dashboard.
--- 2. Open the SQL Editor from the left-hand menu.
--- 3. Click "New query" and paste this script in.
--- 4. Click "Run" to initialize all tables.
+-- Paste this script into your Supabase Dashboard SQL Editor & Click "Run".
 
--- Drop tables if they exist to start fresh
-DROP TABLE IF EXISTS article_statistics CASCADE;
-DROP TABLE IF EXISTS article_categories CASCADE;
-DROP TABLE IF EXISTS articles CASCADE;
-DROP TABLE IF EXISTS industry_partners CASCADE;
-DROP TABLE IF EXISTS student_journey CASCADE;
-DROP TABLE IF EXISTS why_choose_us CASCADE;
-DROP TABLE IF EXISTS client_partners CASCADE;
-DROP TABLE IF EXISTS placements CASCADE;
-DROP TABLE IF EXISTS placement_stats CASCADE;
-DROP TABLE IF EXISTS downloads CASCADE;
-DROP TABLE IF EXISTS faqs CASCADE;
+-- ---------------------------------------------------------
+-- CLEANUP EXISTING SCHEMA
+-- ---------------------------------------------------------
+DROP TABLE IF EXISTS contact_messages CASCADE;
+DROP TABLE IF EXISTS contact_information CASCADE;
 DROP TABLE IF EXISTS blogs CASCADE;
-DROP TABLE IF EXISTS contacts CASCADE;
-DROP TABLE IF EXISTS applications CASCADE;
-DROP TABLE IF EXISTS jobs CASCADE;
-DROP TABLE IF EXISTS testimonials CASCADE;
-DROP TABLE IF EXISTS team CASCADE;
 DROP TABLE IF EXISTS gallery CASCADE;
-DROP TABLE IF EXISTS albums CASCADE;
+DROP TABLE IF EXISTS team_members CASCADE;
+DROP TABLE IF EXISTS testimonials CASCADE;
+DROP TABLE IF EXISTS industry_network CASCADE;
+DROP TABLE IF EXISTS placements CASCADE;
 DROP TABLE IF EXISTS programs CASCADE;
-DROP TABLE IF EXISTS courses CASCADE;
-DROP TABLE IF EXISTS internships CASCADE;
 DROP TABLE IF EXISTS services CASCADE;
-DROP TABLE IF EXISTS about CASCADE;
-DROP TABLE IF EXISTS hero CASCADE;
-DROP TABLE IF EXISTS settings CASCADE;
-DROP TABLE IF EXISTS activity_logs CASCADE;
-DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS why_choose_us CASCADE;
+DROP TABLE IF EXISTS about_section CASCADE;
+DROP TABLE IF EXISTS hero_slides CASCADE;
+DROP TABLE IF EXISTS website_settings CASCADE;
+DROP TABLE IF EXISTS admins CASCADE;
 
--- Enable UUID extension if needed
+-- Enable standard cryptographic & UUID extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- 1. Website Settings
-CREATE TABLE settings (
-  id TEXT PRIMARY KEY,
-  "companyName" TEXT NOT NULL,
-  "logoUrl" TEXT NOT NULL,
-  "faviconUrl" TEXT NOT NULL,
-  "primaryColor" TEXT NOT NULL,
-  "secondaryColor" TEXT NOT NULL,
-  "whatsappNumber" TEXT NOT NULL,
-  "contactEmail" TEXT NOT NULL,
-  "contactPhones" TEXT[] NOT NULL,
-  address TEXT DEFAULT '',
-  "googleMapEmbedUrl" TEXT DEFAULT '',
-  "popupBannerUrl" TEXT,
-  "popupBannerActive" BOOLEAN NOT NULL DEFAULT TRUE,
-  "announcementText" TEXT,
-  "announcementActive" BOOLEAN NOT NULL DEFAULT TRUE,
-  "whyChooseUsTitle" TEXT DEFAULT 'Why Choose Us?',
-  "socialLinks" JSONB NOT NULL DEFAULT '{}'::jsonb,
-  seo JSONB NOT NULL DEFAULT '{}'::jsonb
+-- ---------------------------------------------------------
+-- UTILITY FUNCTIONS
+-- ---------------------------------------------------------
+-- Reusable function to automatically bump `updated_at` on updates
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---------------------------------------------------------
+-- 0. ADMINS DIRECTORY TABLE (AUTH CONTEXT)
+-- ---------------------------------------------------------
+CREATE TABLE admins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE, -- References auth.users(id) via Supabase Auth
+  email TEXT NOT NULL UNIQUE,
+  role TEXT NOT NULL DEFAULT 'owner' CHECK (role IN ('owner', 'admin')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 2. Hero Slider
-CREATE TABLE hero (
-  id TEXT PRIMARY KEY,
+-- ---------------------------------------------------------
+-- SECURITY HELPER FUNCTIONS (SECURITY DEFINER to bypass RLS recursion)
+-- ---------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN SECURITY DEFINER AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.admins WHERE user_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.is_owner()
+RETURNS BOOLEAN SECURITY DEFINER AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND role = 'owner'
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---------------------------------------------------------
+-- 1. WEBSITE SETTINGS TABLE
+-- ---------------------------------------------------------
+CREATE TABLE website_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_name TEXT NOT NULL DEFAULT 'Zentriya Technologies',
+  logo_url TEXT NOT NULL,
+  favicon_url TEXT NOT NULL,
+  primary_color TEXT NOT NULL DEFAULT '#0284c7',
+  secondary_color TEXT NOT NULL DEFAULT '#0f172a',
+  whatsapp_number TEXT,
+  contact_email TEXT,
+  contact_phones TEXT[] NOT NULL DEFAULT '{}'::text[],
+  address TEXT,
+  google_map_embed_url TEXT,
+  popup_banner_url TEXT,
+  popup_banner_active BOOLEAN NOT NULL DEFAULT TRUE,
+  announcement_text TEXT,
+  announcement_active BOOLEAN NOT NULL DEFAULT TRUE,
+  why_choose_us_title TEXT DEFAULT 'Why Choose Zentriya?',
+  social_links JSONB NOT NULL DEFAULT '{}'::jsonb,
+  seo_settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ---------------------------------------------------------
+-- 2. HERO SLIDES TABLE
+-- ---------------------------------------------------------
+CREATE TABLE hero_slides (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   subtitle TEXT NOT NULL,
-  "imageUrl" TEXT NOT NULL,
-  "ctaText" TEXT NOT NULL,
-  "ctaLink" TEXT NOT NULL,
-  "order" INTEGER NOT NULL DEFAULT 0
-);
-
--- 3. About Section
-CREATE TABLE about (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  image TEXT NOT NULL,
+  image_url TEXT NOT NULL,
+  cta_text TEXT,
+  cta_link TEXT,
+  display_order INTEGER NOT NULL DEFAULT 0,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 4. IT Services
-CREATE TABLE services (
-  id TEXT PRIMARY KEY,
+-- ---------------------------------------------------------
+-- 3. ABOUT SECTION TABLE
+-- ---------------------------------------------------------
+CREATE TABLE about_section (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
+  subtitle TEXT,
   description TEXT NOT NULL,
-  "detailedDescription" TEXT,
+  image_url TEXT NOT NULL,
   features TEXT[] DEFAULT '{}'::text[],
-  benefits TEXT[] DEFAULT '{}'::text[],
-  "order" INTEGER DEFAULT 0,
-  "isActive" BOOLEAN DEFAULT TRUE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ---------------------------------------------------------
+-- 4. WHY CHOOSE US TABLE
+-- ---------------------------------------------------------
+CREATE TABLE why_choose_us (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
   icon TEXT NOT NULL,
-  "imageUrl" TEXT NOT NULL,
-  "galleryUrls" TEXT[] NOT NULL DEFAULT '{}'::text[],
-  "seoTitle" TEXT,
-  "seoDescription" TEXT,
-  "buttonText" TEXT,
-  "buttonLink" TEXT,
-  "themeColor" TEXT
+  display_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 5. Internship Programs
-CREATE TABLE internships (
-  id TEXT PRIMARY KEY,
+-- ---------------------------------------------------------
+-- 5. SERVICES TABLE (IT & CONSULTANCY SERVICES)
+-- ---------------------------------------------------------
+CREATE TABLE services (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
-  duration TEXT NOT NULL,
-  technology TEXT NOT NULL,
-  mode TEXT NOT NULL CHECK (mode IN ('Online', 'Offline', 'Hybrid')),
   description TEXT NOT NULL,
-  price NUMERIC NOT NULL,
-  "discountPrice" NUMERIC,
+  detailed_description TEXT,
+  icon TEXT NOT NULL,
+  image_url TEXT NOT NULL,
   features TEXT[] NOT NULL DEFAULT '{}'::text[],
-  "certificateDetails" TEXT NOT NULL,
-  "bannerUrl" TEXT NOT NULL,
-  "isActive" BOOLEAN NOT NULL DEFAULT TRUE,
-  "order" INTEGER DEFAULT 0
+  benefits TEXT[] NOT NULL DEFAULT '{}'::text[],
+  display_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 6. Academic / Certification Courses
-CREATE TABLE courses (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  duration TEXT NOT NULL,
-  category TEXT NOT NULL,
-  description TEXT NOT NULL,
-  syllabus TEXT[] NOT NULL DEFAULT '{}'::text[],
-  price NUMERIC NOT NULL,
-  "discountPrice" NUMERIC,
-  mode TEXT NOT NULL CHECK (mode IN ('Online', 'Offline', 'Self-Paced', 'Hybrid')),
-  features TEXT[] NOT NULL DEFAULT '{}'::text[],
-  "isActive" BOOLEAN NOT NULL DEFAULT TRUE,
-  "bannerUrl" TEXT,
-  "order" INTEGER DEFAULT 0
-);
-
--- 7. High-Performance Programs
+-- ---------------------------------------------------------
+-- 6. PROGRAMS TABLE (COURSES & ACADEMIC OFFERS)
+-- ---------------------------------------------------------
 CREATE TABLE programs (
-  id TEXT PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   category TEXT NOT NULL,
   duration TEXT NOT NULL,
   description TEXT NOT NULL,
   cover_image TEXT NOT NULL,
-  mode TEXT NOT NULL,
+  mode TEXT NOT NULL DEFAULT 'Online' CHECK (mode IN ('Online', 'Offline', 'Hybrid', 'Self-Paced')),
   syllabus TEXT[] NOT NULL DEFAULT '{}'::text[],
   badges TEXT[] NOT NULL DEFAULT '{}'::text[],
+  price NUMERIC NOT NULL DEFAULT 0,
+  discount_price NUMERIC,
   display_order INTEGER NOT NULL DEFAULT 0,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 8. Gallery Albums
-CREATE TABLE albums (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT,
-  category TEXT NOT NULL,
-  "coverImageUrl" TEXT NOT NULL
-);
-
--- 9. Gallery Items (Images & Videos)
-CREATE TABLE gallery (
-  id TEXT PRIMARY KEY,
-  "albumId" TEXT REFERENCES albums(id) ON DELETE SET NULL,
-  type TEXT NOT NULL CHECK (type IN ('image', 'video')),
-  url TEXT NOT NULL,
-  title TEXT NOT NULL,
-  category TEXT NOT NULL
-);
-
--- 10. Team Members Directory
-CREATE TABLE team (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  designation TEXT NOT NULL,
-  "photoUrl" TEXT NOT NULL,
-  bio TEXT NOT NULL,
-  "socialLinks" JSONB NOT NULL DEFAULT '{}'::jsonb,
-  "order" INTEGER NOT NULL DEFAULT 0
-);
-
--- 11. Customer & Alumni Testimonials
-CREATE TABLE testimonials (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-  "companyOrCollege" TEXT,
-  type TEXT CHECK (type IN ('Student', 'Corporate', 'Video')),
-  text TEXT,
-  "videoUrl" TEXT,
-  "avatarUrl" TEXT,
-  designation TEXT,
-  company TEXT,
-  company_logo TEXT,
-  profile_photo TEXT,
-  review TEXT,
-  linkedin TEXT,
-  is_verified BOOLEAN DEFAULT TRUE,
-  display_order INTEGER DEFAULT 0,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 12. Corporate Careers Listings
-CREATE TABLE jobs (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  department TEXT NOT NULL,
-  location TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('Full-time', 'Part-time', 'Contract', 'Internship')),
-  experience TEXT NOT NULL,
-  description TEXT NOT NULL,
-  requirements TEXT[] NOT NULL DEFAULT '{}'::text[],
-  responsibilities TEXT[] NOT NULL DEFAULT '{}'::text[],
-  "salaryRange" TEXT,
-  "isActive" BOOLEAN NOT NULL DEFAULT TRUE,
-  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 13. Recruitment Applications Tracker
-CREATE TABLE applications (
-  id TEXT PRIMARY KEY,
-  "jobId" TEXT REFERENCES jobs(id) ON DELETE CASCADE,
-  "jobTitle" TEXT NOT NULL,
-  "fullName" TEXT NOT NULL,
-  email TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  "experienceYears" NUMERIC NOT NULL,
-  "resumeUrl" TEXT NOT NULL,
-  "coverLetter" TEXT,
-  status TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Reviewed', 'Shortlisted', 'Interviewing', 'Accepted', 'Rejected')),
-  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 14. Contact Messages & Consultations Inquiries
-CREATE TABLE contacts (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  subject TEXT NOT NULL,
-  message TEXT NOT NULL,
-  "isRead" BOOLEAN NOT NULL DEFAULT FALSE,
-  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 15. Editorial Blogs Directory
-CREATE TABLE blogs (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  slug TEXT NOT NULL UNIQUE,
-  content TEXT NOT NULL,
-  excerpt TEXT NOT NULL,
-  category TEXT NOT NULL,
-  tags TEXT[] NOT NULL DEFAULT '{}'::text[],
-  "imageUrl" TEXT NOT NULL,
-  featured BOOLEAN NOT NULL DEFAULT FALSE,
-  "seoTitle" TEXT,
-  "seoDescription" TEXT,
-  author TEXT NOT NULL,
-  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 16. FAQs Directory
-CREATE TABLE faqs (
-  id TEXT PRIMARY KEY,
-  question TEXT NOT NULL,
-  answer TEXT NOT NULL,
-  category TEXT NOT NULL
-);
-
--- 17. Syllabus & Report Downloads Library
-CREATE TABLE downloads (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  "fileUrl" TEXT NOT NULL,
-  category TEXT NOT NULL,
-  "downloadsCount" INTEGER NOT NULL DEFAULT 0
-);
-
--- 18. Micro Placement Statistics (Aggregates)
-CREATE TABLE placement_stats (
-  id TEXT PRIMARY KEY,
-  "studentName" TEXT NOT NULL,
-  "companyName" TEXT NOT NULL,
-  "packageLPA" NUMERIC NOT NULL,
-  "courseOrInternship" TEXT NOT NULL,
-  "studentPhoto" TEXT
-);
-
--- 19. Structured Placement Records
+-- ---------------------------------------------------------
+-- 7. PLACEMENTS TABLE (SUCCESS RECORDS & METRICS)
+-- ---------------------------------------------------------
 CREATE TABLE placements (
-  id TEXT PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   student_name TEXT NOT NULL,
-  photo TEXT NOT NULL,
+  student_photo TEXT NOT NULL,
   company_name TEXT NOT NULL,
   company_logo TEXT NOT NULL,
   job_role TEXT NOT NULL,
-  degree TEXT NOT NULL,
-  batch TEXT NOT NULL,
-  package NUMERIC,
+  degree TEXT,
+  batch TEXT,
+  package_lpa NUMERIC,
   show_package BOOLEAN NOT NULL DEFAULT TRUE,
-  placement_badge TEXT NOT NULL,
+  placement_badge TEXT,
   display_order INTEGER NOT NULL DEFAULT 0,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 20. Client & Partner Corporate Logos
-CREATE TABLE client_partners (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  "logoUrl" TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('Client', 'Partner'))
-);
-
--- 21. Corporate Activity Audit Logs
-CREATE TABLE activity_logs (
-  id TEXT PRIMARY KEY,
-  "userId" TEXT NOT NULL,
-  "userName" TEXT NOT NULL,
-  "userRole" TEXT NOT NULL,
-  action TEXT NOT NULL,
-  details TEXT NOT NULL,
-  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 22. System Alerts & Security Notifications
-CREATE TABLE notifications (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  message TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('info', 'success', 'warning', 'error')),
-  "isRead" BOOLEAN NOT NULL DEFAULT FALSE,
-  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 23. "Why Choose Us" Selling Points
-CREATE TABLE why_choose_us (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  icon TEXT NOT NULL,
-  display_order INTEGER NOT NULL DEFAULT 0,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  description TEXT,
-  bottom_badge TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 24. Student Journey Pipeline
-CREATE TABLE student_journey (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  icon TEXT NOT NULL,
-  display_order INTEGER NOT NULL DEFAULT 0,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 25. Industry Placement Alliances
-CREATE TABLE industry_partners (
-  id TEXT PRIMARY KEY,
+-- ---------------------------------------------------------
+-- 8. INDUSTRY NETWORK TABLE (PARTNERS & CLIENT LOGOS)
+-- ---------------------------------------------------------
+CREATE TABLE industry_network (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_name TEXT NOT NULL,
-  logo TEXT NOT NULL,
+  logo_url TEXT NOT NULL,
   website_url TEXT,
   display_order INTEGER NOT NULL DEFAULT 0,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -383,153 +227,296 @@ CREATE TABLE industry_partners (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 26. Editorial Articles
-CREATE TABLE articles (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  excerpt TEXT,
-  content TEXT,
-  cover_image TEXT NOT NULL,
-  read_time TEXT NOT NULL,
-  read_time_minutes INTEGER,
-  category TEXT NOT NULL,
-  author_name TEXT NOT NULL,
-  author_image TEXT NOT NULL,
-  author_avatar TEXT,
-  author_designation TEXT NOT NULL,
-  published_date TEXT NOT NULL,
-  published_at TEXT,
+-- ---------------------------------------------------------
+-- 9. TESTIMONIALS TABLE
+-- ---------------------------------------------------------
+CREATE TABLE testimonials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  avatar_url TEXT,
+  company TEXT,
+  designation TEXT,
+  rating INTEGER NOT NULL DEFAULT 5 CHECK (rating >= 1 AND rating <= 5),
+  type TEXT NOT NULL DEFAULT 'Student' CHECK (type IN ('Student', 'Corporate', 'Video')),
+  review_text TEXT NOT NULL,
+  video_url TEXT,
+  linkedin_url TEXT,
+  is_verified BOOLEAN NOT NULL DEFAULT TRUE,
   display_order INTEGER NOT NULL DEFAULT 0,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 27. Article Categories
-CREATE TABLE article_categories (
-  id TEXT PRIMARY KEY,
+-- ---------------------------------------------------------
+-- 10. TEAM MEMBERS TABLE (ZENTRIYA DIRECTORY)
+-- ---------------------------------------------------------
+CREATE TABLE team_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
-  icon TEXT NOT NULL,
+  designation TEXT NOT NULL,
+  photo_url TEXT NOT NULL,
+  bio TEXT,
+  social_links JSONB NOT NULL DEFAULT '{}'::jsonb,
   display_order INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 28. Article Statistics Counter Metrics
-CREATE TABLE article_statistics (
-  id TEXT PRIMARY KEY,
-  label TEXT NOT NULL,
-  value TEXT NOT NULL,
-  icon TEXT NOT NULL,
+-- ---------------------------------------------------------
+-- 11. GALLERY TABLE (MEDIA ARCHIVE)
+-- ---------------------------------------------------------
+CREATE TABLE gallery (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  category TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'image' CHECK (type IN ('image', 'video')),
+  media_url TEXT NOT NULL,
+  is_featured BOOLEAN NOT NULL DEFAULT FALSE,
   display_order INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Add database performance indexes for common search fields
-CREATE INDEX IF NOT EXISTS idx_gallery_album ON gallery("albumId");
+-- ---------------------------------------------------------
+-- 12. BLOGS TABLE (EDITORIALS & INSIGHTS)
+-- ---------------------------------------------------------
+CREATE TABLE blogs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  content TEXT NOT NULL,
+  excerpt TEXT NOT NULL,
+  category TEXT NOT NULL,
+  tags TEXT[] NOT NULL DEFAULT '{}'::text[],
+  cover_image_url TEXT NOT NULL,
+  is_featured BOOLEAN NOT NULL DEFAULT FALSE,
+  author_name TEXT NOT NULL,
+  author_avatar_url TEXT,
+  author_designation TEXT,
+  read_time_minutes INTEGER NOT NULL DEFAULT 5,
+  seo_title TEXT,
+  seo_description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ---------------------------------------------------------
+-- 13. CONTACT INFORMATION TABLE (OFFICES & CONTACT CARDS)
+-- ---------------------------------------------------------
+CREATE TABLE contact_information (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  label TEXT NOT NULL DEFAULT 'HQ Office',
+  email TEXT,
+  phone TEXT,
+  address TEXT,
+  working_hours TEXT,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ---------------------------------------------------------
+-- 14. CONTACT MESSAGES TABLE (INBOX FOR INQUIRIES)
+-- ---------------------------------------------------------
+CREATE TABLE contact_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  subject TEXT,
+  message TEXT NOT NULL,
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ---------------------------------------------------------
+-- DATABASE PERFORMANCE INDEXES
+-- ---------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_hero_slides_order ON hero_slides(display_order);
+CREATE INDEX IF NOT EXISTS idx_why_choose_us_order ON why_choose_us(display_order);
+CREATE INDEX IF NOT EXISTS idx_services_order ON services(display_order);
+CREATE INDEX IF NOT EXISTS idx_programs_order ON programs(display_order);
+CREATE INDEX IF NOT EXISTS idx_placements_order ON placements(display_order);
+CREATE INDEX IF NOT EXISTS idx_industry_network_order ON industry_network(display_order);
+CREATE INDEX IF NOT EXISTS idx_testimonials_order ON testimonials(display_order);
+CREATE INDEX IF NOT EXISTS idx_team_members_order ON team_members(display_order);
+CREATE INDEX IF NOT EXISTS idx_gallery_order ON gallery(display_order);
 CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug);
-CREATE INDEX IF NOT EXISTS idx_placements_display ON placements(display_order);
-CREATE INDEX IF NOT EXISTS idx_articles_display ON articles(display_order);
+CREATE INDEX IF NOT EXISTS idx_blogs_featured ON blogs(is_featured);
+CREATE INDEX IF NOT EXISTS idx_contact_information_order ON contact_information(display_order);
+CREATE INDEX IF NOT EXISTS idx_contact_messages_read ON contact_messages(is_read);
+CREATE INDEX IF NOT EXISTS idx_admins_user ON public.admins(user_id);
 
--- Enable Row-Level Security (RLS) but default to open access rules for fully public reading
--- and authenticated/open editing for Zentriya Console (as authentication is not implemented yet)
-ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE hero ENABLE ROW LEVEL SECURITY;
-ALTER TABLE about ENABLE ROW LEVEL SECURITY;
-ALTER TABLE services ENABLE ROW LEVEL SECURITY;
-ALTER TABLE internships ENABLE ROW LEVEL SECURITY;
-ALTER TABLE courses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE albums ENABLE ROW LEVEL SECURITY;
-ALTER TABLE gallery ENABLE ROW LEVEL SECURITY;
-ALTER TABLE team ENABLE ROW LEVEL SECURITY;
-ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
-ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE blogs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE faqs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE downloads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE placement_stats ENABLE ROW LEVEL SECURITY;
-ALTER TABLE placements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE client_partners ENABLE ROW LEVEL SECURITY;
-ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+-- ---------------------------------------------------------
+-- TRIGGER REGISTRATION (UPDATED_AT AUTO-MANAGEMENT)
+-- ---------------------------------------------------------
+CREATE TRIGGER update_website_settings_updated_at BEFORE UPDATE ON website_settings FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_hero_slides_updated_at BEFORE UPDATE ON hero_slides FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_about_section_updated_at BEFORE UPDATE ON about_section FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_why_choose_us_updated_at BEFORE UPDATE ON why_choose_us FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_services_updated_at BEFORE UPDATE ON services FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_programs_updated_at BEFORE UPDATE ON programs FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_placements_updated_at BEFORE UPDATE ON placements FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_industry_network_updated_at BEFORE UPDATE ON industry_network FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_testimonials_updated_at BEFORE UPDATE ON testimonials FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_team_members_updated_at BEFORE UPDATE ON team_members FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_gallery_updated_at BEFORE UPDATE ON gallery FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_blogs_updated_at BEFORE UPDATE ON blogs FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_contact_information_updated_at BEFORE UPDATE ON contact_information FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_contact_messages_updated_at BEFORE UPDATE ON contact_messages FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_admins_updated_at BEFORE UPDATE ON admins FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+
+-- =========================================================
+-- ROW-LEVEL SECURITY (RLS) POLICIES
+-- =========================================================
+ALTER TABLE website_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE hero_slides ENABLE ROW LEVEL SECURITY;
+ALTER TABLE about_section ENABLE ROW LEVEL SECURITY;
 ALTER TABLE why_choose_us ENABLE ROW LEVEL SECURITY;
-ALTER TABLE student_journey ENABLE ROW LEVEL SECURITY;
-ALTER TABLE industry_partners ENABLE ROW LEVEL SECURITY;
-ALTER TABLE articles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE article_categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE article_statistics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE placements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE industry_network ENABLE ROW LEVEL SECURITY;
+ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gallery ENABLE ROW LEVEL SECURITY;
+ALTER TABLE blogs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_information ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
 
--- Allow all reads publicly
-CREATE POLICY "Public Read Settings" ON settings FOR SELECT USING (true);
-CREATE POLICY "Public Read Hero" ON hero FOR SELECT USING (true);
-CREATE POLICY "Public Read About" ON about FOR SELECT USING (true);
-CREATE POLICY "Public Read Services" ON services FOR SELECT USING (true);
-CREATE POLICY "Public Read Internships" ON internships FOR SELECT USING (true);
-CREATE POLICY "Public Read Courses" ON courses FOR SELECT USING (true);
-CREATE POLICY "Public Read Programs" ON programs FOR SELECT USING (true);
-CREATE POLICY "Public Read Albums" ON albums FOR SELECT USING (true);
-CREATE POLICY "Public Read Gallery" ON gallery FOR SELECT USING (true);
-CREATE POLICY "Public Read Team" ON team FOR SELECT USING (true);
-CREATE POLICY "Public Read Testimonials" ON testimonials FOR SELECT USING (true);
-CREATE POLICY "Public Read Jobs" ON jobs FOR SELECT USING (true);
-CREATE POLICY "Public Read Applications" ON applications FOR SELECT USING (true);
-CREATE POLICY "Public Read Contacts" ON contacts FOR SELECT USING (true);
-CREATE POLICY "Public Read Blogs" ON blogs FOR SELECT USING (true);
-CREATE POLICY "Public Read FAQs" ON faqs FOR SELECT USING (true);
-CREATE POLICY "Public Read Downloads" ON downloads FOR SELECT USING (true);
-CREATE POLICY "Public Read Placement Stats" ON placement_stats FOR SELECT USING (true);
-CREATE POLICY "Public Read Placements" ON placements FOR SELECT USING (true);
-CREATE POLICY "Public Read Client Partners" ON client_partners FOR SELECT USING (true);
-CREATE POLICY "Public Read Activity Logs" ON activity_logs FOR SELECT USING (true);
-CREATE POLICY "Public Read Notifications" ON notifications FOR SELECT USING (true);
-CREATE POLICY "Public Read Why Choose Us" ON why_choose_us FOR SELECT USING (true);
-CREATE POLICY "Public Read Student Journey" ON student_journey FOR SELECT USING (true);
-CREATE POLICY "Public Read Industry Partners" ON industry_partners FOR SELECT USING (true);
-CREATE POLICY "Public Read Articles" ON articles FOR SELECT USING (true);
-CREATE POLICY "Public Read Article Categories" ON article_categories FOR SELECT USING (true);
-CREATE POLICY "Public Read Article Statistics" ON article_statistics FOR SELECT USING (true);
+-- ---------------------------------------------------------
+-- 1. PUBLIC SELECT PERMISSIONS (Any website visitor can view)
+-- ---------------------------------------------------------
+CREATE POLICY "Public read website_settings" ON website_settings FOR SELECT USING (true);
+CREATE POLICY "Public read hero_slides" ON hero_slides FOR SELECT USING (true);
+CREATE POLICY "Public read about_section" ON about_section FOR SELECT USING (true);
+CREATE POLICY "Public read why_choose_us" ON why_choose_us FOR SELECT USING (true);
+CREATE POLICY "Public read services" ON services FOR SELECT USING (true);
+CREATE POLICY "Public read programs" ON programs FOR SELECT USING (true);
+CREATE POLICY "Public read placements" ON placements FOR SELECT USING (true);
+CREATE POLICY "Public read industry_network" ON industry_network FOR SELECT USING (true);
+CREATE POLICY "Public read testimonials" ON testimonials FOR SELECT USING (true);
+CREATE POLICY "Public read team_members" ON team_members FOR SELECT USING (true);
+CREATE POLICY "Public read gallery" ON gallery FOR SELECT USING (true);
+CREATE POLICY "Public read blogs" ON blogs FOR SELECT USING (true);
+CREATE POLICY "Public read contact_information" ON contact_information FOR SELECT USING (true);
 
--- Allow all modifications (insert/update/delete) publicly for the admin panel (temporary while auth is bypassed)
-CREATE POLICY "Permissive Write Settings" ON settings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Hero" ON hero FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write About" ON about FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Services" ON services FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Internships" ON internships FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Courses" ON courses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Programs" ON programs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Albums" ON albums FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Gallery" ON gallery FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Team" ON team FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Testimonials" ON testimonials FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Jobs" ON jobs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Applications" ON applications FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Contacts" ON contacts FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Blogs" ON blogs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write FAQs" ON faqs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Downloads" ON downloads FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Placement Stats" ON placement_stats FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Placements" ON placements FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Client Partners" ON client_partners FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Activity Logs" ON activity_logs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Notifications" ON notifications FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Why Choose Us" ON why_choose_us FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Student Journey" ON student_journey FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Industry Partners" ON industry_partners FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Articles" ON articles FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Article Categories" ON article_categories FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Permissive Write Article Statistics" ON article_statistics FOR ALL USING (true) WITH CHECK (true);
+-- ---------------------------------------------------------
+-- 2. CONTACT FORM INQUIRIES SPECIAL RULE
+-- ---------------------------------------------------------
+-- Any public visitor can send inquiries (INSERT).
+-- Only authorized admins can view, update or delete them.
+CREATE POLICY "Public insert contact_messages" ON contact_messages FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admin select contact_messages" ON contact_messages FOR SELECT TO authenticated USING (public.is_admin());
+CREATE POLICY "Admin update contact_messages" ON contact_messages FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin delete contact_messages" ON contact_messages FOR DELETE TO authenticated USING (public.is_admin());
+
+-- ---------------------------------------------------------
+-- 3. ADMINS TABLE MANAGEMENT POLICY
+-- ---------------------------------------------------------
+-- Authenticated users can query their own admin state.
+-- Only the "owner" role can insert, update or delete other admins.
+CREATE POLICY "Select admin profile" ON admins FOR SELECT TO authenticated USING (auth.uid() = user_id OR public.is_admin());
+CREATE POLICY "Owner manage admins" ON admins FOR ALL TO authenticated USING (public.is_owner()) WITH CHECK (public.is_owner());
+
+-- ---------------------------------------------------------
+-- 4. AUTHORIZED WRITE POLICIES FOR ZENTRIYA DATABASE ADMINS
+-- ---------------------------------------------------------
+-- Website settings management
+CREATE POLICY "Admin manage website_settings" ON website_settings FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Hero slides management
+CREATE POLICY "Admin manage hero_slides" ON hero_slides FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- About section management
+CREATE POLICY "Admin manage about_section" ON about_section FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Why Choose Us management
+CREATE POLICY "Admin manage why_choose_us" ON why_choose_us FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Services management
+CREATE POLICY "Admin manage services" ON services FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Programs management
+CREATE POLICY "Admin manage programs" ON programs FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Placements management
+CREATE POLICY "Admin manage placements" ON placements FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Industry Network management
+CREATE POLICY "Admin manage industry_network" ON industry_network FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Testimonials management
+CREATE POLICY "Admin manage testimonials" ON testimonials FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Team members directory management
+CREATE POLICY "Admin manage team_members" ON team_members FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Gallery management
+CREATE POLICY "Admin manage gallery" ON gallery FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Blogs management
+CREATE POLICY "Admin manage blogs" ON blogs FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Contact information cards management
+CREATE POLICY "Admin manage contact_information" ON contact_information FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 
--- =====================================================================
--- BUCKETS CONFIGURATION INSTRUCTIONS
--- =====================================================================
--- Please create the following public storage buckets in Supabase Storage:
--- 1. "gallery"     - For all uploaded banner images, logos, photos.
--- 2. "resumes"     - For job application resumes (.pdf, .docx).
--- 3. "downloads"   - For files, brochures, or reports.
---
--- Ensure "Public bucket" toggled ON when creating these buckets in Supabase UI.
--- =====================================================================
+-- =========================================================
+-- BUCKETS & STORAGE SECURITIES CONFIGURATION
+-- =========================================================
+-- 1. Create storage buckets programmatically
+INSERT INTO storage.buckets (id, name, public)
+VALUES 
+  ('hero', 'hero', true),
+  ('logos', 'logos', true),
+  ('gallery', 'gallery', true),
+  ('programs', 'programs', true),
+  ('services', 'services', true),
+  ('team', 'team', true),
+  ('blogs', 'blogs', true),
+  ('documents', 'documents', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Storage access policies
+DROP POLICY IF EXISTS "Public Read Access for Buckets" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Upload Access" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Update Access" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Delete Access" ON storage.objects;
+
+CREATE POLICY "Public Read Access for Buckets" ON storage.objects
+FOR SELECT USING (
+  bucket_id IN ('hero', 'logos', 'gallery', 'programs', 'services', 'team', 'blogs', 'documents')
+);
+
+CREATE POLICY "Admin Upload Access" ON storage.objects
+FOR INSERT WITH CHECK (
+  bucket_id IN ('hero', 'logos', 'gallery', 'programs', 'services', 'team', 'blogs', 'documents')
+  AND public.is_admin()
+);
+
+CREATE POLICY "Admin Update Access" ON storage.objects
+FOR UPDATE USING (
+  bucket_id IN ('hero', 'logos', 'gallery', 'programs', 'services', 'team', 'blogs', 'documents')
+  AND public.is_admin()
+) WITH CHECK (
+  bucket_id IN ('hero', 'logos', 'gallery', 'programs', 'services', 'team', 'blogs', 'documents')
+  AND public.is_admin()
+);
+
+CREATE POLICY "Admin Delete Access" ON storage.objects
+FOR DELETE USING (
+  bucket_id IN ('hero', 'logos', 'gallery', 'programs', 'services', 'team', 'blogs', 'documents')
+  AND public.is_admin()
+);
+-- =========================================================

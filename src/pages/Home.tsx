@@ -464,13 +464,16 @@ export default function Home() {
   }, [isHovered, placements.length, cardsToShow]);
 
   useEffect(() => {
+    let fallbackModeTriggered = false;
+
     const fetchData = async () => {
+      // Create a timeout promise to prevent any hanging queries from blocking the user experience
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Landing page data fetch timeout')), 5000)
+      );
+
       try {
-        const [
-          slideData, servData, internData, placementData,
-          cpData, testData, blogData, whyChooseData, settingsData,
-          aboutData, programData
-        ] = await Promise.all([
+        const fetchPromise = Promise.all([
           db.getHeroSlides(),
           db.getServices(),
           db.getInternships(),
@@ -484,31 +487,53 @@ export default function Home() {
           db.getPrograms()
         ]);
 
-        setSlides(slideData);
-        setServices(servData.filter(s => s.isActive !== false)); // load all active services
-        setInternships(internData.slice(0, 3)); // top 3 internships
-        setPrograms(programData.filter(p => p.is_active)); // load all active programs
+        const [
+          slideData, servData, internData, placementData,
+          cpData, testData, blogData, whyChooseData, settingsData,
+          aboutData, programData
+        ] = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+        setSlides(slideData || []);
+        setServices((servData || []).filter(s => s.isActive !== false)); // load all active services
+        setInternships((internData || []).slice(0, 3)); // top 3 internships
+        setPrograms((programData || []).filter(p => p.is_active)); // load all active programs
         const activePlacements = (placementData || [])
           .filter(p => p.is_active !== false)
           .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
         setPlacements(activePlacements);
-        setPartners(cpData);
+        setPartners(cpData || []);
         const sortedTestimonials = (testData || [])
           .filter(t => t.is_active !== false)
           .sort((a, b) => (a.display_order ?? 99) - (b.display_order ?? 99));
-        setTestimonials(sortedTestimonials.length > 0 ? sortedTestimonials : testData);
-        setBlogs(blogData.slice(0, 2)); // top 2 latest blogs
-        setWhyChooseUs(whyChooseData.filter(item => item.is_active));
-        setWhyChooseUsTitle(settingsData.whyChooseUsTitle || 'Why Choose Us?');
-        setAbout(aboutData);
+        setTestimonials(sortedTestimonials.length > 0 ? sortedTestimonials : testData || []);
+        setBlogs((blogData || []).slice(0, 2)); // top 2 latest blogs
+        setWhyChooseUs((whyChooseData || []).filter(item => item.is_active));
+        setWhyChooseUsTitle((settingsData && settingsData.whyChooseUsTitle) || 'Why Choose Us?');
+        setAbout(aboutData || null);
       } catch (err) {
-        console.error('Error fetching landing details:', err);
+        console.warn('Error fetching landing details, attempting mock database fallback:', err);
+        if (!fallbackModeTriggered) {
+          fallbackModeTriggered = true;
+          // Set db service to force mock mode
+          db.setMockFallback(true);
+          // Try fetching again; because of mock mode, it will resolve instantly in-memory!
+          await fetchData();
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    const init = async () => {
+      try {
+        await db.checkDatabaseConnection();
+      } catch (e) {
+        console.warn('Initial connection check failed:', e);
+      }
+      await fetchData();
+    };
+
+    init();
   }, []);
 
   // Slide loop timer

@@ -19,6 +19,7 @@ import AdminOverview from './admin/AdminOverview';
 import AdminManage from './admin/AdminManage';
 
 import { ToastProvider } from './components/Toast';
+import { AdminAuthProvider } from './context/AdminAuthContext';
 import AestheticControls from './components/AestheticControls';
 
 // Scroll Restoration Utility to enhance enterprise quality user experience
@@ -85,26 +86,28 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <BrowserRouter>
-        <Routes>
-          
-          {/* Admin Auth Route (Fully isolated design canvas) */}
-          <Route path="/admin/login" element={<AdminLogin />} />
+      <AdminAuthProvider>
+        <BrowserRouter>
+          <Routes>
+            
+            {/* Admin Auth Route (Fully isolated design canvas) */}
+            <Route path="/admin/login" element={<AdminLogin />} />
 
-          {/* Nested Admin Console Routes */}
-          <Route path="/admin" element={<AdminLayout darkMode={darkMode} setDarkMode={setDarkMode} />}>
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<AdminOverview />} />
-            <Route path="manage" element={<AdminManage />} />
-          </Route>
+            {/* Nested Admin Console Routes */}
+            <Route path="/admin" element={<AdminLayout darkMode={darkMode} setDarkMode={setDarkMode} />}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<AdminOverview />} />
+              <Route path="manage" element={<AdminManage />} />
+            </Route>
 
-          {/* Standard Public website tracks */}
-          <Route path="/*" element={<PublicLayout darkMode={darkMode} setDarkMode={setDarkMode} />} />
+            {/* Standard Public website tracks */}
+            <Route path="/*" element={<PublicLayout darkMode={darkMode} setDarkMode={setDarkMode} />} />
 
-        </Routes>
-      </BrowserRouter>
-      {/* Global Aesthetics Floating Controller */}
-      <AestheticControls />
+          </Routes>
+        </BrowserRouter>
+        {/* Global Aesthetics Floating Controller */}
+        <AestheticControls />
+      </AdminAuthProvider>
     </ToastProvider>
   );
 }
