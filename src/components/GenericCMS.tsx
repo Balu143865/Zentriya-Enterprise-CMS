@@ -39,6 +39,19 @@ export default function GenericCMS({
   onDataChange,
   gridDisplay = false
 }: GenericCMSProps) {
+  const getRealTableName = (t: string): string => {
+    const mapping: Record<string, string> = {
+      hero: 'hero_slides',
+      about: 'about_section',
+      industry_partners: 'industry_network',
+      team: 'team_members',
+      contacts: 'contact_messages',
+      settings: 'website_settings'
+    };
+    return mapping[t] || t;
+  };
+  const realTableName = getRealTableName(tableName);
+
   const { toast } = useToast();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +68,7 @@ export default function GenericCMS({
   const loadData = async () => {
     setLoading(true);
     try {
-      let query = supabase.from(tableName).select('*');
+      let query = supabase.from(realTableName).select('*');
       
       if (orderByField) {
         query = query.order(orderByField, { ascending: orderAscending });
@@ -67,7 +80,7 @@ export default function GenericCMS({
       setData(result || []);
       if (onDataChange) onDataChange();
     } catch (err: any) {
-      console.error(`Error loading data from ${tableName}:`, err);
+      console.error(`Error loading data from ${realTableName}:`, err);
       toast(`Failed to load ${title} data: ${err.message}`, 'error');
     } finally {
       setLoading(false);
@@ -76,7 +89,7 @@ export default function GenericCMS({
 
   useEffect(() => {
     loadData();
-  }, [tableName, orderByField, orderAscending]);
+  }, [realTableName, orderByField, orderAscending]);
 
   // Open modal for Create/Edit
   const handleOpenModal = (item: any | null = null) => {
@@ -124,7 +137,7 @@ export default function GenericCMS({
     if (!confirm(`Are you sure you want to delete this ${title.toLowerCase()} item?`)) return;
 
     try {
-      const { error } = await supabase.from(tableName).delete().eq('id', id);
+      const { error } = await supabase.from(realTableName).delete().eq('id', id);
       if (error) throw error;
 
       toast('Item deleted successfully from database!', 'success');
@@ -140,7 +153,7 @@ export default function GenericCMS({
     try {
       const updatedValue = !item[fieldName];
       const { error } = await supabase
-        .from(tableName)
+        .from(realTableName)
         .update({ [fieldName]: updatedValue })
         .eq('id', item.id);
 
@@ -179,11 +192,14 @@ export default function GenericCMS({
       if (editingItem) {
         payload.id = editingItem.id;
       } else if (!payload.id) {
-        // Generate a valid custom ID if none exists (usually UUID or sequential)
-        payload.id = `${tableName.substring(0, 4)}_${Date.now()}`;
+        // Generate a valid RFC4122 UUID to prevent database UUID constraint crashes
+        payload.id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
       }
 
-      const { error } = await supabase.from(tableName).upsert(payload);
+      const { error } = await supabase.from(realTableName).upsert(payload);
       if (error) throw error;
 
       toast(`${title} saved successfully in real time!`, 'success');

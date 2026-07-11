@@ -52,6 +52,30 @@ export function saveDbConfig(config: DbConfig) {
   supabaseInstance = null;
 }
 
+// Helper to check if an ID string is a valid UUID
+export function isUuid(str: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
+// Helper to deterministically map arbitrary string IDs to valid PostgreSQL UUID format
+export function ensureUuid(id: string | undefined): string {
+  if (!id) {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  if (isUuid(id)) return id;
+  
+  // Deterministic UUID from non-UUID string using djb2-like string hashing
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const absHash = Math.abs(hash).toString(16).padStart(12, '0');
+  return `11111111-2222-3333-4444-${absHash.substring(0, 12)}`;
+}
+
 // Runtime fallback flag in case of connection timeouts or explicit mock request
 let useMockFallback = false;
 let pingPromise: Promise<boolean> | null = null;
@@ -68,9 +92,6 @@ export function isMockFallbackActive(): boolean {
 }
 
 export async function checkDatabaseConnection(): Promise<boolean> {
-  if (useMockFallback) return false;
-  if (pingPromise) return pingPromise;
-
   const config = getDbConfig();
   if (config.useMock || !config.url || !config.anonKey) {
     setMockFallback(true);
@@ -87,106 +108,43 @@ export async function checkDatabaseConnection(): Promise<boolean> {
     return false;
   }
 
-  // Try querying website_settings (or the active schema) with a tight 2000ms timeout
-  const timeoutPromise = new Promise<boolean>((resolve) =>
-    setTimeout(() => {
-      if (!useMockFallback) {
-        console.warn('Database connection check timed out. Falling back to mock data.');
-        setMockFallback(true);
-      }
-      resolve(false);
-    }, 2000)
-  );
+  if (pingPromise) return pingPromise;
 
-  const queryPromise = Promise.resolve(
-    client.from('website_settings').select('id').limit(1)
-  ).then(({ error }) => {
-    // If we have a network fetch error, we are offline or blocked.
-    // If we have other errors (e.g., table not found etc), the database is alive and reachable.
-    if (error && (error.message.includes('FetchError') || error.message.includes('Failed to fetch') || error.message.includes('network'))) {
-      if (!useMockFallback) {
-        console.warn('Database query network error. Falling back to mock data:', error);
+  const queryPromise = (async () => {
+    try {
+      const { error } = await client.from('website_settings').select('id').limit(1);
+      if (error && (error.message?.includes('FetchError') || error.message?.includes('Failed to fetch') || error.message?.includes('network'))) {
         setMockFallback(true);
+        return false;
       }
+      setMockFallback(false);
+      return true;
+    } catch (err) {
+      setMockFallback(true);
       return false;
     }
-    return true;
-  }).catch((err) => {
-    if (!useMockFallback) {
-      console.warn('Database check failed. Falling back to mock data:', err);
+  })();
+
+  const timeoutPromise = new Promise<boolean>((resolve) => {
+    setTimeout(() => {
       setMockFallback(true);
-    }
-    return false;
+      resolve(false);
+    }, 1500);
   });
 
   pingPromise = Promise.race([queryPromise, timeoutPromise]);
+  
+  pingPromise.finally(() => {
+    setTimeout(() => {
+      pingPromise = null;
+    }, 10000);
+  });
+
   return pingPromise;
 }
 
-// Self-healing Supabase Query Timeout Proxy
-function wrapThenable(builder: any): any {
-  return new Proxy(builder, {
-    get(target, prop) {
-      if (prop === 'then') {
-        return function(onfulfilled: any, onrejected: any) {
-          if (useMockFallback) {
-            return Promise.resolve({ data: null, error: { message: 'Fallback active', details: 'Using mock data' } }).then(onfulfilled, onrejected);
-          }
-          const timeoutPromise = new Promise((resolve) =>
-            setTimeout(() => {
-              if (!useMockFallback) {
-                console.warn('Supabase query timed out. Enabling mock fallback mode.');
-                setMockFallback(true);
-              }
-              resolve({ data: null, error: { message: 'Query timed out', details: 'Fallback activated' } });
-            }, 2000)
-          );
-          const originalPromise = new Promise((resolve, reject) => {
-            target.then(resolve, reject);
-          });
-          return Promise.race([
-            originalPromise,
-            timeoutPromise
-          ]).then(onfulfilled, onrejected);
-        };
-      }
-      const val = target[prop];
-      if (typeof val === 'function') {
-        return function(...args: any[]) {
-          const result = val.apply(target, args);
-          if (result && typeof result.then === 'function') {
-            return wrapThenable(result);
-          }
-          return result;
-        };
-      }
-      return val;
-    }
-  });
-}
-
 function wrapSupabaseClient(client: SupabaseClient): SupabaseClient {
-  return new Proxy(client, {
-    get(target, prop) {
-      if (prop === 'from') {
-        return function(relation: string) {
-          const builder = target.from(relation);
-          return wrapThenable(builder);
-        };
-      }
-      if (prop === 'rpc') {
-        return function(fn: string, args?: any) {
-          const builder = target.rpc(fn, args);
-          return wrapThenable(builder);
-        };
-      }
-      const val = (target as any)[prop];
-      if (typeof val === 'function') {
-        return val.bind(target);
-      }
-      return val;
-    }
-  }) as any;
+  return client;
 }
 
 // Lazy Supabase Client Initialization
@@ -1383,33 +1341,63 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('website_settings').select('*').maybeSingle();
-        if (!error && data) {
+        const { data, error } = await supabase.from('website_settings').select('*');
+        if (!error && data && data.length > 0) {
+          const row = data[0];
           return {
-            id: data.id,
-            companyName: data.company_name,
-            logoUrl: data.logo_url,
-            faviconUrl: data.favicon_url,
-            primaryColor: data.primary_color,
-            secondaryColor: data.secondary_color,
-            whatsappNumber: data.whatsapp_number,
-            contactEmail: data.contact_email,
-            contactPhones: data.contact_phones || [],
-            address: data.address || '',
-            googleMapEmbedUrl: data.google_map_embed_url || '',
-            popupBannerUrl: data.popup_banner_url || '',
-            popupBannerActive: data.popup_banner_active ?? false,
-            announcementText: data.announcement_text || '',
-            announcementActive: data.announcement_active ?? false,
-            whyChooseUsTitle: data.why_choose_us_title || 'Why Choose Us?',
-            socialLinks: data.social_links || {},
+            id: row.id,
+            companyName: row.company_name,
+            logoUrl: row.logo_url,
+            faviconUrl: row.favicon_url,
+            primaryColor: row.primary_color,
+            secondaryColor: row.secondary_color,
+            whatsappNumber: row.whatsapp_number,
+            contactEmail: row.contact_email,
+            contactPhones: row.contact_phones || [],
+            address: row.address || '',
+            googleMapEmbedUrl: row.google_map_embed_url || '',
+            popupBannerUrl: row.popup_banner_url || '',
+            popupBannerActive: row.popup_banner_active ?? false,
+            announcementText: row.announcement_text || '',
+            announcementActive: row.announcement_active ?? false,
+            whyChooseUsTitle: row.why_choose_us_title || 'Why Choose Us?',
+            socialLinks: row.social_links || {},
             seo: {
-              metaTitle: data.seo_settings?.metaTitle || data.seo_settings?.meta_title || '',
-              metaDescription: data.seo_settings?.metaDescription || data.seo_settings?.meta_description || '',
-              metaKeywords: data.seo_settings?.metaKeywords || data.seo_settings?.meta_keywords || '',
-              ogImage: data.seo_settings?.ogImage || data.seo_settings?.og_image || ''
+              metaTitle: row.seo_settings?.meta_title || row.seo_settings?.metaTitle || '',
+              metaDescription: row.seo_settings?.meta_description || row.seo_settings?.metaDescription || '',
+              metaKeywords: row.seo_settings?.meta_keywords || row.seo_settings?.metaKeywords || '',
+              ogImage: row.seo_settings?.og_image || row.seo_settings?.ogImage || ''
             }
           } as WebsiteSettings;
+        } else if (!error) {
+          // Empty, let's seed website_settings
+          const dbData = {
+            id: '88888888-8888-8888-8888-888888888888',
+            company_name: defaultSettings.companyName,
+            logo_url: defaultSettings.logoUrl,
+            favicon_url: defaultSettings.faviconUrl,
+            primary_color: defaultSettings.primaryColor,
+            secondary_color: defaultSettings.secondaryColor,
+            whatsapp_number: defaultSettings.whatsappNumber,
+            contact_email: defaultSettings.contactEmail,
+            contact_phones: defaultSettings.contactPhones,
+            address: defaultSettings.address,
+            google_map_embed_url: defaultSettings.googleMapEmbedUrl,
+            popup_banner_url: defaultSettings.popupBannerUrl,
+            popup_banner_active: defaultSettings.popupBannerActive,
+            announcement_text: defaultSettings.announcementText,
+            announcement_active: defaultSettings.announcementActive,
+            why_choose_us_title: defaultSettings.whyChooseUsTitle,
+            social_links: defaultSettings.socialLinks,
+            seo_settings: {
+              meta_title: defaultSettings.seo.metaTitle,
+              meta_description: defaultSettings.seo.metaDescription,
+              meta_keywords: defaultSettings.seo.metaKeywords,
+              og_image: defaultSettings.seo.ogImage
+            }
+          };
+          await supabase.from('website_settings').insert(dbData);
+          return { ...defaultSettings, id: dbData.id };
         }
       } catch (e) {
         console.warn('Failed to fetch website_settings:', e);
@@ -1446,7 +1434,7 @@ export const db = {
             og_image: settings.seo.ogImage
           }
         };
-        await supabase.from('website_settings').upsert({ id: settings.id, ...dbData });
+        await supabase.from('website_settings').upsert({ id: ensureUuid(settings.id), ...dbData });
       } catch (e) {
         console.warn('Failed to update website_settings:', e);
       }
@@ -1473,6 +1461,20 @@ export const db = {
             ctaLink: row.cta_link || '',
             order: row.display_order ?? 0
           })) as HeroSlide[];
+        } else if (!error) {
+          // Seeding
+          const dbSlides = defaultHeroSlides.map(slide => ({
+            id: ensureUuid(slide.id),
+            title: slide.title,
+            subtitle: slide.subtitle,
+            image_url: slide.imageUrl,
+            cta_text: slide.ctaText,
+            cta_link: slide.ctaLink,
+            display_order: slide.order,
+            is_active: true
+          }));
+          await supabase.from('hero_slides').insert(dbSlides);
+          return defaultHeroSlides.map(slide => ({ ...slide, id: ensureUuid(slide.id) }));
         }
       } catch (e) {
         console.warn('Failed to fetch hero_slides:', e);
@@ -1485,9 +1487,9 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       try {
-        await supabase.from('hero_slides').delete().neq('id', 'keep_all');
+        await supabase.from('hero_slides').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         const dbSlides = slides.map(slide => ({
-          id: slide.id,
+          id: ensureUuid(slide.id),
           title: slide.title,
           subtitle: slide.subtitle,
           image_url: slide.imageUrl,
@@ -1512,17 +1514,29 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('about_section').select('*').maybeSingle();
-        if (!error && data) {
+        const { data, error } = await supabase.from('about_section').select('*');
+        if (!error && data && data.length > 0) {
+          const row = data[0];
           return {
-            id: data.id,
-            title: data.title,
-            description: data.description,
-            image: data.image_url,
-            is_active: data.is_active,
-            created_at: data.created_at,
-            updated_at: data.updated_at
+            id: row.id,
+            title: row.title,
+            description: row.description,
+            image: row.image_url,
+            is_active: row.is_active,
+            created_at: row.created_at,
+            updated_at: row.updated_at
           } as AboutSection;
+        } else if (!error) {
+          // Seeding
+          const dbAbout = {
+            id: ensureUuid(defaultAbout.id),
+            title: defaultAbout.title,
+            description: defaultAbout.description,
+            image_url: defaultAbout.image,
+            is_active: defaultAbout.is_active
+          };
+          await supabase.from('about_section').insert(dbAbout);
+          return { ...defaultAbout, id: dbAbout.id };
         }
       } catch (e) {
         console.warn('Failed to fetch about_section:', e);
@@ -1539,9 +1553,9 @@ export const db = {
           title: about.title,
           description: about.description,
           image_url: about.image,
-          is_active: about.is_active
+          is_active: about.is_active !== false
         };
-        await supabase.from('about_section').upsert({ id: about.id, ...dbData });
+        await supabase.from('about_section').upsert({ id: ensureUuid(about.id), ...dbData });
       } catch (e) {
         console.warn('Failed to update about_section:', e);
       }
@@ -1576,7 +1590,7 @@ export const db = {
         if (!error && data && data.length === 0) {
           try {
             const dbServices = defaultServices.map(s => ({
-              id: s.id,
+              id: ensureUuid(s.id),
               title: s.title,
               description: s.description,
               detailed_description: s.detailedDescription,
@@ -1591,7 +1605,7 @@ export const db = {
           } catch (e) {
             console.warn('Failed to seed services table:', e);
           }
-          return defaultServices;
+          return defaultServices.map(s => ({ ...s, id: ensureUuid(s.id) }));
         }
       } catch (err) {
         console.warn('getServices error:', err);
@@ -1615,7 +1629,7 @@ export const db = {
           display_order: service.order || 0,
           is_active: service.isActive !== false
         };
-        await supabase.from('services').upsert({ id: service.id, ...dbData });
+        await supabase.from('services').upsert({ id: ensureUuid(service.id), ...dbData });
       } catch (err) {
         console.warn('Failed to save service:', err);
       }
@@ -1638,7 +1652,7 @@ export const db = {
     if (supabase) {
       try {
         const dbData = services.map(s => ({
-          id: s.id,
+          id: ensureUuid(s.id),
           title: s.title,
           description: s.description,
           detailed_description: s.detailedDescription,
@@ -1775,10 +1789,10 @@ export const db = {
             category: row.category,
             duration: row.duration,
             description: row.description,
-            cover_image: row.banner_image_url,
-            mode: row.learning_mode,
+            cover_image: row.cover_image,
+            mode: row.mode,
             syllabus: Array.isArray(row.syllabus) ? row.syllabus : [],
-            badges: row.highlights || [],
+            badges: Array.isArray(row.badges) ? row.badges : [],
             display_order: row.display_order ?? 0,
             is_active: row.is_active ?? true,
             created_at: row.created_at,
@@ -1788,26 +1802,24 @@ export const db = {
         if (!error && data && data.length === 0) {
           try {
             const dbPrograms = defaultPrograms.map(p => ({
-              id: p.id,
+              id: ensureUuid(p.id),
               title: p.title,
               category: p.category,
               duration: p.duration,
               description: p.description,
-              banner_image_url: p.cover_image,
-              learning_mode: p.mode,
+              cover_image: p.cover_image,
+              mode: p.mode,
               syllabus: p.syllabus || [],
-              highlights: p.badges || [],
+              badges: p.badges || [],
               display_order: p.display_order,
               is_active: p.is_active !== false,
-              technology: 'General IT',
-              eligibility: 'Open to all background levels',
-              fee_structure: {}
+              price: 0
             }));
             await supabase.from('programs').insert(dbPrograms);
           } catch (e) {
             console.warn('Failed to seed programs table:', e);
           }
-          return defaultPrograms;
+          return defaultPrograms.map(p => ({ ...p, id: ensureUuid(p.id) }));
         }
       } catch (err) {
         console.warn('getPrograms error:', err);
@@ -1825,17 +1837,15 @@ export const db = {
           category: program.category,
           duration: program.duration,
           description: program.description,
-          banner_image_url: program.cover_image,
-          learning_mode: program.mode,
+          cover_image: program.cover_image,
+          mode: program.mode,
           syllabus: program.syllabus || [],
-          highlights: program.badges || [],
+          badges: program.badges || [],
           display_order: program.display_order,
           is_active: program.is_active !== false,
-          technology: 'General IT',
-          eligibility: 'Open to all background levels',
-          fee_structure: {}
+          price: 0
         };
-        await supabase.from('programs').upsert({ id: program.id, ...dbData });
+        await supabase.from('programs').upsert({ id: ensureUuid(program.id), ...dbData });
       } catch (err) {
         console.warn('Failed to save program:', err);
       }
@@ -1849,20 +1859,18 @@ export const db = {
     if (supabase) {
       try {
         const dbData = list.map(program => ({
-          id: program.id,
+          id: ensureUuid(program.id),
           title: program.title,
           category: program.category,
           duration: program.duration,
           description: program.description,
-          banner_image_url: program.cover_image,
-          learning_mode: program.mode,
+          cover_image: program.cover_image,
+          mode: program.mode,
           syllabus: program.syllabus || [],
-          highlights: program.badges || [],
+          badges: program.badges || [],
           display_order: program.display_order,
           is_active: program.is_active !== false,
-          technology: 'General IT',
-          eligibility: 'Open to all background levels',
-          fee_structure: {}
+          price: 0
         }));
         await supabase.from('programs').upsert(dbData);
       } catch (err) {
@@ -2446,11 +2454,15 @@ export const db = {
         }
         if (!error && data && data.length === 0) {
           try {
-            await supabase.from('placements').insert(defaultPlacements);
+            const dbPlacements = defaultPlacements.map(p => ({
+              ...p,
+              id: ensureUuid(p.id)
+            }));
+            await supabase.from('placements').insert(dbPlacements);
           } catch (e) {
             console.warn('Failed to seed placements table:', e);
           }
-          return defaultPlacements;
+          return defaultPlacements.map(p => ({ ...p, id: ensureUuid(p.id) }));
         }
       } catch (err) {
         console.warn('getPlacements error:', err);
@@ -2462,7 +2474,11 @@ export const db = {
   async savePlacement(placement: Placement): Promise<Placement> {
     const supabase = getSupabase();
     if (supabase) {
-      const { error } = await supabase.from('placements').upsert(placement);
+      const dbData = {
+        ...placement,
+        id: ensureUuid(placement.id)
+      };
+      const { error } = await supabase.from('placements').upsert(dbData);
       if (error) console.error('Supabase savePlacement failed:', error);
     }
     return placement;
@@ -2480,7 +2496,11 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       for (const item of items) {
-        await supabase.from('placements').upsert(item);
+        const dbData = {
+          ...item,
+          id: ensureUuid(item.id)
+        };
+        await supabase.from('placements').upsert(dbData);
       }
     }
   },
@@ -2495,11 +2515,15 @@ export const db = {
         }
         if (!error && data && data.length === 0) {
           try {
-            await supabase.from('client_partners').insert(defaultClientPartners);
+            const dbCP = defaultClientPartners.map(cp => ({
+              ...cp,
+              id: ensureUuid(cp.id)
+            }));
+            await supabase.from('client_partners').insert(dbCP);
           } catch (e) {
             console.warn('Failed to seed client_partners table:', e);
           }
-          return defaultClientPartners;
+          return defaultClientPartners.map(cp => ({ ...cp, id: ensureUuid(cp.id) }));
         }
       } catch (err) {
         console.warn('getClientPartners error:', err);
@@ -2511,7 +2535,11 @@ export const db = {
   async saveClientPartner(cp: ClientPartnerLogo): Promise<ClientPartnerLogo> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('client_partners').upsert(cp);
+      const dbCP = {
+        ...cp,
+        id: ensureUuid(cp.id)
+      };
+      await supabase.from('client_partners').upsert(dbCP);
     }
     return cp;
   },
@@ -2634,11 +2662,15 @@ export const db = {
         }
         if (!error && data && data.length === 0) {
           try {
-            await supabase.from('why_choose_us').insert(defaultWhyChooseUs);
+            const dbItems = defaultWhyChooseUs.map(item => ({
+              ...item,
+              id: ensureUuid(item.id)
+            }));
+            await supabase.from('why_choose_us').insert(dbItems);
           } catch (e) {
             console.warn('Failed to seed why_choose_us table:', e);
           }
-          return defaultWhyChooseUs;
+          return defaultWhyChooseUs.map(item => ({ ...item, id: ensureUuid(item.id) }));
         }
       } catch (e) {
         console.warn("Supabase query error:", e);
@@ -2651,7 +2683,11 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       try {
-        await supabase.from('why_choose_us').upsert(item);
+        const dbData = {
+          ...item,
+          id: ensureUuid(item.id)
+        };
+        await supabase.from('why_choose_us').upsert(dbData);
       } catch (e) {
         console.warn("Supabase upsert warning:", e);
       }
@@ -2670,6 +2706,7 @@ export const db = {
   async saveWhyChooseUsOrder(items: WhyChooseUsItem[]): Promise<void> {
     const updated = items.map((item, idx) => ({
       ...item,
+      id: ensureUuid(item.id),
       display_order: idx + 1
     }));
     const supabase = getSupabase();
@@ -2748,7 +2785,20 @@ export const db = {
           })) as IndustryPartner[];
         }
         if (!error && data && data.length === 0) {
-          return defaultIndustryPartners;
+          try {
+            const dbPartners = defaultIndustryPartners.map(p => ({
+              id: ensureUuid(p.id),
+              company_name: p.company_name,
+              logo_url: p.logo,
+              website_url: p.website_url || '',
+              display_order: p.display_order,
+              is_active: p.is_active
+            }));
+            await supabase.from('industry_network').insert(dbPartners);
+          } catch (e) {
+            console.warn('Failed to seed industry_network table:', e);
+          }
+          return defaultIndustryPartners.map(p => ({ ...p, id: ensureUuid(p.id) }));
         }
       } catch (e) {
         console.error('Supabase query failed:', e);
@@ -2768,7 +2818,7 @@ export const db = {
           display_order: partner.display_order,
           is_active: partner.is_active
         };
-        await supabase.from('industry_network').upsert({ id: partner.id, ...dbData });
+        await supabase.from('industry_network').upsert({ id: ensureUuid(partner.id), ...dbData });
       } catch (err) {
         console.warn('Failed to save industry_network:', err);
       }
