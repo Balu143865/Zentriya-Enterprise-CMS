@@ -73,9 +73,9 @@ export interface DbConfig {
 }
 
 export function getDbConfig(): DbConfig {
-  const url = localStorage.getItem(SUPABASE_URL_KEY) || import.meta.env.VITE_SUPABASE_URL || '';
-  const anonKey = localStorage.getItem(SUPABASE_ANON_KEY) || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  const useMock = localStorage.getItem(USE_MOCK_DB_KEY) === 'true';
+  const url = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem(SUPABASE_URL_KEY) || '';
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem(SUPABASE_ANON_KEY) || '';
+  const useMock = localStorage.getItem(USE_MOCK_DB_KEY) === 'true' && !(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
   return { url, anonKey, useMock };
 }
 
@@ -116,9 +116,6 @@ let pingPromise: Promise<boolean> | null = null;
 
 export function setMockFallback(value: boolean) {
   useMockFallback = value;
-  if (value) {
-    supabaseInstance = null;
-  }
 }
 
 export function isMockFallbackActive(): boolean {
@@ -147,13 +144,15 @@ export async function checkDatabaseConnection(): Promise<boolean> {
   const queryPromise = (async () => {
     try {
       const { error } = await client.from('website_settings').select('id').limit(1);
-      if (error && (error.message?.includes('FetchError') || error.message?.includes('Failed to fetch') || error.message?.includes('network'))) {
+      if (error) {
+        console.warn('Database connection check failed:', error);
         setMockFallback(true);
         return false;
       }
       setMockFallback(false);
       return true;
     } catch (err) {
+      console.error('Database connection check error:', err);
       setMockFallback(true);
       return false;
     }
@@ -161,9 +160,10 @@ export async function checkDatabaseConnection(): Promise<boolean> {
 
   const timeoutPromise = new Promise<boolean>((resolve) => {
     setTimeout(() => {
+      console.warn('Database connection check timed out, falling back to mock.');
       setMockFallback(true);
       resolve(false);
-    }, 1500);
+    }, 2000);
   });
 
   pingPromise = Promise.race([queryPromise, timeoutPromise]);
@@ -218,7 +218,6 @@ export function getSupabase(): SupabaseClient | null {
   }
   if (!supabaseInstance) {
     try {
-      // Wrap client with our query proxy to prevent infinite hangs and implement graceful timeouts
       supabaseInstance = wrapSupabaseClient(rawClient);
     } catch (e) {
       console.error('Failed to initialize Supabase client:', e);
@@ -1978,9 +1977,35 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('gallery').select('*');
-        if (!error && data && data.length > 0) {
-          return data as GalleryItem[];
+        const { data, error } = await supabase.from('gallery').select('*').order('display_order', { ascending: true });
+        if (error) {
+          throw new Error(`getGalleryItems error: ${error.message}`);
+        }
+        if (data && data.length > 0) {
+          return data.map(row => ({
+            id: row.id,
+            type: row.type || 'image',
+            url: row.media_url,
+            title: row.title,
+            category: row.category
+          })) as GalleryItem[];
+        }
+        if (data && data.length === 0) {
+          try {
+            const dbGallery = defaultGalleryItems.map(item => ({
+              id: ensureUuid(item.id),
+              title: item.title,
+              category: item.category,
+              type: item.type,
+              media_url: item.url,
+              display_order: 0,
+              is_active: true
+            }));
+            await supabase.from('gallery').insert(dbGallery);
+          } catch (e) {
+            console.warn('Failed to seed gallery table:', e);
+          }
+          return defaultGalleryItems.map(item => ({ ...item, id: ensureUuid(item.id) }));
         }
       } catch (e) {
         console.warn('Failed to fetch gallery from Supabase:', e);
@@ -1992,7 +2017,18 @@ export const db = {
   async saveGalleryItem(item: GalleryItem): Promise<GalleryItem> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('gallery').upsert(item);
+      try {
+        const dbData = {
+          title: item.title,
+          category: item.category,
+          type: item.type,
+          media_url: item.url,
+          is_active: true
+        };
+        await supabase.from('gallery').upsert({ id: ensureUuid(item.id), ...dbData });
+      } catch (err) {
+        console.error('saveGalleryItem error:', err);
+      }
     }
     return item;
   },
@@ -2013,19 +2049,43 @@ export const db = {
     if (supabase) {
       try {
         const { data, error } = await supabase.from('team_members').select('*').order('display_order', { ascending: true });
-        if (!error && data && data.length > 0) {
+        if (error) {
+          throw new Error(`getTeam error: ${error.message}`);
+        }
+        if (data && data.length > 0) {
           return data.map(row => ({
             id: row.id,
             name: row.name,
-            designation: row.role,
-            photoUrl: row.avatar_url,
+            designation: row.designation,
+            photoUrl: row.photo_url,
             bio: row.bio || '',
             socialLinks: {
-              linkedin: row.linkedin_url || '',
-              twitter: row.twitter_url || ''
+              linkedin: row.social_links?.linkedin || '',
+              twitter: row.social_links?.twitter || ''
             },
             order: row.display_order ?? 0
           })) as TeamMember[];
+        }
+        if (data && data.length === 0) {
+          try {
+            const dbTeam = defaultTeam.map(t => ({
+              id: ensureUuid(t.id),
+              name: t.name,
+              designation: t.designation,
+              photo_url: t.photoUrl,
+              bio: t.bio || '',
+              social_links: {
+                linkedin: t.socialLinks?.linkedin || '',
+                twitter: t.socialLinks?.twitter || ''
+              },
+              display_order: t.order || 0,
+              is_active: true
+            }));
+            await supabase.from('team_members').insert(dbTeam);
+          } catch (e) {
+            console.warn('Failed to seed team_members table:', e);
+          }
+          return defaultTeam.map(t => ({ ...t, id: ensureUuid(t.id) }));
         }
       } catch (err) {
         console.warn('Failed to fetch team_members:', err);
@@ -2040,15 +2100,17 @@ export const db = {
       try {
         const dbData = {
           name: member.name,
-          role: member.designation,
-          avatar_url: member.photoUrl,
-          bio: member.bio,
-          linkedin_url: member.socialLinks?.linkedin || '',
-          twitter_url: member.socialLinks?.twitter || '',
-          display_order: member.order,
+          designation: member.designation,
+          photo_url: member.photoUrl,
+          bio: member.bio || '',
+          social_links: {
+            linkedin: member.socialLinks?.linkedin || '',
+            twitter: member.socialLinks?.twitter || ''
+          },
+          display_order: member.order || 0,
           is_active: true
         };
-        await supabase.from('team_members').upsert({ id: member.id, ...dbData });
+        await supabase.from('team_members').upsert({ id: ensureUuid(member.id), ...dbData });
       } catch (err) {
         console.warn('Failed to save team_member:', err);
       }
@@ -2060,11 +2122,7 @@ export const db = {
   async deleteTeamMember(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        await supabase.from('team_members').delete().eq('id', id);
-      } catch (err) {
-        console.warn('Failed to delete team_member:', err);
-      }
+      await supabase.from('team_members').delete().eq('id', id);
     }
     return true;
   },
@@ -2076,17 +2134,52 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('testimonials').select('*');
-        if (!error && data && data.length > 0) {
-          return data as TestimonialItem[];
+        const { data, error } = await supabase.from('testimonials').select('*').order('display_order', { ascending: true });
+        if (error) {
+          throw new Error(`getTestimonials error: ${error.message}`);
         }
-        if (!error && data && data.length === 0) {
+        if (data && data.length > 0) {
+          return data.map(row => ({
+            id: row.id,
+            name: row.name,
+            rating: row.rating,
+            companyOrCollege: row.company,
+            company: row.company,
+            designation: row.designation || '',
+            type: row.type || 'Student',
+            text: row.review_text,
+            videoUrl: row.video_url || '',
+            avatarUrl: row.avatar_url || '',
+            linkedin: row.linkedin_url || '',
+            is_verified: row.is_verified ?? true,
+            display_order: row.display_order ?? 0,
+            is_active: row.is_active ?? true,
+            created_at: row.created_at,
+            updated_at: row.updated_at
+          })) as TestimonialItem[];
+        }
+        if (data && data.length === 0) {
           try {
-            await supabase.from('testimonials').insert(defaultTestimonials);
+            const dbTestimonials = defaultTestimonials.map(t => ({
+              id: ensureUuid(t.id),
+              name: t.name,
+              avatar_url: t.avatarUrl || '',
+              company: t.companyOrCollege || t.company || '',
+              designation: t.designation || '',
+              rating: t.rating || 5,
+              type: t.type || 'Student',
+              review_text: t.text || '',
+              video_url: t.videoUrl || '',
+              linkedin_url: t.linkedin || '',
+              is_verified: t.is_verified !== false,
+              display_order: t.display_order || 0,
+              is_active: t.is_active !== false
+            }));
+            await supabase.from('testimonials').insert(dbTestimonials);
           } catch (e) {
             console.warn('Failed to seed testimonials table:', e);
           }
-          return defaultTestimonials;
+          return defaultTestimonials.map(t => ({ ...t, id: ensureUuid(t.id) }));
         }
       } catch (err) {
         console.warn('getTestimonials error:', err);
@@ -2098,7 +2191,25 @@ export const db = {
   async saveTestimonial(testimonial: TestimonialItem): Promise<TestimonialItem> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('testimonials').upsert(testimonial);
+      try {
+        const dbData = {
+          name: testimonial.name,
+          avatar_url: testimonial.avatarUrl || '',
+          company: testimonial.companyOrCollege || testimonial.company || '',
+          designation: testimonial.designation || '',
+          rating: testimonial.rating || 5,
+          type: testimonial.type || 'Student',
+          review_text: testimonial.text || '',
+          video_url: testimonial.videoUrl || '',
+          linkedin_url: testimonial.linkedin || '',
+          is_verified: testimonial.is_verified !== false,
+          display_order: testimonial.display_order || 0,
+          is_active: testimonial.is_active !== false
+        };
+        await supabase.from('testimonials').upsert({ id: ensureUuid(testimonial.id), ...dbData });
+      } catch (err) {
+        console.error('saveTestimonial error:', err);
+      }
     }
     this.logActivity('Testimonial Added', `Saved review from "${testimonial.name}".`);
     return testimonial;
@@ -2216,17 +2327,44 @@ export const db = {
   async getContactMessages(): Promise<ContactMessage[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('contacts').select('*').order('createdAt', { ascending: false });
-      if (!error && data && data.length > 0) {
-        return data as ContactMessage[];
-      }
-      if (!error && data && data.length === 0) {
-        try {
-          await supabase.from('contacts').insert(defaultContacts);
-        } catch (e) {
-          console.warn('Failed to seed contacts table:', e);
+      try {
+        const { data, error } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
+        if (error) {
+          throw new Error(`getContactMessages error: ${error.message}`);
         }
-        return defaultContacts;
+        if (data && data.length > 0) {
+          return data.map(row => ({
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            phone: row.phone || '',
+            subject: row.subject || '',
+            message: row.message,
+            isRead: row.is_read ?? false,
+            createdAt: row.created_at,
+            notes: row.notes || ''
+          })) as ContactMessage[];
+        }
+        if (data && data.length === 0) {
+          try {
+            const dbContacts = defaultContacts.map(c => ({
+              id: ensureUuid(c.id),
+              name: c.name,
+              email: c.email,
+              phone: c.phone || '',
+              subject: c.subject || '',
+              message: c.message,
+              is_read: c.isRead ?? false,
+              created_at: c.createdAt || new Date().toISOString()
+            }));
+            await supabase.from('contact_messages').insert(dbContacts);
+          } catch (e) {
+            console.warn('Failed to seed contact_messages table:', e);
+          }
+          return defaultContacts.map(c => ({ ...c, id: ensureUuid(c.id) }));
+        }
+      } catch (err) {
+        console.warn('Failed to fetch contact_messages:', err);
       }
     }
     return defaultContacts;
@@ -2235,7 +2373,20 @@ export const db = {
   async createContactMessage(msg: ContactMessage): Promise<ContactMessage> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('contacts').insert(msg);
+      try {
+        const dbData = {
+          name: msg.name,
+          email: msg.email,
+          phone: msg.phone || '',
+          subject: msg.subject || '',
+          message: msg.message,
+          is_read: msg.isRead ?? false,
+          created_at: msg.createdAt || new Date().toISOString()
+        };
+        await supabase.from('contact_messages').insert({ id: ensureUuid(msg.id), ...dbData });
+      } catch (err) {
+        console.error('Failed to insert contact_message:', err);
+      }
     }
 
     // Notification
@@ -2254,7 +2405,11 @@ export const db = {
   async markContactMessageRead(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('contacts').update({ isRead: true }).eq('id', id);
+      try {
+        await supabase.from('contact_messages').update({ is_read: true }).eq('id', ensureUuid(id));
+      } catch (err) {
+        console.error('Failed to mark read:', err);
+      }
     }
     return true;
   },
@@ -2262,7 +2417,11 @@ export const db = {
   async deleteContactMessage(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('contacts').delete().eq('id', id);
+      try {
+        await supabase.from('contact_messages').delete().eq('id', ensureUuid(id));
+      } catch (err) {
+        console.error('Failed to delete contact message:', err);
+      }
     }
     this.logActivity('Contact Inquiry Deleted', `Removed support ticket ID: ${id}`);
     return true;
@@ -2490,14 +2649,44 @@ export const db = {
           .from('placements')
           .select('*')
           .order('display_order', { ascending: true });
-        if (!error && data && data.length > 0) {
-          return data as Placement[];
+        if (error) {
+          throw new Error(`getPlacements error: ${error.message}`);
         }
-        if (!error && data && data.length === 0) {
+        if (data && data.length > 0) {
+          return data.map(row => ({
+            id: row.id,
+            student_name: row.student_name,
+            photo: row.student_photo,
+            company_name: row.company_name,
+            company_logo: row.company_logo,
+            job_role: row.job_role,
+            degree: row.degree || '',
+            batch: row.batch || '',
+            package: row.package_lpa !== null ? Number(row.package_lpa) : undefined,
+            show_package: row.show_package ?? true,
+            placement_badge: row.placement_badge || '',
+            display_order: row.display_order ?? 0,
+            is_active: row.is_active ?? true,
+            created_at: row.created_at,
+            updated_at: row.updated_at
+          })) as Placement[];
+        }
+        if (data && data.length === 0) {
           try {
             const dbPlacements = defaultPlacements.map(p => ({
-              ...p,
-              id: ensureUuid(p.id)
+              id: ensureUuid(p.id),
+              student_name: p.student_name,
+              student_photo: p.photo,
+              company_name: p.company_name,
+              company_logo: p.company_logo,
+              job_role: p.job_role,
+              degree: p.degree || '',
+              batch: p.batch || '',
+              package_lpa: p.package || null,
+              show_package: p.show_package ?? true,
+              placement_badge: p.placement_badge || '',
+              display_order: p.display_order,
+              is_active: p.is_active ?? true
             }));
             await supabase.from('placements').insert(dbPlacements);
           } catch (e) {
@@ -2515,12 +2704,26 @@ export const db = {
   async savePlacement(placement: Placement): Promise<Placement> {
     const supabase = getSupabase();
     if (supabase) {
-      const dbData = {
-        ...placement,
-        id: ensureUuid(placement.id)
-      };
-      const { error } = await supabase.from('placements').upsert(dbData);
-      if (error) console.error('Supabase savePlacement failed:', error);
+      try {
+        const dbData = {
+          student_name: placement.student_name,
+          student_photo: placement.photo,
+          company_name: placement.company_name,
+          company_logo: placement.company_logo,
+          job_role: placement.job_role,
+          degree: placement.degree || '',
+          batch: placement.batch || '',
+          package_lpa: placement.package !== undefined ? Number(placement.package) : null,
+          show_package: placement.show_package ?? true,
+          placement_badge: placement.placement_badge || '',
+          display_order: placement.display_order,
+          is_active: placement.is_active ?? true
+        };
+        const { error } = await supabase.from('placements').upsert({ id: ensureUuid(placement.id), ...dbData });
+        if (error) console.error('Supabase savePlacement failed:', error);
+      } catch (err) {
+        console.error('savePlacement exception:', err);
+      }
     }
     return placement;
   },
@@ -2537,11 +2740,25 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       for (const item of items) {
-        const dbData = {
-          ...item,
-          id: ensureUuid(item.id)
-        };
-        await supabase.from('placements').upsert(dbData);
+        try {
+          const dbData = {
+            student_name: item.student_name,
+            student_photo: item.photo,
+            company_name: item.company_name,
+            company_logo: item.company_logo,
+            job_role: item.job_role,
+            degree: item.degree || '',
+            batch: item.batch || '',
+            package_lpa: item.package !== undefined ? Number(item.package) : null,
+            show_package: item.show_package ?? true,
+            placement_badge: item.placement_badge || '',
+            display_order: item.display_order,
+            is_active: item.is_active ?? true
+          };
+          await supabase.from('placements').upsert({ id: ensureUuid(item.id), ...dbData });
+        } catch (e) {
+          console.error('Failed to reorder placements item:', e);
+        }
       }
     }
   },
