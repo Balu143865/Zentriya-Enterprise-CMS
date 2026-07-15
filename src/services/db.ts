@@ -11,21 +11,55 @@ import {
 } from '../types';
 
 // @ts-ignore
-import workshopBanner from '../assets/images/workshop_banner_1782548250512.jpg';
+import img1 from '../assets/images/image1.jpeg';
 // @ts-ignore
-import groupPhoto from '../assets/images/group_photo_1782548265859.jpg';
+import img2 from '../assets/images/image2.jpeg';
 // @ts-ignore
-import presentationScreen from '../assets/images/presentation_screen_1782548285739.jpg';
+import img3 from '../assets/images/image3.jpeg';
 // @ts-ignore
-import awardTrophy from '../assets/images/award_trophy_1782548299290.jpg';
+import img4 from '../assets/images/image4.jpeg';
 // @ts-ignore
-import computerLabSession from '../assets/images/computer_lab_session_1782548312362.jpg';
+import img5 from '../assets/images/image5.jpeg';
 // @ts-ignore
-import landscapeVisualization from '../assets/images/landscape_visualization_1782548328367.jpg';
+import img6 from '../assets/images/image6.jpeg';
 // @ts-ignore
-import workshopOutdoorBanner from '../assets/images/workshop_outdoor_banner_1782549502724.jpg';
+import img7 from '../assets/images/image7.jpeg';
 // @ts-ignore
-import workshopSeminarAudience from '../assets/images/workshop_seminar_audience_1782549516586.jpg';
+import img8 from '../assets/images/image8.jpeg';
+// @ts-ignore
+import img9 from '../assets/images/image9.jpeg';
+// @ts-ignore
+import img10 from '../assets/images/image10.jpeg';
+// @ts-ignore
+import img11 from '../assets/images/image11.jpeg';
+// @ts-ignore
+import img12 from '../assets/images/image12.jpeg';
+// @ts-ignore
+import img13 from '../assets/images/image13.jpeg';
+// @ts-ignore
+import img14 from '../assets/images/image14.jpeg';
+// @ts-ignore
+import img15 from '../assets/images/image15.jpeg';
+// @ts-ignore
+import img16 from '../assets/images/image16.jpeg';
+// @ts-ignore
+import img17 from '../assets/images/image17.jpeg';
+// @ts-ignore
+import img18 from '../assets/images/image18.jpeg';
+// @ts-ignore
+import img19 from '../assets/images/image19.jpeg';
+// @ts-ignore
+import img20 from '../assets/images/image20.jpeg';
+// @ts-ignore
+import img21 from '../assets/images/image21.jpeg';
+// @ts-ignore
+import img22 from '../assets/images/image22.jpeg';
+// @ts-ignore
+import img23 from '../assets/images/image23.jpeg';
+// @ts-ignore
+import img24 from '../assets/images/image24.jpeg';
+// @ts-ignore
+import video1 from '../assets/images/video1.mp4';
 
 // Supabase configuration storage keys
 const SUPABASE_URL_KEY = 'zentriya_supabase_url';
@@ -632,20 +666,35 @@ const defaultPrograms: ProgramItem[] = [
 ];
 
 const defaultGalleryAlbums: GalleryAlbum[] = [
-  { id: 'album_workshop', title: '6-Day SketchUp Workshop 2026', description: 'Hands-on SketchUp and Landscape Design workshop at Bapatla Engineering College.', category: 'Workshops', coverImageUrl: workshopBanner },
-  { id: 'album_lab', title: 'Interactive Practical Sessions', description: 'Students designing 3D landscapes in the computer laboratory.', category: 'Labs', coverImageUrl: computerLabSession },
-  { id: 'album_achievements', title: 'Achievements & Awards', description: 'Award mementos and workshop certification ceremonies.', category: 'Achievements', coverImageUrl: awardTrophy }
+  { id: 'album_workshop', title: '6-Day SketchUp Workshop 2026', description: 'Hands-on SketchUp and Landscape Design workshop at Bapatla Engineering College.', category: 'Workshops', coverImageUrl: img11 }
 ];
 
 const defaultGalleryItems: GalleryItem[] = [
-  { id: 'gal_1', albumId: 'album_workshop', type: 'image', url: workshopBanner, title: 'Workshop Official Banner & Brochure', category: 'Workshops' },
-  { id: 'gal_2', albumId: 'album_workshop', type: 'image', url: groupPhoto, title: 'Workshop Batch Group Portrait', category: 'Workshops' },
-  { id: 'gal_3', albumId: 'album_workshop', type: 'image', url: presentationScreen, title: 'Landscape Design Presentation', category: 'Workshops' },
-  { id: 'gal_4', albumId: 'album_achievements', type: 'image', url: awardTrophy, title: 'Award Trophy presented to Ms. K. Lakshmi Naga Valli', category: 'Achievements' },
-  { id: 'gal_5', albumId: 'album_lab', type: 'image', url: computerLabSession, title: 'Practical SketchUp Modeling in Computer Lab', category: 'Labs' },
-  { id: 'gal_6', albumId: 'album_lab', type: 'image', url: landscapeVisualization, title: 'Final 3D Landscape Design Rendering', category: 'Labs' },
-  { id: 'gal_7', albumId: 'album_workshop', type: 'image', url: workshopOutdoorBanner, title: 'Workshop Outdoor Display Banner & Backdrop', category: 'Workshops' },
-  { id: 'gal_8', albumId: 'album_workshop', type: 'image', url: workshopSeminarAudience, title: 'Interactive Seminar Session & Guest Lecture', category: 'Workshops' }
+  { id: 'gal_1', albumId: 'album_workshop', type: 'image', url: img1, title: 'Workshop Inauguration & Lighting of Lamp', category: 'Inauguration' },
+  { id: 'gal_2', albumId: 'album_workshop', type: 'image', url: img2, title: 'Keynote Session on 3D Modeling & Rendering', category: 'Seminars' },
+  { id: 'gal_3', albumId: 'album_workshop', type: 'image', url: img3, title: 'Interactive Laboratory Training Session', category: 'Labs' },
+  { id: 'gal_4', albumId: 'album_workshop', type: 'image', url: img4, title: 'Hands-on CAD and SketchUp Modeling Practice', category: 'Labs' },
+  { id: 'gal_5', albumId: 'album_workshop', type: 'image', url: img5, title: 'Expert Guidance on Architectural Visualization', category: 'Workshops' },
+  { id: 'gal_6', albumId: 'album_workshop', type: 'image', url: img6, title: 'Students Collaborating on Design Projects', category: 'Labs' },
+  { id: 'gal_7', albumId: 'album_workshop', type: 'image', url: img7, title: 'Review of Final Student Showcase Submissions', category: 'Workshops' },
+  { id: 'gal_8', albumId: 'album_workshop', type: 'image', url: img8, title: 'Outstanding Student Award & Honors', category: 'Awards' },
+  { id: 'gal_9', albumId: 'album_workshop', type: 'image', url: img9, title: 'Valedictory Session & Certification Distribution', category: 'Awards' },
+  { id: 'gal_10', albumId: 'album_workshop', type: 'image', url: img10, title: 'Vote of Thanks & Event Conclusion', category: 'Inauguration' },
+  { id: 'gal_11', albumId: 'album_workshop', type: 'image', url: img11, title: '6-Day Workshop Batch Group Portrait', category: 'Workshops' },
+  { id: 'gal_12', albumId: 'album_workshop', type: 'image', url: img12, title: 'SketchUp Advanced Rendering Techniques', category: 'Workshops' },
+  { id: 'gal_13', albumId: 'album_workshop', type: 'image', url: img13, title: 'Interactive Hands-on Design Project Session', category: 'Labs' },
+  { id: 'gal_14', albumId: 'album_workshop', type: 'image', url: img14, title: 'Collaborative Team Design Critique', category: 'Seminars' },
+  { id: 'gal_15', albumId: 'album_workshop', type: 'image', url: img15, title: 'Landscape Modeling Demonstration', category: 'Workshops' },
+  { id: 'gal_16', albumId: 'album_workshop', type: 'image', url: img16, title: 'Architecture and Ecology Integration Lecture', category: 'Seminars' },
+  { id: 'gal_17', albumId: 'album_workshop', type: 'image', url: img17, title: 'Practical CAD Drafting Exercises', category: 'Labs' },
+  { id: 'gal_18', albumId: 'album_workshop', type: 'image', url: img18, title: 'Guest Lecture on Digital Twins and Smart Cities', category: 'Seminars' },
+  { id: 'gal_19', albumId: 'album_workshop', type: 'image', url: img19, title: 'Student Exhibition of 3D Project Renderings', category: 'Workshops' },
+  { id: 'gal_20', albumId: 'album_workshop', type: 'image', url: img20, title: 'Workshop Closing Remarks and Feedback', category: 'Inauguration' },
+  { id: 'gal_21', albumId: 'album_workshop', type: 'image', url: img21, title: 'Certificate Award Ceremony Highlights', category: 'Awards' },
+  { id: 'gal_22', albumId: 'album_workshop', type: 'image', url: img22, title: 'Valedictory Batch Group Photo Session', category: 'Workshops' },
+  { id: 'gal_23', albumId: 'album_workshop', type: 'image', url: img23, title: 'Honoring Guest Speakers with Mementos', category: 'Awards' },
+  { id: 'gal_24', albumId: 'album_workshop', type: 'image', url: img24, title: 'Inspiring Final Student Presentation', category: 'Seminars' },
+  { id: 'gal_video1', albumId: 'album_workshop', type: 'video', url: video1, title: '6-Day Workshop Interactive Highlights Video', category: 'Workshops' }
 ];
 
 const defaultTeam: TeamMember[] = [
@@ -1896,17 +1945,13 @@ export const db = {
   async getGalleryAlbums(): Promise<GalleryAlbum[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('albums').select('*');
-      if (!error && data && data.length > 0) {
-        return data as GalleryAlbum[];
-      }
-      if (!error && data && data.length === 0) {
-        try {
-          await supabase.from('albums').insert(defaultGalleryAlbums);
-        } catch (e) {
-          console.warn('Failed to seed albums table:', e);
+      try {
+        const { data, error } = await supabase.from('albums').select('*');
+        if (!error && data && data.length > 0) {
+          return data as GalleryAlbum[];
         }
-        return defaultGalleryAlbums;
+      } catch (e) {
+        console.warn('Failed to fetch albums from Supabase:', e);
       }
     }
     return defaultGalleryAlbums;
@@ -1932,17 +1977,13 @@ export const db = {
   async getGalleryItems(): Promise<GalleryItem[]> {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase.from('gallery').select('*');
-      if (!error && data && data.length > 0) {
-        return data as GalleryItem[];
-      }
-      if (!error && data && data.length === 0) {
-        try {
-          await supabase.from('gallery').insert(defaultGalleryItems);
-        } catch (e) {
-          console.warn('Failed to seed gallery table:', e);
+      try {
+        const { data, error } = await supabase.from('gallery').select('*');
+        if (!error && data && data.length > 0) {
+          return data as GalleryItem[];
         }
-        return defaultGalleryItems;
+      } catch (e) {
+        console.warn('Failed to fetch gallery from Supabase:', e);
       }
     }
     return defaultGalleryItems;

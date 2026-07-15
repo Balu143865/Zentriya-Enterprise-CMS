@@ -9,6 +9,7 @@ import {
   Sliders, Globe, Server, Check, HelpCircle, X
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import MediaSyncController from '../components/MediaSyncController';
 
 export default function AdminOverview() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
@@ -283,6 +284,9 @@ export default function AdminOverview() {
           </button>
         </div>
       </div>
+
+      {/* Media Synchronization Controller */}
+      <MediaSyncController />
 
       {/* 4 Overview cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

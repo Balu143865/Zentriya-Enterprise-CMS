@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import ZentriyaBrandLogo from './ZentriyaBrandLogo';
 import { 
   Phone, Mail, Facebook, Twitter, Linkedin, 
   Instagram, Youtube, ArrowUp, Send, CheckCircle2, Globe
@@ -42,27 +43,8 @@ export default function Footer() {
           
           {/* Company Brief Column */}
           <div className="space-y-6">
-            <Link to="/" className="flex items-center gap-3">
-              {settings?.logoUrl ? (
-                <img 
-                  src={settings.logoUrl} 
-                  alt={settings.companyName} 
-                  className="h-10 w-auto object-contain"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-blue-800 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                  Z
-                </div>
-              )}
-              <div className="flex flex-col">
-                <span className="font-bold text-white text-lg leading-tight">
-                  Zentriya IT
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">
-                  Solutions Pvt Ltd
-                </span>
-              </div>
+            <Link to="/" className="group block select-none">
+              <ZentriyaBrandLogo size="lg" inverseText={true} />
             </Link>
 
             <p className="text-sm text-slate-400 leading-relaxed">

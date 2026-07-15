@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../services/db';
+import groupPhoto from '../assets/images/image11.jpeg';
 import { 
   HeroSlide, WebsiteSettings, ServiceItem, InternshipProgram, CourseItem,
   BlogPost, TestimonialItem, PlacementStat, Placement, ClientPartnerLogo,
@@ -628,14 +629,15 @@ export default function Home() {
                   const keywords = [
                     'internship', 'internships', 'career', 'careers', 'future', 'ecosystem', 
                     'industry', 'technical', 'training', 'professional', 'placement', 'placements', 
-                    'courses', 'skills', 'global', 'opportunities', 'success', 'excellence', 'transform'
+                    'courses', 'skills', 'global', 'opportunities', 'success', 'excellence', 'transform',
+                    'transforming', 'enterprise', 'code', 'architecting', 'scalable', 'cloud', 'ai', 'elite'
                   ];
                   return text.split(' ').map((word, wIdx) => {
                     const cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").toLowerCase();
                     const isKeyword = keywords.includes(cleanWord);
                     if (isKeyword) {
                       return (
-                        <span key={wIdx} className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-300 to-emerald-400 font-extrabold mr-[0.25em] inline-block tracking-tight drop-shadow-[0_2px_15px_rgba(59,130,246,0.1)]">
+                        <span key={wIdx} className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-300 to-emerald-400 font-extrabold mr-[0.25em] inline-block tracking-tight drop-shadow-[0_2px_15px_rgba(59,130,246,0.1)] animate-text-gradient">
                           {word}
                         </span>
                       );
@@ -1621,6 +1623,89 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* 8.5. FEATURED GALLERY SHOWCASE SECTION */}
+      <section id="featured-gallery-showcase" className="py-24 bg-white dark:bg-[#070b14] relative overflow-hidden border-t border-b border-slate-100 dark:border-slate-900/40">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-500/5 dark:bg-emerald-500/2 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <AnimatedHeader className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-xs font-black tracking-widest text-emerald-600 dark:text-emerald-400 uppercase bg-emerald-50 dark:bg-emerald-950/40 px-3.5 py-1.5 rounded-full inline-block">
+                6-DAY WORKSHOP HIGHLIGHT
+              </span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight font-display">
+              Workshop <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-blue-600">Batch Gallery</span>
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+              Presenting our official group photograph from the 6-Day SketchUp and Landscape Design workshop, held successfully with collaborative interactive laboratory sessions.
+            </p>
+            <div className="flex items-center justify-center gap-1.5 pt-2">
+              <div className="w-8 h-[2px] bg-emerald-500 rounded-full" />
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <div className="w-8 h-[2px] bg-blue-500 rounded-full" />
+            </div>
+          </AnimatedHeader>
+
+          {/* Gorgeous Large Image Display Card */}
+          <div className="max-w-3xl mx-auto">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="group relative bg-slate-100 dark:bg-slate-900 rounded-3xl p-3 sm:p-4 border border-slate-200/60 dark:border-slate-800 shadow-lg overflow-hidden"
+            >
+              <div className="relative aspect-[4/3] sm:aspect-video rounded-2xl overflow-hidden bg-slate-950 shadow-inner">
+                <img 
+                  src={groupPhoto} 
+                  alt="6-Day SketchUp Workshop Batch Group Portrait" 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent opacity-90 group-hover:opacity-95 transition-opacity duration-350" />
+                
+                {/* Decorative overlay metadata matching GPS details in image */}
+                <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 text-white flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 z-10">
+                  <div className="space-y-1.5 max-w-md">
+                    <span className="text-[10px] bg-emerald-600/95 text-white font-bold tracking-wider px-2 py-0.5 rounded uppercase font-mono">
+                      Workshops & Certifications
+                    </span>
+                    <h3 className="text-lg sm:text-xl md:text-2xl font-extrabold tracking-tight text-white font-display">
+                      Workshop Batch Group Portrait
+                    </h3>
+                    <p className="text-slate-300 text-xs sm:text-sm font-light">
+                      Official photo session with students and coordinators at Bapatla Engineering College.
+                    </p>
+                  </div>
+                  
+                  {/* Geographic GPS Specs Tag */}
+                  <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800/80 p-3 rounded-xl text-left space-y-1 font-mono text-[9px] sm:text-xs text-slate-400 self-stretch sm:self-auto max-w-[280px]">
+                    <div className="text-white font-bold flex items-center gap-1">
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      GPS Verified Location
+                    </div>
+                    <p className="text-slate-300 leading-tight">Bapatla, Andhra Pradesh, India 🇮🇳</p>
+                    <p className="opacity-75">Lat 15.889709° / Long 80.441266°</p>
+                    <p className="opacity-60 text-[8px] sm:text-[10px]">14/03/2026 03:56 PM GMT+05:30</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+            
+            <div className="text-center mt-10">
+              <Link 
+                to="/gallery" 
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-bold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              >
+                View Full Interactive Gallery
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* 9. TECH INSIGHTS / ARTICLES SECTION */}
       <TechInsights />

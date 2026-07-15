@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../services/db';
 import { WebsiteSettings } from '../types';
+import ZentriyaBrandLogo from './ZentriyaBrandLogo';
 
 const iconMap: Record<string, React.ComponentType<any>> = {
   Home,
@@ -136,27 +137,8 @@ export default function Header({ darkMode, setDarkMode }: HeaderProps) {
         <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 xl:px-8 flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Logo Brand */}
-          <Link id="logo-brand-link" to="/" className="flex items-center gap-1.5 min-[380px]:gap-2 sm:gap-3 group shrink-0 select-none">
-            {settings?.logoUrl ? (
-              <img 
-                src={settings.logoUrl} 
-                alt={settings?.companyName || 'Zentriya Logo'} 
-                className="h-8 min-[380px]:h-9 sm:h-10 w-auto object-contain group-hover:scale-105 group-hover:rotate-[2deg] transition-all duration-300 shrink-0"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-black text-xl sm:text-2xl shrink-0 group-hover:scale-105 group-hover:rotate-[2deg] transition-all duration-300">
-                Z
-              </div>
-            )}
-            <div className="flex flex-col shrink-0">
-              <span className="font-bold text-sm min-[380px]:text-base sm:text-lg leading-none tracking-tight text-slate-900 dark:text-white font-display whitespace-nowrap group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
-                ZENTRIYA
-              </span>
-              <span className="hidden min-[380px]:block text-[7px] sm:text-[10px] uppercase tracking-[0.12em] sm:tracking-[0.2em] font-bold text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1 whitespace-nowrap group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors duration-300">
-                IT Solutions Private Limited
-              </span>
-            </div>
+          <Link id="logo-brand-link" to="/" className="group shrink-0 select-none">
+            <ZentriyaBrandLogo size="md" />
           </Link>
           
           {/* Desktop Navigation Link Cluster with Sliding Glass Active Indicator */}

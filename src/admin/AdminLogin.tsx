@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth } from '../services/auth';
 import { Lock, Mail, Sparkles, UserCheck, RefreshCw } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import ZentriyaBrandLogo from '../components/ZentriyaBrandLogo';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -41,15 +42,8 @@ export default function AdminLogin() {
       <div className="max-w-md w-full space-y-8 relative z-10 animate-fade-in">
         
         {/* Header Branding */}
-        <div className="text-center space-y-3">
-          <img 
-            src="/logo.png" 
-            alt="Zentriya Logo" 
-            className="w-16 h-16 object-contain mx-auto drop-shadow-[0_0_15px_rgba(16,185,129,0.2)]" 
-          />
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-display">
-            Zentriya IT Solutions
-          </h2>
+        <div className="text-center space-y-4 flex flex-col items-center justify-center">
+          <ZentriyaBrandLogo size="lg" inverseText={true} className="justify-center mx-auto" />
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
             <UserCheck size={11} className="animate-pulse" />
             Owner-Only Administrative Console

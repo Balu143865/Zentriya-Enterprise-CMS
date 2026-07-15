@@ -11,6 +11,7 @@ import {
   ArrowLeft, Menu, X, Award, ShieldAlert, Milestone, BookOpen
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import ZentriyaBrandLogo from '../components/ZentriyaBrandLogo';
 
 interface AdminLayoutProps {
   darkMode: boolean;
@@ -188,7 +189,7 @@ export default function AdminLayout({ darkMode, setDarkMode }: AdminLayoutProps)
         {/* Sidebar Brand */}
         <div className="p-6 border-b border-slate-800 flex items-center justify-between shrink-0">
           <Link to="/" className="flex items-center gap-3" onClick={() => setSidebarOpen(false)}>
-            <img src="/logo.png" alt="Zentriya Logo" className="w-8 h-8 object-contain" />
+            <ZentriyaBrandLogo iconOnly={true} size="sm" />
             <div className="flex flex-col">
               <span className="text-white font-bold text-sm leading-tight">Admin Console</span>
               <span className="text-[9px] text-slate-500 uppercase tracking-widest font-semibold">Zentriya IT Solutions</span>
