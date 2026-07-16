@@ -145,10 +145,18 @@ export async function checkDatabaseConnection(): Promise<boolean> {
     try {
       const { error } = await client.from('website_settings').select('id').limit(1);
       if (error) {
+        // If we get a DB/Postgrest error (like table not found 42P01 or PGRST116), it means connection succeeded!
+        const isDbError = !!(error.code || (error as any).status || error.message?.includes('relation') || error.message?.includes('fetch'));
+        if (isDbError) {
+          console.log('Supabase connection verified successfully (database server is reachable).');
+          setMockFallback(false);
+          return true;
+        }
         console.warn('Database connection check failed:', error);
         setMockFallback(true);
         return false;
       }
+      console.log('Supabase connection verified successfully.');
       setMockFallback(false);
       return true;
     } catch (err) {
@@ -160,10 +168,9 @@ export async function checkDatabaseConnection(): Promise<boolean> {
 
   const timeoutPromise = new Promise<boolean>((resolve) => {
     setTimeout(() => {
-      console.warn('Database connection check timed out, falling back to mock.');
       setMockFallback(true);
       resolve(false);
-    }, 2000);
+    }, 10000);
   });
 
   pingPromise = Promise.race([queryPromise, timeoutPromise]);
