@@ -52,6 +52,34 @@ export default function GenericCMS({
   };
   const realTableName = getRealTableName(tableName);
 
+  // Self-healing normalization of sorting field to avoid SQL column missing crashes
+  const getEffectiveOrderByField = (): string => {
+    if (!orderByField) return 'id';
+    if (orderByField === 'order') {
+      const tablesWithDisplayOrder = [
+        'hero_slides',
+        'why_choose_us',
+        'services',
+        'programs',
+        'placements',
+        'industry_network',
+        'testimonials',
+        'team_members',
+        'gallery',
+        'article_categories',
+        'article_statistics',
+        'articles',
+        'contact_information',
+        'student_journey'
+      ];
+      if (tablesWithDisplayOrder.includes(realTableName)) {
+        return 'display_order';
+      }
+    }
+    return orderByField;
+  };
+  const effectiveOrderByField = getEffectiveOrderByField();
+
   const { toast } = useToast();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,8 +98,8 @@ export default function GenericCMS({
     try {
       let query = supabase.from(realTableName).select('*');
       
-      if (orderByField) {
-        query = query.order(orderByField, { ascending: orderAscending });
+      if (effectiveOrderByField) {
+        query = query.order(effectiveOrderByField, { ascending: orderAscending });
       }
 
       const { data: result, error } = await query;
@@ -89,7 +117,7 @@ export default function GenericCMS({
 
   useEffect(() => {
     loadData();
-  }, [realTableName, orderByField, orderAscending]);
+  }, [realTableName, effectiveOrderByField, orderAscending]);
 
   // Open modal for Create/Edit
   const handleOpenModal = (item: any | null = null) => {
@@ -152,6 +180,7 @@ export default function GenericCMS({
   const handleToggle = async (item: any, fieldName: string) => {
     try {
       const updatedValue = !item[fieldName];
+
       const { error } = await supabase
         .from(realTableName)
         .update({ [fieldName]: updatedValue })
@@ -191,16 +220,19 @@ export default function GenericCMS({
       // If editing, use ID
       if (editingItem) {
         payload.id = editingItem.id;
-      } else if (!payload.id) {
-        // Generate a valid RFC4122 UUID to prevent database UUID constraint crashes
-        payload.id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-          var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-          return v.toString(16);
-        });
+        const { error } = await supabase.from(realTableName).update(payload).eq('id', editingItem.id);
+        if (error) throw error;
+      } else {
+        if (!payload.id) {
+          // Generate a valid RFC4122 UUID to prevent database UUID constraint crashes
+          payload.id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
+        }
+        const { error } = await supabase.from(realTableName).insert(payload);
+        if (error) throw error;
       }
-
-      const { error } = await supabase.from(realTableName).upsert(payload);
-      if (error) throw error;
 
       toast(`${title} saved successfully in real time!`, 'success');
       setIsModalOpen(false);

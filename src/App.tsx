@@ -21,6 +21,7 @@ import AdminManage from './admin/AdminManage';
 import { ToastProvider } from './components/Toast';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import AestheticControls from './components/AestheticControls';
+import FloatingChatBot from './components/FloatingChatBot';
 
 // Scroll Restoration Utility to enhance enterprise quality user experience
 function ScrollToTop() {
@@ -54,6 +55,7 @@ function PublicLayout({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMod
         </Routes>
       </main>
       <Footer />
+      <FloatingChatBot />
     </div>
   );
 }

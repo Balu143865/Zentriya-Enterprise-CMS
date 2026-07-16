@@ -112,30 +112,51 @@ export function ensureUuid(id: string | undefined): string {
 
 // Runtime fallback flag in case of connection timeouts or explicit mock request
 let useMockFallback = false;
+let databaseSchemaMissing = false;
 let pingPromise: Promise<boolean> | null = null;
 
 export function setMockFallback(value: boolean) {
   useMockFallback = value;
 }
 
+export function hasLiveCredentials(): boolean {
+  const config = getDbConfig();
+  const urlValid = !!config.url && config.url.startsWith('http') && !config.url.includes('placeholder') && !config.url.includes('your-') && !config.url.includes('example.com');
+  const keyValid = !!config.anonKey && config.anonKey.length > 20 && !config.anonKey.includes('placeholder');
+  return urlValid && keyValid;
+}
+
 export function isMockFallbackActive(): boolean {
+  if (useMockFallback) {
+    return true;
+  }
+  if (hasLiveCredentials()) {
+    return false;
+  }
   return useMockFallback;
+}
+
+export function isDatabaseSchemaMissing(): boolean {
+  return databaseSchemaMissing;
 }
 
 export async function checkDatabaseConnection(): Promise<boolean> {
   const config = getDbConfig();
   if (config.useMock || !config.url || !config.anonKey) {
     setMockFallback(true);
+    databaseSchemaMissing = false;
     return false;
   }
   if (config.url.includes('placeholder') || config.url.includes('your-') || config.url.includes('example.com')) {
     setMockFallback(true);
+    databaseSchemaMissing = false;
     return false;
   }
 
   const client = getRawSupabase();
   if (!client) {
     setMockFallback(true);
+    databaseSchemaMissing = false;
     return false;
   }
 
@@ -145,22 +166,35 @@ export async function checkDatabaseConnection(): Promise<boolean> {
     try {
       const { error } = await client.from('website_settings').select('id').limit(1);
       if (error) {
-        // If we get a DB/Postgrest error (like table not found 42P01 or PGRST116), it means connection succeeded!
-        const isDbError = !!(error.code || (error as any).status || error.message?.includes('relation') || error.message?.includes('fetch'));
+        // If table doesn't exist (relation not found/42P01), connection is verified but tables are missing
+        const isTableMissing = error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist');
+        if (isTableMissing) {
+          console.warn('Supabase connection verified but required table schemas are missing. Falling back to mock database mode to prevent errors.');
+          databaseSchemaMissing = true;
+          setMockFallback(true);
+          return true;
+        }
+
+        // If we get another DB/Postgrest error, it means connection succeeded!
+        const isDbError = !!(error.code || (error as any).status || error.message?.includes('fetch'));
         if (isDbError) {
           console.log('Supabase connection verified successfully (database server is reachable).');
+          databaseSchemaMissing = false;
           setMockFallback(false);
           return true;
         }
         console.warn('Database connection check failed:', error);
+        databaseSchemaMissing = false;
         setMockFallback(true);
         return false;
       }
       console.log('Supabase connection verified successfully.');
+      databaseSchemaMissing = false;
       setMockFallback(false);
       return true;
     } catch (err) {
       console.error('Database connection check error:', err);
+      databaseSchemaMissing = false;
       setMockFallback(true);
       return false;
     }
@@ -215,9 +249,11 @@ export function getSupabase(): SupabaseClient | null {
   if (useMockFallback) {
     return null;
   }
-  const config = getDbConfig();
-  if (config.useMock) {
-    return null;
+  if (!hasLiveCredentials()) {
+    const config = getDbConfig();
+    if (config.useMock) {
+      return null;
+    }
   }
   const rawClient = getRawSupabase();
   if (!rawClient) {
@@ -1489,9 +1525,11 @@ export const db = {
             og_image: settings.seo.ogImage
           }
         };
-        await supabase.from('website_settings').upsert({ id: ensureUuid(settings.id), ...dbData });
+        const { error } = await supabase.from('website_settings').upsert({ id: ensureUuid(settings.id), ...dbData });
+        if (error) throw error;
       } catch (e) {
-        console.warn('Failed to update website_settings:', e);
+        console.error('Failed to update website_settings:', e);
+        throw e;
       }
     }
     this.logActivity('Settings Modified', 'Global corporate contact, theme, and SEO fields updated.');
@@ -1541,22 +1579,20 @@ export const db = {
   async saveHeroSlides(slides: HeroSlide[]): Promise<HeroSlide[]> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        await supabase.from('hero_slides').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        const dbSlides = slides.map(slide => ({
-          id: ensureUuid(slide.id),
-          title: slide.title,
-          subtitle: slide.subtitle,
-          image_url: slide.imageUrl,
-          cta_text: slide.ctaText,
-          cta_link: slide.ctaLink,
-          display_order: slide.order,
-          is_active: true
-        }));
-        await supabase.from('hero_slides').insert(dbSlides);
-      } catch (e) {
-        console.warn('Failed to save hero_slides:', e);
-      }
+      const { error: delError } = await supabase.from('hero_slides').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (delError) throw delError;
+      const dbSlides = slides.map(slide => ({
+        id: ensureUuid(slide.id),
+        title: slide.title,
+        subtitle: slide.subtitle,
+        image_url: slide.imageUrl,
+        cta_text: slide.ctaText,
+        cta_link: slide.ctaLink,
+        display_order: slide.order,
+        is_active: true
+      }));
+      const { error: insError } = await supabase.from('hero_slides').insert(dbSlides);
+      if (insError) throw insError;
     }
     this.logActivity('Hero Slides Updated', `Reordered and updated ${slides.length} home banner slides.`);
     return slides;
@@ -1603,17 +1639,14 @@ export const db = {
   async updateAbout(about: AboutSection): Promise<AboutSection> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = {
-          title: about.title,
-          description: about.description,
-          image_url: about.image,
-          is_active: about.is_active !== false
-        };
-        await supabase.from('about_section').upsert({ id: ensureUuid(about.id), ...dbData });
-      } catch (e) {
-        console.warn('Failed to update about_section:', e);
-      }
+      const dbData = {
+        title: about.title,
+        description: about.description,
+        image_url: about.image,
+        is_active: about.is_active !== false
+      };
+      const { error } = await supabase.from('about_section').upsert({ id: ensureUuid(about.id), ...dbData });
+      if (error) throw error;
     }
     this.logActivity('About Section Modified', 'Updated company vision, mission, and historic milestones.');
     return about;
@@ -1672,22 +1705,19 @@ export const db = {
   async saveService(service: ServiceItem): Promise<ServiceItem> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = {
-          title: service.title,
-          description: service.description,
-          detailed_description: service.detailedDescription,
-          icon: service.icon,
-          image_url: service.imageUrl,
-          features: service.features || [],
-          benefits: service.benefits || [],
-          display_order: service.order || 0,
-          is_active: service.isActive !== false
-        };
-        await supabase.from('services').upsert({ id: ensureUuid(service.id), ...dbData });
-      } catch (err) {
-        console.warn('Failed to save service:', err);
-      }
+      const dbData = {
+        title: service.title,
+        description: service.description,
+        detailed_description: service.detailedDescription,
+        icon: service.icon,
+        image_url: service.imageUrl,
+        features: service.features || [],
+        benefits: service.benefits || [],
+        display_order: service.order || 0,
+        is_active: service.isActive !== false
+      };
+      const { error } = await supabase.from('services').upsert({ id: ensureUuid(service.id), ...dbData });
+      if (error) throw error;
     }
     this.logActivity('Service Configured', `Created/Modified IT Service: "${service.title}".`);
     return service;
@@ -1696,7 +1726,8 @@ export const db = {
   async deleteService(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('services').delete().eq('id', id);
+      const { error } = await supabase.from('services').delete().eq('id', id);
+      if (error) throw error;
     }
     this.logActivity('Service Removed', `Deleted service item reference. ID: ${id}`);
     return true;
@@ -1705,23 +1736,20 @@ export const db = {
   async saveServices(services: ServiceItem[]): Promise<ServiceItem[]> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = services.map(s => ({
-          id: ensureUuid(s.id),
-          title: s.title,
-          description: s.description,
-          detailed_description: s.detailedDescription,
-          icon: s.icon,
-          image_url: s.imageUrl,
-          features: s.features || [],
-          benefits: s.benefits || [],
-          display_order: s.order || 0,
-          is_active: s.isActive !== false
-        }));
-        await supabase.from('services').upsert(dbData);
-      } catch (err) {
-        console.warn('Failed to save services:', err);
-      }
+      const dbData = services.map(s => ({
+        id: ensureUuid(s.id),
+        title: s.title,
+        description: s.description,
+        detailed_description: s.detailedDescription,
+        icon: s.icon,
+        image_url: s.imageUrl,
+        features: s.features || [],
+        benefits: s.benefits || [],
+        display_order: s.order || 0,
+        is_active: s.isActive !== false
+      }));
+      const { error } = await supabase.from('services').upsert(dbData);
+      if (error) throw error;
     }
     this.logActivity('Services Reordered', 'Reordered Services directory items.');
     return services;
@@ -1756,7 +1784,8 @@ export const db = {
   async saveInternship(internship: InternshipProgram): Promise<InternshipProgram> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('internships').upsert(internship);
+      const { error } = await supabase.from('internships').upsert(internship);
+      if (error) throw error;
     }
     this.logActivity('Internship Modified', `Syllabus/Pricing for "${internship.title}" updated.`);
     return internship;
@@ -1765,7 +1794,8 @@ export const db = {
   async saveInternships(list: InternshipProgram[]): Promise<InternshipProgram[]> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('internships').upsert(list);
+      const { error } = await supabase.from('internships').upsert(list);
+      if (error) throw error;
     }
     this.logActivity('Internships Reordered', 'Reordered internship items sequence.');
     return list;
@@ -1774,7 +1804,8 @@ export const db = {
   async deleteInternship(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('internships').delete().eq('id', id);
+      const { error } = await supabase.from('internships').delete().eq('id', id);
+      if (error) throw error;
     }
     this.logActivity('Internship Removed', `Deleted internship offering. ID: ${id}`);
     return true;
@@ -1805,7 +1836,8 @@ export const db = {
   async saveCourse(course: CourseItem): Promise<CourseItem> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('courses').upsert(course);
+      const { error } = await supabase.from('courses').upsert(course);
+      if (error) throw error;
     }
     this.logActivity('Course Updated', `Enterprise training course "${course.title}" updated.`);
     return course;
@@ -1814,7 +1846,8 @@ export const db = {
   async saveCourses(list: CourseItem[]): Promise<CourseItem[]> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('courses').upsert(list);
+      const { error } = await supabase.from('courses').upsert(list);
+      if (error) throw error;
     }
     this.logActivity('Courses Reordered', 'Reordered courses items sequence.');
     return list;
@@ -1823,7 +1856,8 @@ export const db = {
   async deleteCourse(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('courses').delete().eq('id', id);
+      const { error } = await supabase.from('courses').delete().eq('id', id);
+      if (error) throw error;
     }
     this.logActivity('Course Deleted', `Deleted course item. ID: ${id}`);
     return true;
@@ -1886,24 +1920,21 @@ export const db = {
   async saveProgram(program: ProgramItem): Promise<ProgramItem> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = {
-          title: program.title,
-          category: program.category,
-          duration: program.duration,
-          description: program.description,
-          cover_image: program.cover_image,
-          mode: program.mode,
-          syllabus: program.syllabus || [],
-          badges: program.badges || [],
-          display_order: program.display_order,
-          is_active: program.is_active !== false,
-          price: 0
-        };
-        await supabase.from('programs').upsert({ id: ensureUuid(program.id), ...dbData });
-      } catch (err) {
-        console.warn('Failed to save program:', err);
-      }
+      const dbData = {
+        title: program.title,
+        category: program.category,
+        duration: program.duration,
+        description: program.description,
+        cover_image: program.cover_image,
+        mode: program.mode,
+        syllabus: program.syllabus || [],
+        badges: program.badges || [],
+        display_order: program.display_order,
+        is_active: program.is_active !== false,
+        price: 0
+      };
+      const { error } = await supabase.from('programs').upsert({ id: ensureUuid(program.id), ...dbData });
+      if (error) throw error;
     }
     this.logActivity('Program Modified', `Program offering "${program.title}" updated.`);
     return program;
@@ -1912,25 +1943,22 @@ export const db = {
   async savePrograms(list: ProgramItem[]): Promise<ProgramItem[]> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = list.map(program => ({
-          id: ensureUuid(program.id),
-          title: program.title,
-          category: program.category,
-          duration: program.duration,
-          description: program.description,
-          cover_image: program.cover_image,
-          mode: program.mode,
-          syllabus: program.syllabus || [],
-          badges: program.badges || [],
-          display_order: program.display_order,
-          is_active: program.is_active !== false,
-          price: 0
-        }));
-        await supabase.from('programs').upsert(dbData);
-      } catch (err) {
-        console.warn('Failed to save programs:', err);
-      }
+      const dbData = list.map(program => ({
+        id: ensureUuid(program.id),
+        title: program.title,
+        category: program.category,
+        duration: program.duration,
+        description: program.description,
+        cover_image: program.cover_image,
+        mode: program.mode,
+        syllabus: program.syllabus || [],
+        badges: program.badges || [],
+        display_order: program.display_order,
+        is_active: program.is_active !== false,
+        price: 0
+      }));
+      const { error } = await supabase.from('programs').upsert(dbData);
+      if (error) throw error;
     }
     this.logActivity('Programs Reordered', 'Reordered program offerings sequence.');
     return list;
@@ -1939,7 +1967,8 @@ export const db = {
   async deleteProgram(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('programs').delete().eq('id', id);
+      const { error } = await supabase.from('programs').delete().eq('id', id);
+      if (error) throw error;
     }
     this.logActivity('Program Removed', `Deleted program offering. ID: ${id}`);
     return true;
@@ -1966,7 +1995,8 @@ export const db = {
   async saveGalleryAlbum(album: GalleryAlbum): Promise<GalleryAlbum> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('albums').upsert(album);
+      const { error } = await supabase.from('albums').upsert(album);
+      if (error) throw error;
     }
     this.logActivity('Gallery Album Saved', `Created/Modified photo album "${album.title}".`);
     return album;
@@ -1975,7 +2005,8 @@ export const db = {
   async deleteGalleryAlbum(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('albums').delete().eq('id', id);
+      const { error } = await supabase.from('albums').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -2024,18 +2055,15 @@ export const db = {
   async saveGalleryItem(item: GalleryItem): Promise<GalleryItem> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = {
-          title: item.title,
-          category: item.category,
-          type: item.type,
-          media_url: item.url,
-          is_active: true
-        };
-        await supabase.from('gallery').upsert({ id: ensureUuid(item.id), ...dbData });
-      } catch (err) {
-        console.error('saveGalleryItem error:', err);
-      }
+      const dbData = {
+        title: item.title,
+        category: item.category,
+        type: item.type,
+        media_url: item.url,
+        is_active: true
+      };
+      const { error } = await supabase.from('gallery').upsert({ id: ensureUuid(item.id), ...dbData });
+      if (error) throw error;
     }
     return item;
   },
@@ -2043,7 +2071,8 @@ export const db = {
   async deleteGalleryItem(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('gallery').delete().eq('id', id);
+      const { error } = await supabase.from('gallery').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -2104,23 +2133,20 @@ export const db = {
   async saveTeamMember(member: TeamMember): Promise<TeamMember> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = {
-          name: member.name,
-          designation: member.designation,
-          photo_url: member.photoUrl,
-          bio: member.bio || '',
-          social_links: {
-            linkedin: member.socialLinks?.linkedin || '',
-            twitter: member.socialLinks?.twitter || ''
-          },
-          display_order: member.order || 0,
-          is_active: true
-        };
-        await supabase.from('team_members').upsert({ id: ensureUuid(member.id), ...dbData });
-      } catch (err) {
-        console.warn('Failed to save team_member:', err);
-      }
+      const dbData = {
+        name: member.name,
+        designation: member.designation,
+        photo_url: member.photoUrl,
+        bio: member.bio || '',
+        social_links: {
+          linkedin: member.socialLinks?.linkedin || '',
+          twitter: member.socialLinks?.twitter || ''
+        },
+        display_order: member.order || 0,
+        is_active: true
+      };
+      const { error } = await supabase.from('team_members').upsert({ id: ensureUuid(member.id), ...dbData });
+      if (error) throw error;
     }
     this.logActivity('Team Member Saved', `Added or updated team sheet for ${member.name}.`);
     return member;
@@ -2129,7 +2155,8 @@ export const db = {
   async deleteTeamMember(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('team_members').delete().eq('id', id);
+      const { error } = await supabase.from('team_members').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -2198,25 +2225,22 @@ export const db = {
   async saveTestimonial(testimonial: TestimonialItem): Promise<TestimonialItem> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = {
-          name: testimonial.name,
-          avatar_url: testimonial.avatarUrl || '',
-          company: testimonial.companyOrCollege || testimonial.company || '',
-          designation: testimonial.designation || '',
-          rating: testimonial.rating || 5,
-          type: testimonial.type || 'Student',
-          review_text: testimonial.text || '',
-          video_url: testimonial.videoUrl || '',
-          linkedin_url: testimonial.linkedin || '',
-          is_verified: testimonial.is_verified !== false,
-          display_order: testimonial.display_order || 0,
-          is_active: testimonial.is_active !== false
-        };
-        await supabase.from('testimonials').upsert({ id: ensureUuid(testimonial.id), ...dbData });
-      } catch (err) {
-        console.error('saveTestimonial error:', err);
-      }
+      const dbData = {
+        name: testimonial.name,
+        avatar_url: testimonial.avatarUrl || '',
+        company: testimonial.companyOrCollege || testimonial.company || '',
+        designation: testimonial.designation || '',
+        rating: testimonial.rating || 5,
+        type: testimonial.type || 'Student',
+        review_text: testimonial.text || '',
+        video_url: testimonial.videoUrl || '',
+        linkedin_url: testimonial.linkedin || '',
+        is_verified: testimonial.is_verified !== false,
+        display_order: testimonial.display_order || 0,
+        is_active: testimonial.is_active !== false
+      };
+      const { error } = await supabase.from('testimonials').upsert({ id: ensureUuid(testimonial.id), ...dbData });
+      if (error) throw error;
     }
     this.logActivity('Testimonial Added', `Saved review from "${testimonial.name}".`);
     return testimonial;
@@ -2225,7 +2249,8 @@ export const db = {
   async deleteTestimonial(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('testimonials').delete().eq('id', id);
+      const { error } = await supabase.from('testimonials').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -2255,7 +2280,8 @@ export const db = {
   async saveJob(job: JobListing): Promise<JobListing> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('jobs').upsert(job);
+      const { error } = await supabase.from('jobs').upsert(job);
+      if (error) throw error;
     }
     this.logActivity('Career Job Configured', `Saved recruitment post for "${job.title}".`);
     return job;
@@ -2264,7 +2290,8 @@ export const db = {
   async deleteJob(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('jobs').delete().eq('id', id);
+      const { error } = await supabase.from('jobs').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -2294,7 +2321,8 @@ export const db = {
   async createApplication(app: JobApplication): Promise<JobApplication> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('applications').insert(app);
+      const { error } = await supabase.from('applications').insert(app);
+      if (error) throw error;
     }
 
     // Create system notification
@@ -2313,7 +2341,8 @@ export const db = {
   async updateApplicationStatus(id: string, status: JobApplication['status']): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('applications').update({ status }).eq('id', id);
+      const { error } = await supabase.from('applications').update({ status }).eq('id', id);
+      if (error) throw error;
     }
     this.logActivity('Application Processed', `Updated applicant status to ${status}.`);
     return true;
@@ -2322,7 +2351,8 @@ export const db = {
   async deleteApplication(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('applications').delete().eq('id', id);
+      const { error } = await supabase.from('applications').delete().eq('id', id);
+      if (error) throw error;
     }
     this.logActivity('Application Deleted', `Removed application reference. ID: ${id}`);
     return true;
@@ -2380,20 +2410,17 @@ export const db = {
   async createContactMessage(msg: ContactMessage): Promise<ContactMessage> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = {
-          name: msg.name,
-          email: msg.email,
-          phone: msg.phone || '',
-          subject: msg.subject || '',
-          message: msg.message,
-          is_read: msg.isRead ?? false,
-          created_at: msg.createdAt || new Date().toISOString()
-        };
-        await supabase.from('contact_messages').insert({ id: ensureUuid(msg.id), ...dbData });
-      } catch (err) {
-        console.error('Failed to insert contact_message:', err);
-      }
+      const dbData = {
+        name: msg.name,
+        email: msg.email,
+        phone: msg.phone || '',
+        subject: msg.subject || '',
+        message: msg.message,
+        is_read: msg.isRead ?? false,
+        created_at: msg.createdAt || new Date().toISOString()
+      };
+      const { error } = await supabase.from('contact_messages').insert({ id: ensureUuid(msg.id), ...dbData });
+      if (error) throw error;
     }
 
     // Notification
@@ -2412,11 +2439,8 @@ export const db = {
   async markContactMessageRead(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        await supabase.from('contact_messages').update({ is_read: true }).eq('id', ensureUuid(id));
-      } catch (err) {
-        console.error('Failed to mark read:', err);
-      }
+      const { error } = await supabase.from('contact_messages').update({ is_read: true }).eq('id', ensureUuid(id));
+      if (error) throw error;
     }
     return true;
   },
@@ -2424,11 +2448,8 @@ export const db = {
   async deleteContactMessage(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        await supabase.from('contact_messages').delete().eq('id', ensureUuid(id));
-      } catch (err) {
-        console.error('Failed to delete contact message:', err);
-      }
+      const { error } = await supabase.from('contact_messages').delete().eq('id', ensureUuid(id));
+      if (error) throw error;
     }
     this.logActivity('Contact Inquiry Deleted', `Removed support ticket ID: ${id}`);
     return true;
@@ -2495,28 +2516,25 @@ export const db = {
   async saveBlogPost(post: BlogPost): Promise<BlogPost> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = {
-          title: post.title,
-          slug: post.slug,
-          content: post.content,
-          excerpt: post.excerpt,
-          category: post.category,
-          tags: post.tags || [],
-          cover_image_url: post.imageUrl,
-          is_featured: post.featured !== false,
-          author_name: post.author || 'Zentriya Admin',
-          author_avatar_url: '/logo.png',
-          author_designation: 'Administrator',
-          read_time_minutes: Math.ceil(post.content.split(/\s+/).length / 200) || 5,
-          seo_title: post.seoTitle || '',
-          seo_description: post.seoDescription || '',
-          is_active: true
-        };
-        await supabase.from('blogs').upsert({ id: post.id, ...dbData });
-      } catch (err) {
-        console.warn('Failed to save blog post:', err);
-      }
+      const dbData = {
+        title: post.title,
+        slug: post.slug,
+        content: post.content,
+        excerpt: post.excerpt,
+        category: post.category,
+        tags: post.tags || [],
+        cover_image_url: post.imageUrl,
+        is_featured: post.featured !== false,
+        author_name: post.author || 'Zentriya Admin',
+        author_avatar_url: '/logo.png',
+        author_designation: 'Administrator',
+        read_time_minutes: Math.ceil(post.content.split(/\s+/).length / 200) || 5,
+        seo_title: post.seoTitle || '',
+        seo_description: post.seoDescription || '',
+        is_active: true
+      };
+      const { error } = await supabase.from('blogs').upsert({ id: post.id, ...dbData });
+      if (error) throw error;
     }
     this.logActivity('Blog Post Written', `Published blog post: "${post.title}".`);
     return post;
@@ -2525,7 +2543,8 @@ export const db = {
   async deleteBlogPost(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('blogs').delete().eq('id', id);
+      const { error } = await supabase.from('blogs').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -2559,7 +2578,8 @@ export const db = {
   async saveFaq(faq: FaqItem): Promise<FaqItem> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('faqs').upsert(faq);
+      const { error } = await supabase.from('faqs').upsert(faq);
+      if (error) throw error;
     }
     return faq;
   },
@@ -2567,7 +2587,8 @@ export const db = {
   async deleteFaq(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('faqs').delete().eq('id', id);
+      const { error } = await supabase.from('faqs').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -2634,7 +2655,8 @@ export const db = {
   async savePlacementStat(stat: PlacementStat): Promise<PlacementStat> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('placement_stats').upsert(stat);
+      const { error } = await supabase.from('placement_stats').upsert(stat);
+      if (error) throw error;
     }
     return stat;
   },
@@ -2642,7 +2664,8 @@ export const db = {
   async deletePlacementStat(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('placement_stats').delete().eq('id', id);
+      const { error } = await supabase.from('placement_stats').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -2711,26 +2734,22 @@ export const db = {
   async savePlacement(placement: Placement): Promise<Placement> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = {
-          student_name: placement.student_name,
-          student_photo: placement.photo,
-          company_name: placement.company_name,
-          company_logo: placement.company_logo,
-          job_role: placement.job_role,
-          degree: placement.degree || '',
-          batch: placement.batch || '',
-          package_lpa: placement.package !== undefined ? Number(placement.package) : null,
-          show_package: placement.show_package ?? true,
-          placement_badge: placement.placement_badge || '',
-          display_order: placement.display_order,
-          is_active: placement.is_active ?? true
-        };
-        const { error } = await supabase.from('placements').upsert({ id: ensureUuid(placement.id), ...dbData });
-        if (error) console.error('Supabase savePlacement failed:', error);
-      } catch (err) {
-        console.error('savePlacement exception:', err);
-      }
+      const dbData = {
+        student_name: placement.student_name,
+        student_photo: placement.photo,
+        company_name: placement.company_name,
+        company_logo: placement.company_logo,
+        job_role: placement.job_role,
+        degree: placement.degree || '',
+        batch: placement.batch || '',
+        package_lpa: placement.package !== undefined ? Number(placement.package) : null,
+        show_package: placement.show_package ?? true,
+        placement_badge: placement.placement_badge || '',
+        display_order: placement.display_order,
+        is_active: placement.is_active ?? true
+      };
+      const { error } = await supabase.from('placements').upsert({ id: ensureUuid(placement.id), ...dbData });
+      if (error) throw error;
     }
     return placement;
   },
@@ -2738,7 +2757,8 @@ export const db = {
   async deletePlacement(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('placements').delete().eq('id', id);
+      const { error } = await supabase.from('placements').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -2747,25 +2767,22 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       for (const item of items) {
-        try {
-          const dbData = {
-            student_name: item.student_name,
-            student_photo: item.photo,
-            company_name: item.company_name,
-            company_logo: item.company_logo,
-            job_role: item.job_role,
-            degree: item.degree || '',
-            batch: item.batch || '',
-            package_lpa: item.package !== undefined ? Number(item.package) : null,
-            show_package: item.show_package ?? true,
-            placement_badge: item.placement_badge || '',
-            display_order: item.display_order,
-            is_active: item.is_active ?? true
-          };
-          await supabase.from('placements').upsert({ id: ensureUuid(item.id), ...dbData });
-        } catch (e) {
-          console.error('Failed to reorder placements item:', e);
-        }
+        const dbData = {
+          student_name: item.student_name,
+          student_photo: item.photo,
+          company_name: item.company_name,
+          company_logo: item.company_logo,
+          job_role: item.job_role,
+          degree: item.degree || '',
+          batch: item.batch || '',
+          package_lpa: item.package !== undefined ? Number(item.package) : null,
+          show_package: item.show_package ?? true,
+          placement_badge: item.placement_badge || '',
+          display_order: item.display_order,
+          is_active: item.is_active ?? true
+        };
+        const { error } = await supabase.from('placements').upsert({ id: ensureUuid(item.id), ...dbData });
+        if (error) throw error;
       }
     }
   },
@@ -2804,7 +2821,8 @@ export const db = {
         ...cp,
         id: ensureUuid(cp.id)
       };
-      await supabase.from('client_partners').upsert(dbCP);
+      const { error } = await supabase.from('client_partners').upsert(dbCP);
+      if (error) throw error;
     }
     return cp;
   },
@@ -2812,7 +2830,8 @@ export const db = {
   async deleteClientPartner(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('client_partners').delete().eq('id', id);
+      const { error } = await supabase.from('client_partners').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -2947,15 +2966,12 @@ export const db = {
   async saveWhyChooseUsItem(item: WhyChooseUsItem): Promise<WhyChooseUsItem> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = {
-          ...item,
-          id: ensureUuid(item.id)
-        };
-        await supabase.from('why_choose_us').upsert(dbData);
-      } catch (e) {
-        console.warn("Supabase upsert warning:", e);
-      }
+      const dbData = {
+        ...item,
+        id: ensureUuid(item.id)
+      };
+      const { error } = await supabase.from('why_choose_us').upsert(dbData);
+      if (error) throw error;
     }
     return item;
   },
@@ -2963,7 +2979,8 @@ export const db = {
   async deleteWhyChooseUsItem(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('why_choose_us').delete().eq('id', id);
+      const { error } = await supabase.from('why_choose_us').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -2977,7 +2994,8 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       for (const item of updated) {
-        await supabase.from('why_choose_us').upsert(item);
+        const { error } = await supabase.from('why_choose_us').upsert(item);
+        if (error) throw error;
       }
     }
   },
@@ -3005,7 +3023,8 @@ export const db = {
   async saveStudentJourneyStep(step: StudentJourneyStep): Promise<StudentJourneyStep> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('student_journey').upsert(step);
+      const { error } = await supabase.from('student_journey').upsert(step);
+      if (error) throw error;
     }
     return step;
   },
@@ -3013,7 +3032,8 @@ export const db = {
   async deleteStudentJourneyStep(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      await supabase.from('student_journey').delete().eq('id', id);
+      const { error } = await supabase.from('student_journey').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -3026,7 +3046,8 @@ export const db = {
     const supabase = getSupabase();
     if (supabase) {
       for (const item of updated) {
-        await supabase.from('student_journey').upsert(item);
+        const { error } = await supabase.from('student_journey').upsert(item);
+        if (error) throw error;
       }
     }
   },
@@ -3075,18 +3096,15 @@ export const db = {
   async saveIndustryPartner(partner: IndustryPartner): Promise<IndustryPartner> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        const dbData = {
-          company_name: partner.company_name,
-          logo_url: partner.logo,
-          website_url: partner.website_url || '',
-          display_order: partner.display_order,
-          is_active: partner.is_active
-        };
-        await supabase.from('industry_network').upsert({ id: ensureUuid(partner.id), ...dbData });
-      } catch (err) {
-        console.warn('Failed to save industry_network:', err);
-      }
+      const dbData = {
+        company_name: partner.company_name,
+        logo_url: partner.logo,
+        website_url: partner.website_url || '',
+        display_order: partner.display_order,
+        is_active: partner.is_active
+      };
+      const { error } = await supabase.from('industry_network').upsert({ id: ensureUuid(partner.id), ...dbData });
+      if (error) throw error;
     }
     return partner;
   },
@@ -3094,11 +3112,8 @@ export const db = {
   async deleteIndustryPartner(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        await supabase.from('industry_network').delete().eq('id', id);
-      } catch (err) {
-        console.warn('Failed to delete industry_network:', err);
-      }
+      const { error } = await supabase.from('industry_network').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -3110,19 +3125,16 @@ export const db = {
     }));
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        for (const item of updated) {
-          const dbData = {
-            company_name: item.company_name,
-            logo_url: item.logo,
-            website_url: item.website_url || '',
-            display_order: item.display_order,
-            is_active: item.is_active
-          };
-          await supabase.from('industry_network').upsert({ id: item.id, ...dbData });
-        }
-      } catch (err) {
-        console.warn('Failed to save industry_network order:', err);
+      for (const item of updated) {
+        const dbData = {
+          company_name: item.company_name,
+          logo_url: item.logo,
+          website_url: item.website_url || '',
+          display_order: item.display_order,
+          is_active: item.is_active
+        };
+        const { error } = await supabase.from('industry_network').upsert({ id: item.id, ...dbData });
+        if (error) throw error;
       }
     }
   },
@@ -3154,11 +3166,8 @@ export const db = {
   async saveArticle(article: Article): Promise<Article> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        await supabase.from('articles').upsert(article);
-      } catch (e) {
-        console.warn('Supabase upsert failed for article:', e);
-      }
+      const { error } = await supabase.from('articles').upsert(article);
+      if (error) throw error;
     }
     this.logActivity('Article Saved', `Saved tech article: "${article.title}".`);
     return article;
@@ -3167,11 +3176,8 @@ export const db = {
   async deleteArticle(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        await supabase.from('articles').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Supabase delete failed for article:', e);
-      }
+      const { error } = await supabase.from('articles').delete().eq('id', id);
+      if (error) throw error;
     }
     this.logActivity('Article Deleted', `Deleted tech article with ID: ${id}`);
     return true;
@@ -3184,12 +3190,9 @@ export const db = {
     }));
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        for (const item of updated) {
-          await supabase.from('articles').upsert(item);
-        }
-      } catch (e) {
-        console.warn('Supabase upsert order failed for articles:', e);
+      for (const item of updated) {
+        const { error } = await supabase.from('articles').upsert(item);
+        if (error) throw error;
       }
     }
   },
@@ -3221,11 +3224,8 @@ export const db = {
   async saveArticleCategory(category: ArticleCategory): Promise<ArticleCategory> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        await supabase.from('article_categories').upsert(category);
-      } catch (e) {
-        console.warn('Supabase upsert failed for category:', e);
-      }
+      const { error } = await supabase.from('article_categories').upsert(category);
+      if (error) throw error;
     }
     return category;
   },
@@ -3233,11 +3233,8 @@ export const db = {
   async deleteArticleCategory(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        await supabase.from('article_categories').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Supabase delete failed for category:', e);
-      }
+      const { error } = await supabase.from('article_categories').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },
@@ -3269,11 +3266,8 @@ export const db = {
   async saveArticleStatistic(stat: ArticleStatistic): Promise<ArticleStatistic> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        await supabase.from('article_statistics').upsert(stat);
-      } catch (e) {
-        console.warn('Supabase upsert failed for statistic:', e);
-      }
+      const { error } = await supabase.from('article_statistics').upsert(stat);
+      if (error) throw error;
     }
     return stat;
   },
@@ -3281,11 +3275,8 @@ export const db = {
   async deleteArticleStatistic(id: string): Promise<boolean> {
     const supabase = getSupabase();
     if (supabase) {
-      try {
-        await supabase.from('article_statistics').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Supabase delete failed for statistic:', e);
-      }
+      const { error } = await supabase.from('article_statistics').delete().eq('id', id);
+      if (error) throw error;
     }
     return true;
   },

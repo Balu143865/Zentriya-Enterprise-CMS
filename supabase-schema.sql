@@ -520,3 +520,254 @@ FOR DELETE USING (
   AND public.is_admin()
 );
 -- =========================================================
+
+-- =========================================================
+-- ADDITIONAL MODULES & COMPLEMENTARY SCHEMAS
+-- =========================================================
+-- Added automatically to match application client services
+
+-- 1. Courses Table
+CREATE TABLE IF NOT EXISTS courses (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    duration TEXT,
+    category TEXT,
+    description TEXT,
+    syllabus JSONB DEFAULT '[]'::jsonb,
+    price NUMERIC,
+    "discountPrice" NUMERIC,
+    mode TEXT,
+    features JSONB DEFAULT '[]'::jsonb,
+    "bannerUrl" TEXT,
+    "isActive" BOOLEAN DEFAULT true,
+    "order" INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Internships Table
+CREATE TABLE IF NOT EXISTS internships (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    duration TEXT,
+    technology TEXT,
+    mode TEXT,
+    description TEXT,
+    price NUMERIC,
+    "discountPrice" NUMERIC,
+    features JSONB DEFAULT '[]'::jsonb,
+    "certificateDetails" TEXT,
+    "bannerUrl" TEXT,
+    "isActive" BOOLEAN DEFAULT true,
+    "order" INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. FAQs Table
+CREATE TABLE IF NOT EXISTS faqs (
+    id TEXT PRIMARY KEY,
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    category TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. Jobs / Careers Table
+CREATE TABLE IF NOT EXISTS jobs (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    department TEXT,
+    location TEXT,
+    type TEXT,
+    experience TEXT,
+    description TEXT,
+    requirements JSONB DEFAULT '[]'::jsonb,
+    responsibilities JSONB DEFAULT '[]'::jsonb,
+    "salaryRange" TEXT,
+    "isActive" BOOLEAN DEFAULT true,
+    "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. Applications Table
+CREATE TABLE IF NOT EXISTS applications (
+    id TEXT PRIMARY KEY,
+    "jobId" TEXT,
+    "jobTitle" TEXT,
+    "fullName" TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT,
+    "experienceYears" NUMERIC,
+    "resumeUrl" TEXT,
+    "coverLetter" TEXT,
+    status TEXT DEFAULT 'Pending',
+    "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 6. Activity Logs Table
+CREATE TABLE IF NOT EXISTS activity_logs (
+    id TEXT PRIMARY KEY,
+    "userId" TEXT,
+    "userName" TEXT,
+    "userRole" TEXT,
+    action TEXT NOT NULL,
+    details TEXT,
+    "ipAddress" TEXT,
+    timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. System Notifications Table
+CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT DEFAULT 'info',
+    "isRead" BOOLEAN DEFAULT false,
+    "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 8. Articles Table
+CREATE TABLE IF NOT EXISTS articles (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    excerpt TEXT,
+    content TEXT,
+    cover_image TEXT,
+    read_time TEXT,
+    read_time_minutes NUMERIC,
+    category TEXT,
+    author_name TEXT,
+    author_image TEXT,
+    author_avatar TEXT,
+    author_designation TEXT,
+    published_date TEXT,
+    published_at TEXT,
+    display_order INTEGER,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 9. Article Categories Table
+CREATE TABLE IF NOT EXISTS article_categories (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    icon TEXT,
+    display_order INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 10. Article Statistics Table
+CREATE TABLE IF NOT EXISTS article_statistics (
+    id TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
+    value TEXT NOT NULL,
+    icon TEXT,
+    display_order INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 11. Gallery Albums Table
+CREATE TABLE IF NOT EXISTS albums (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    category TEXT,
+    "coverImageUrl" TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. Placement Statistics Table
+CREATE TABLE IF NOT EXISTS placement_stats (
+    id TEXT PRIMARY KEY,
+    "studentName" TEXT,
+    "companyName" TEXT,
+    "packageLPA" NUMERIC,
+    "courseOrInternship" TEXT,
+    "studentPhoto" TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 13. Client Partners Table
+CREATE TABLE IF NOT EXISTS client_partners (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    "logoUrl" TEXT,
+    type TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 14. Downloads Table
+CREATE TABLE IF NOT EXISTS downloads (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    "fileUrl" TEXT NOT NULL,
+    category TEXT,
+    "downloadsCount" INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 15. Student Journey Steps Table
+CREATE TABLE IF NOT EXISTS student_journey (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    icon TEXT,
+    display_order INTEGER,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RLS POLICIES FOR ADDITIONAL TABLES
+ALTER TABLE courses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE internships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE faqs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE articles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE article_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE article_statistics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE albums ENABLE ROW LEVEL SECURITY;
+ALTER TABLE placement_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE client_partners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE downloads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE student_journey ENABLE ROW LEVEL SECURITY;
+
+-- Select/read public policies
+CREATE POLICY "Public read courses" ON courses FOR SELECT USING (true);
+CREATE POLICY "Public read internships" ON internships FOR SELECT USING (true);
+CREATE POLICY "Public read faqs" ON faqs FOR SELECT USING (true);
+CREATE POLICY "Public read jobs" ON jobs FOR SELECT USING (true);
+CREATE POLICY "Public read articles" ON articles FOR SELECT USING (true);
+CREATE POLICY "Public read article_categories" ON article_categories FOR SELECT USING (true);
+CREATE POLICY "Public read article_statistics" ON article_statistics FOR SELECT USING (true);
+CREATE POLICY "Public read albums" ON albums FOR SELECT USING (true);
+CREATE POLICY "Public read placement_stats" ON placement_stats FOR SELECT USING (true);
+CREATE POLICY "Public read client_partners" ON client_partners FOR SELECT USING (true);
+CREATE POLICY "Public read downloads" ON downloads FOR SELECT USING (true);
+CREATE POLICY "Public read student_journey" ON student_journey FOR SELECT USING (true);
+
+-- Admin manage policies
+CREATE POLICY "Admin manage courses" ON courses FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage internships" ON internships FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage faqs" ON faqs FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage jobs" ON jobs FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage applications" ON applications FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage activity_logs" ON activity_logs FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage notifications" ON notifications FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage articles" ON articles FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage article_categories" ON article_categories FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage article_statistics" ON article_statistics FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage albums" ON albums FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage placement_stats" ON placement_stats FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage client_partners" ON client_partners FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage downloads" ON downloads FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admin manage student_journey" ON student_journey FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Special rules: Job applications can be inserted by public
+CREATE POLICY "Public insert applications" ON applications FOR INSERT WITH CHECK (true);
+-- =========================================================

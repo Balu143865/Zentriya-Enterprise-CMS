@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { db, getRawSupabase, setMockFallback, isMockFallbackActive } from '../services/db';
+import { db, getRawSupabase, setMockFallback, isMockFallbackActive, isDatabaseSchemaMissing } from '../services/db';
 import { auth } from '../services/auth';
 import { ActivityLog, UserProfile } from '../types';
 import { 
@@ -10,6 +10,40 @@ import {
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import MediaSyncController from '../components/MediaSyncController';
+import DiagnosticUtility from './DiagnosticUtility';
+
+const ALL_TABLE_NAMES = [
+  'admins',
+  'website_settings',
+  'hero_slides',
+  'about_section',
+  'why_choose_us',
+  'services',
+  'programs',
+  'placements',
+  'industry_network',
+  'testimonials',
+  'team_members',
+  'gallery',
+  'blogs',
+  'contact_information',
+  'contact_messages',
+  'courses',
+  'internships',
+  'faqs',
+  'jobs',
+  'applications',
+  'activity_logs',
+  'notifications',
+  'articles',
+  'article_categories',
+  'article_statistics',
+  'albums',
+  'placement_stats',
+  'client_partners',
+  'downloads',
+  'student_journey'
+];
 
 export default function AdminOverview() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
@@ -28,12 +62,17 @@ export default function AdminOverview() {
   // Diagnostics states
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
-  const [tableStates, setTableStates] = useState<Record<string, 'checking' | 'healthy' | 'empty' | 'error' | 'idle'>>({
-    website_settings: 'idle',
-    admins: 'idle',
-    student_journey: 'idle',
-    activity_logs: 'idle',
-    contact_messages: 'idle',
+  
+  // Search and filter states for the table connectivity checks
+  const [tableSearch, setTableSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'healthy' | 'empty' | 'error' | 'idle'>('all');
+
+  const [tableStates, setTableStates] = useState<Record<string, 'checking' | 'healthy' | 'empty' | 'error' | 'idle'>>(() => {
+    const states: Record<string, 'idle'> = {};
+    ALL_TABLE_NAMES.forEach(tbl => {
+      states[tbl] = 'idle';
+    });
+    return states;
   });
   const [envDiagnostics, setEnvDiagnostics] = useState({
     urlSource: 'None',
@@ -141,13 +180,10 @@ export default function AdminOverview() {
     addLog('✔ Client successfully initialized.');
 
     // Initialize checking table states
-    const initialTables = {
-      website_settings: 'checking',
-      admins: 'checking',
-      student_journey: 'checking',
-      activity_logs: 'checking',
-      contact_messages: 'checking',
-    } as const;
+    const initialTables: Record<string, 'checking' | 'healthy' | 'empty' | 'error' | 'idle'> = {};
+    ALL_TABLE_NAMES.forEach(tbl => {
+      initialTables[tbl] = 'checking';
+    });
     setTableStates(initialTables);
 
     // Measure Ping & Latency
@@ -170,33 +206,30 @@ export default function AdminOverview() {
       setConnectionStatus('warning');
       setMockFallback(true);
       setIsFallbackActive(true);
-      setTableStates({
-        website_settings: 'error',
-        admins: 'error',
-        student_journey: 'error',
-        activity_logs: 'error',
-        contact_messages: 'error',
+      const errorStates: Record<string, 'checking' | 'healthy' | 'empty' | 'error' | 'idle'> = {};
+      ALL_TABLE_NAMES.forEach(tbl => {
+        errorStates[tbl] = 'error';
       });
+      setTableStates(errorStates);
       setTestingConnection(false);
       return;
     }
 
     // Checking each core table
-    const tables = ['website_settings', 'admins', 'student_journey', 'activity_logs', 'contact_messages'] as const;
-    for (const tbl of tables) {
+    for (const tbl of ALL_TABLE_NAMES) {
       addLog(`[SCHEMA] Querying table: "${tbl}"...`);
       try {
-        const { data, error } = await rawClient.from(tbl).select('*').limit(2);
+        const { data, error } = await rawClient.from(tbl).select('*').limit(1);
         if (error) {
-          addLog(`  ↳ ❌ Error: ${error.message}`);
+          addLog(`  ↳ ❌ Error on table "${tbl}": ${error.message} (Code: ${error.code || 'unknown'})`);
           setTableStates(prev => ({ ...prev, [tbl]: 'error' }));
         } else {
           const count = data?.length || 0;
-          addLog(`  ↳ ✔ Table verified. Status: Healthy (${count} record${count === 1 ? '' : 's'} fetched)`);
+          addLog(`  ↳ ✔ Table verified: "${tbl}". Status: Healthy (${count} record${count === 1 ? '' : 's'} fetched)`);
           setTableStates(prev => ({ ...prev, [tbl]: count > 0 ? 'healthy' : 'empty' }));
         }
       } catch (err: any) {
-        addLog(`  ↳ ❌ Exception: ${err.message || err}`);
+        addLog(`  ↳ ❌ Exception on table "${tbl}": ${err.message || err}`);
         setTableStates(prev => ({ ...prev, [tbl]: 'error' }));
       }
     }
@@ -250,6 +283,20 @@ export default function AdminOverview() {
   };
 
 
+  const totalTablesCount = ALL_TABLE_NAMES.length;
+  const healthyCount = Object.values(tableStates).filter(s => s === 'healthy').length;
+  const emptyCount = Object.values(tableStates).filter(s => s === 'empty').length;
+  const errorCount = Object.values(tableStates).filter(s => s === 'error').length;
+  const checkingCount = Object.values(tableStates).filter(s => s === 'checking').length;
+  const idleCount = Object.values(tableStates).filter(s => s === 'idle').length;
+
+  const filteredTableEntries = Object.entries(tableStates).filter(([table, state]) => {
+    const matchesSearch = table.toLowerCase().includes(tableSearch.toLowerCase());
+    if (statusFilter === 'all') return matchesSearch;
+    return matchesSearch && state === statusFilter;
+  });
+
+
   return (
     <div id="admin-overview-root" className="space-y-8 animate-fade-in">
       
@@ -284,6 +331,24 @@ export default function AdminOverview() {
           </button>
         </div>
       </div>
+
+      {/* Schema Missing Alert */}
+      {isDatabaseSchemaMissing() && (
+        <div className="bg-amber-500/10 border-2 border-amber-500/30 text-amber-900 dark:text-amber-300 p-5 rounded-3xl flex flex-col md:flex-row items-start md:items-center gap-4 shadow-sm animate-fade-in">
+          <AlertTriangle className="text-amber-500 shrink-0 mt-1 md:mt-0" size={32} />
+          <div className="flex-1 space-y-1">
+            <h4 className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white">
+              Supabase Connected Successfully, but Tables are Missing!
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              The application successfully connected to your Supabase project, but it detected that the required table schemas have not been created yet. The system has automatically fallen back to <strong>Mock Mode</strong> to ensure everything functions perfectly.
+            </p>
+            <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mt-1">
+              💡 To enable full live storage: Go to your Supabase SQL Editor, paste the entire contents of <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono text-[11px] text-slate-800 dark:text-slate-200">supabase-schema.sql</code>, and click Run.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Media Synchronization Controller */}
       <MediaSyncController />
@@ -660,47 +725,161 @@ export default function AdminOverview() {
                 <div className="lg:col-span-7 flex flex-col space-y-5">
                   
                   {/* Schema validation card */}
-                  <div className="bg-slate-50 dark:bg-slate-950 border border-slate-150 dark:border-slate-850 p-5 rounded-2xl space-y-3">
-                    <div className="flex items-center gap-2 border-b dark:border-slate-800 pb-2">
-                      <Database className="text-emerald-500" size={15} />
-                      <h4 className="text-xs font-bold uppercase text-slate-900 dark:text-white tracking-wide">
-                        Supabase Live Schema Checks
-                      </h4>
+                  <div className="bg-slate-50 dark:bg-slate-950 border border-slate-150 dark:border-slate-850 p-5 rounded-2xl space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b dark:border-slate-800 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Database className="text-emerald-500" size={16} />
+                        <h4 className="text-xs font-bold uppercase text-slate-900 dark:text-white tracking-wide">
+                          Supabase Live Schema Checks
+                        </h4>
+                      </div>
+                      <span className="text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-350 px-2 py-0.5 rounded-full font-semibold font-mono">
+                        {healthyCount + emptyCount} / {totalTablesCount} Tables Connected
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
-                      {Object.entries(tableStates).map(([table, state]) => (
-                        <div key={table} className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl shadow-sm">
-                          <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                            {table}
-                          </span>
-                          
-                          {state === 'checking' && (
-                            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
-                          )}
-                          {state === 'healthy' && (
-                            <span className="text-emerald-500 flex items-center gap-1 text-[10px] font-bold">
-                              <CheckCircle2 size={13} />
-                              Healthy
-                            </span>
-                          )}
-                          {state === 'empty' && (
-                            <span className="text-blue-400 flex items-center gap-1 text-[10px] font-semibold">
-                              <Info size={13} />
-                              Empty
-                            </span>
-                          )}
-                          {state === 'error' && (
-                            <span className="text-red-500 flex items-center gap-1 text-[10px] font-bold">
-                              <XCircle size={13} />
-                              Unreachable
-                            </span>
-                          )}
-                          {state === 'idle' && (
-                            <span className="text-slate-400 text-[10px]">Unchecked</span>
-                          )}
+                    {/* Quick status summary cards */}
+                    <div className="grid grid-cols-5 gap-2 text-center text-[10px] font-bold">
+                      <button 
+                        type="button"
+                        onClick={() => setStatusFilter('all')}
+                        className={`p-1.5 rounded-xl border transition-all ${
+                          statusFilter === 'all' 
+                            ? 'bg-slate-900 dark:bg-slate-800 text-white border-slate-900' 
+                            : 'bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:hover:text-white border-slate-200 dark:border-slate-800'
+                        }`}
+                      >
+                        <div>All</div>
+                        <div className="text-xs font-mono">{totalTablesCount}</div>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setStatusFilter('healthy')}
+                        className={`p-1.5 rounded-xl border transition-all ${
+                          statusFilter === 'healthy' 
+                            ? 'bg-emerald-600 text-white border-emerald-600' 
+                            : 'bg-white dark:bg-slate-900 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 border-slate-200 dark:border-slate-800'
+                        }`}
+                      >
+                        <div>Healthy</div>
+                        <div className="text-xs font-mono">{healthyCount}</div>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setStatusFilter('empty')}
+                        className={`p-1.5 rounded-xl border transition-all ${
+                          statusFilter === 'empty' 
+                            ? 'bg-blue-600 text-white border-blue-600' 
+                            : 'bg-white dark:bg-slate-900 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20 border-slate-200 dark:border-slate-800'
+                        }`}
+                      >
+                        <div>Empty</div>
+                        <div className="text-xs font-mono">{emptyCount}</div>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setStatusFilter('error')}
+                        className={`p-1.5 rounded-xl border transition-all ${
+                          statusFilter === 'error' 
+                            ? 'bg-red-600 text-white border-red-600' 
+                            : 'bg-white dark:bg-slate-900 text-red-500 hover:bg-red-550/10 border-slate-200 dark:border-slate-800'
+                        }`}
+                      >
+                        <div>Gaps</div>
+                        <div className="text-xs font-mono">{errorCount}</div>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setStatusFilter('idle')}
+                        className={`p-1.5 rounded-xl border transition-all ${
+                          statusFilter === 'idle' 
+                            ? 'bg-slate-500 text-white border-slate-500' 
+                            : 'bg-white dark:bg-slate-900 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850 border-slate-200 dark:border-slate-800'
+                        }`}
+                      >
+                        <div>Idle</div>
+                        <div className="text-xs font-mono">{idleCount}</div>
+                      </button>
+                    </div>
+
+                    {/* Search bar */}
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        placeholder="Filter tables by name (e.g. website_settings)..."
+                        value={tableSearch}
+                        onChange={(e) => setTableSearch(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-1.5 px-3 rounded-xl text-xs outline-none focus:border-emerald-500 dark:focus:border-emerald-500 font-mono transition-colors"
+                      />
+                      {tableSearch && (
+                        <button 
+                          type="button"
+                          onClick={() => setTableSearch('')}
+                          className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Missing Schema Gaps Warning Banner */}
+                    {errorCount > 0 && (
+                      <div className="bg-red-500/10 border border-red-500/20 text-red-900 dark:text-red-300 p-3.5 rounded-xl text-[11px] leading-relaxed space-y-1.5">
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <AlertTriangle size={14} className="text-red-500 shrink-0" />
+                          <span>Detected {errorCount} Configuration Gaps (Missing Tables)</span>
                         </div>
-                      ))}
+                        <p className="text-slate-500 dark:text-slate-400">
+                          These tables failed connection testing, which typically indicates they are missing from your database schema. Check the SQL editor in your Supabase dashboard.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Scrollable grid container */}
+                    <div className="max-h-[18rem] overflow-y-auto pr-1 space-y-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                      {filteredTableEntries.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400 italic text-xs bg-white dark:bg-slate-900 rounded-xl border border-slate-150 dark:border-slate-800">
+                          No tables matched the search and filters.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                          {filteredTableEntries.map(([table, state]) => (
+                            <div key={table} className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
+                              <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300 truncate pr-2" title={table}>
+                                {table}
+                              </span>
+                              
+                              {state === 'checking' && (
+                                <span className="flex items-center gap-1.5 text-[10px] text-blue-500 font-semibold shrink-0">
+                                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
+                                  Probing
+                                </span>
+                              )}
+                              {state === 'healthy' && (
+                                <span className="text-emerald-500 flex items-center gap-1 text-[10px] font-bold shrink-0">
+                                  <CheckCircle2 size={13} />
+                                  Healthy
+                                </span>
+                              )}
+                              {state === 'empty' && (
+                                <span className="text-blue-400 flex items-center gap-1 text-[10px] font-semibold shrink-0">
+                                  <Info size={13} />
+                                  Empty
+                                </span>
+                              )}
+                              {state === 'error' && (
+                                <span className="text-red-500 flex items-center gap-1 text-[10px] font-bold shrink-0" title="Check schema structure">
+                                  <XCircle size={13} />
+                                  Gap / Fail
+                                </span>
+                              )}
+                              {state === 'idle' && (
+                                <span className="text-slate-400 text-[10px] shrink-0">Unchecked</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -763,6 +942,9 @@ export default function AdminOverview() {
           </div>
         </div>
       )}
+
+      {/* Schema Diagnostic Utility Component */}
+      <DiagnosticUtility />
 
       {/* Lower Row - Recent Operations logs */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-md space-y-4">

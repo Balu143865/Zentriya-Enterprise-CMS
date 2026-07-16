@@ -540,13 +540,16 @@ export default function AdminManage() {
               hero: {
                 title: "Hero Slides",
                 description: "Manage high-impact homepage slider assets and messaging.",
-                orderByField: "order",
+                orderByField: "display_order",
                 orderAscending: true,
                 fields: [
                   { name: 'title', label: 'Slide Title', type: 'text', required: true },
                   { name: 'subtitle', label: 'Slide Subtitle', type: 'text', required: true },
-                  { name: 'imageUrl', label: 'Slide Cover Image', type: 'image', required: true },
-                  { name: 'order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 }
+                  { name: 'image_url', label: 'Slide Cover Image', type: 'image', required: true },
+                  { name: 'display_order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 },
+                  { name: 'cta_text', label: 'CTA Button Text', type: 'text' },
+                  { name: 'cta_link', label: 'CTA Button Link', type: 'text' },
+                  { name: 'is_active', label: 'Is Active', type: 'boolean', required: true, defaultValue: true }
                 ]
               },
               about: {
@@ -556,45 +559,52 @@ export default function AdminManage() {
                   { name: 'title', label: 'Heading Title', type: 'text', required: true },
                   { name: 'subtitle', label: 'Sub-heading Caption', type: 'text', required: true },
                   { name: 'description', label: 'Full Narrative', type: 'textarea', required: true },
-                  { name: 'imageUrl', label: 'Action Image', type: 'image', required: true },
-                  { name: 'experienceYears', label: 'Years of Experience', type: 'number', required: true, defaultValue: 10 }
+                  { name: 'image_url', label: 'Action Image', type: 'image', required: true },
+                  { name: 'is_active', label: 'Is Active', type: 'boolean', required: true, defaultValue: true }
                 ]
               },
               why_choose_us: {
                 title: "Why Choose Us",
                 description: "Edit unique selling points and institutional capabilities.",
-                orderByField: "order",
+                orderByField: "display_order",
                 orderAscending: true,
                 fields: [
                   { name: 'title', label: 'Feature Title', type: 'text', required: true },
                   { name: 'description', label: 'Detailed Explanation', type: 'textarea', required: true },
                   { name: 'icon', label: 'Lucide Icon Name', type: 'text', required: true, placeholder: "e.g. Award, Shield, Users" },
-                  { name: 'order', label: 'Display Order', type: 'number', required: true, defaultValue: 1 }
+                  { name: 'display_order', label: 'Display Order', type: 'number', required: true, defaultValue: 1 },
+                  { name: 'is_active', label: 'Is Active', type: 'boolean', required: true, defaultValue: true }
                 ]
               },
               services: {
                 title: "Services Portfolio",
                 description: "Administer consulting and engineering service offerings.",
-                orderByField: "order",
+                orderByField: "display_order",
                 orderAscending: true,
                 fields: [
                   { name: 'title', label: 'Service Heading', type: 'text', required: true },
                   { name: 'description', label: 'Service Description Summary', type: 'textarea', required: true },
+                  { name: 'detailed_description', label: 'Detailed Features Narrative', type: 'textarea' },
                   { name: 'icon', label: 'Lucide Icon Name', type: 'text', required: true, placeholder: "e.g. Layers, Code, Settings" },
-                  { name: 'isActive', label: 'Service Is Active', type: 'boolean', required: true, defaultValue: true },
-                  { name: 'order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 }
+                  { name: 'image_url', label: 'Service Cover Image', type: 'image', required: true },
+                  { name: 'display_order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 },
+                  { name: 'is_active', label: 'Service Is Active', type: 'boolean', required: true, defaultValue: true }
                 ]
               },
               programs: {
                 title: "Academic Programs",
                 description: "Publish career training and skill bootcamp programs.",
+                orderByField: "display_order",
+                orderAscending: true,
                 fields: [
                   { name: 'title', label: 'Program Name', type: 'text', required: true },
-                  { name: 'subtitle', label: 'Short Hook Subtitle', type: 'text', required: true },
+                  { name: 'category', label: 'Program Category', type: 'text', required: true, placeholder: "e.g. Technology, Design, Business" },
                   { name: 'description', label: 'Course Curriculum Description', type: 'textarea', required: true },
                   { name: 'cover_image', label: 'Curriculum Cover Photo', type: 'image', required: true },
                   { name: 'duration', label: 'Track Duration', type: 'text', required: true, placeholder: "e.g. 6 Months, 1 Year" },
-                  { name: 'badges', label: 'Marketing Badges (Comma Separated)', type: 'tags', required: true, placeholder: "Live Projects, Mentor Support" }
+                  { name: 'mode', label: 'Learning Mode', type: 'select', required: true, options: [{ label: 'Online', value: 'Online' }, { label: 'Offline', value: 'Offline' }, { label: 'Hybrid', value: 'Hybrid' }, { label: 'Self-Paced', value: 'Self-Paced' }], defaultValue: 'Online' },
+                  { name: 'display_order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 },
+                  { name: 'is_active', label: 'Is Active', type: 'boolean', required: true, defaultValue: true }
                 ]
               },
               placements: {
@@ -604,11 +614,17 @@ export default function AdminManage() {
                 orderAscending: true,
                 fields: [
                   { name: 'student_name', label: 'Student Full Name', type: 'text', required: true },
-                  { name: 'company', label: 'Hiring Company Corporate Name', type: 'text', required: true },
-                  { name: 'role', label: 'Job Profile Title Offered', type: 'text', required: true },
-                  { name: 'package_details', label: 'Salary Package Tier (LPA)', type: 'text', required: true, placeholder: "e.g. 14 LPA, 8.5 LPA" },
-                  { name: 'photo', label: 'Graduate Professional Portrait', type: 'image', required: true },
-                  { name: 'display_order', label: 'Display Order Score', type: 'number', required: true, defaultValue: 1 }
+                  { name: 'company_name', label: 'Hiring Company Corporate Name', type: 'text', required: true },
+                  { name: 'job_role', label: 'Job Profile Title Offered', type: 'text', required: true },
+                  { name: 'package_lpa', label: 'Salary Package Tier (LPA)', type: 'number', required: true, defaultValue: 6 },
+                  { name: 'student_photo', label: 'Graduate Professional Portrait', type: 'image', required: true },
+                  { name: 'company_logo', label: 'Company Brand Logo', type: 'image', required: true },
+                  { name: 'degree', label: 'Student Degree Track', type: 'text' },
+                  { name: 'batch', label: 'Academic Batch Year', type: 'text' },
+                  { name: 'placement_badge', label: 'Placement Badge Tag', type: 'text' },
+                  { name: 'show_package', label: 'Show Package On Card', type: 'boolean', required: true, defaultValue: true },
+                  { name: 'display_order', label: 'Display Order Score', type: 'number', required: true, defaultValue: 1 },
+                  { name: 'is_active', label: 'Is Active', type: 'boolean', required: true, defaultValue: true }
                 ]
               },
               industry_partners: {
@@ -617,78 +633,103 @@ export default function AdminManage() {
                 orderByField: "display_order",
                 orderAscending: true,
                 fields: [
-                  { name: 'name', label: 'Company Brand Name', type: 'text', required: true },
-                  { name: 'logo', label: 'Company Logo Graphic', type: 'image', required: true },
-                  { name: 'display_order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 }
+                  { name: 'company_name', label: 'Company Brand Name', type: 'text', required: true },
+                  { name: 'logo_url', label: 'Company Logo Graphic', type: 'image', required: true },
+                  { name: 'website_url', label: 'Company Corporate Link', type: 'text' },
+                  { name: 'display_order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 },
+                  { name: 'is_active', label: 'Is Active', type: 'boolean', required: true, defaultValue: true }
                 ]
               },
               testimonials: {
                 title: "Testimonials Feed",
                 description: "Manage peer feedback, student success and review quotes.",
+                orderByField: "display_order",
+                orderAscending: true,
                 fields: [
                   { name: 'name', label: 'Reviewer Name', type: 'text', required: true },
-                  { name: 'role', label: 'Reviewer Job Title', type: 'text', required: true },
+                  { name: 'avatar_url', label: 'Professional Avatar URL', type: 'image', required: true },
                   { name: 'company', label: 'Employer / University', type: 'text', required: true },
-                  { name: 'content', label: 'Testimonial Content Statement', type: 'textarea', required: true },
-                  { name: 'avatarUrl', label: 'Professional Avatar URL', type: 'image', required: true },
-                  { name: 'rating', label: 'Star Rating Index (1-5)', type: 'number', required: true, defaultValue: 5 }
+                  { name: 'designation', label: 'Reviewer Job Title', type: 'text', required: true },
+                  { name: 'review_text', label: 'Testimonial Content Statement', type: 'textarea', required: true },
+                  { name: 'rating', label: 'Star Rating Index (1-5)', type: 'number', required: true, defaultValue: 5 },
+                  { name: 'type', label: 'Testimonial Category Group', type: 'select', required: true, options: [{ label: 'Student', value: 'Student' }, { label: 'Corporate', value: 'Corporate' }, { label: 'Video', value: 'Video' }], defaultValue: 'Student' },
+                  { name: 'video_url', label: 'Video Embed Link (If video testimonial)', type: 'text' },
+                  { name: 'linkedin_url', label: 'LinkedIn Profile URL', type: 'text' },
+                  { name: 'is_verified', label: 'Verified Graduate Review', type: 'boolean', required: true, defaultValue: true },
+                  { name: 'display_order', label: 'Display Order Score', type: 'number', required: true, defaultValue: 1 },
+                  { name: 'is_active', label: 'Is Active', type: 'boolean', required: true, defaultValue: true }
                 ]
               },
               team: {
                 title: "Team Members",
                 description: "Manage corporate profiles of teachers and administrators.",
+                orderByField: "display_order",
+                orderAscending: true,
                 fields: [
                   { name: 'name', label: 'Member Name', type: 'text', required: true },
-                  { name: 'role', label: 'Designation Role', type: 'text', required: true },
-                  { name: 'department', label: 'Division / Department', type: 'text', required: true, placeholder: "e.g. Technology, Admissions, Operations" },
-                  { name: 'photoUrl', label: 'Member Headshot Photo', type: 'image', required: true },
-                  { name: 'bio', label: 'Short Personal Description', type: 'textarea', required: true }
+                  { name: 'designation', label: 'Designation Role', type: 'text', required: true },
+                  { name: 'photo_url', label: 'Member Headshot Photo', type: 'image', required: true },
+                  { name: 'bio', label: 'Short Personal Description', type: 'textarea' },
+                  { name: 'display_order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 },
+                  { name: 'is_active', label: 'Is Active', type: 'boolean', required: true, defaultValue: true }
                 ]
               },
               gallery: {
                 title: "Media Gallery",
                 description: "Curate event highlights and academic camp posters.",
+                orderByField: "display_order",
+                orderAscending: true,
                 fields: [
                   { name: 'title', label: 'Media Display Name', type: 'text', required: true },
-                  { name: 'url', label: 'Static Photo Asset', type: 'image', required: true },
+                  { name: 'description', label: 'Media Detailed Subtitle', type: 'textarea' },
+                  { name: 'category', label: 'Gallery Division Group', type: 'text', required: true, placeholder: "e.g. Workshops, Awards, Campus" },
                   { name: 'type', label: 'Asset Content Type', type: 'select', required: true, options: [{ label: 'Image', value: 'image' }, { label: 'Video', value: 'video' }], defaultValue: 'image' },
-                  { name: 'category', label: 'Gallery Division Group', type: 'text', required: true, placeholder: "e.g. Workshops, Awards, Campus" }
+                  { name: 'media_url', label: 'Static Photo Asset or Video URL', type: 'image', required: true },
+                  { name: 'is_featured', label: 'Highlight on Front Page', type: 'boolean', required: true, defaultValue: false },
+                  { name: 'display_order', label: 'Display Order Sequence', type: 'number', required: true, defaultValue: 1 },
+                  { name: 'is_active', label: 'Is Active', type: 'boolean', required: true, defaultValue: true }
                 ]
               },
               blogs: {
                 title: "Blog Posts",
                 description: "Oversee company news columns and dynamic content feeds.",
+                orderByField: "created_at",
+                orderAscending: false,
                 fields: [
                   { name: 'title', label: 'Article Headline', type: 'text', required: true },
+                  { name: 'slug', label: 'SEO Url Slug (No spaces, e.g. next-gen-tech)', type: 'text', required: true },
                   { name: 'excerpt', label: 'Short Lead Intro Description', type: 'text', required: true },
                   { name: 'content', label: 'Full Blog Post content Markdown', type: 'textarea', required: true },
-                  { name: 'cover_image', label: 'Article Main Banner Image', type: 'image', required: true },
-                  { name: 'author', label: 'Author Full Name', type: 'text', required: true },
+                  { name: 'cover_image_url', label: 'Article Main Banner Image', type: 'image', required: true },
+                  { name: 'author_name', label: 'Author Full Name', type: 'text', required: true },
                   { name: 'category', label: 'Blog Topic Category', type: 'text', required: true, placeholder: "e.g. Careers, Technology, Placement" },
-                  { name: 'published', label: 'Publish Article Online', type: 'boolean', required: true, defaultValue: true }
+                  { name: 'is_featured', label: 'Featured Banner Highlight', type: 'boolean', required: true, defaultValue: false },
+                  { name: 'is_active', label: 'Publish Article Online', type: 'boolean', required: true, defaultValue: true }
                 ]
               },
               contacts: {
                 title: "Contact Messages",
                 description: "Review public contact queries and feedback submissions.",
+                orderByField: "created_at",
+                orderAscending: false,
                 fields: [
                   { name: 'name', label: 'Sender Full Name', type: 'text', required: true },
                   { name: 'email', label: 'Sender Email Address', type: 'text', required: true },
                   { name: 'phone', label: 'Sender Phone Number', type: 'text' },
                   { name: 'subject', label: 'Inquiry Subject Header', type: 'text', required: true },
                   { name: 'message', label: 'Inquiry Narrative Body', type: 'textarea', required: true },
-                  { name: 'isRead', label: 'Message Checked & Resolved', type: 'boolean', required: true, defaultValue: false }
+                  { name: 'is_read', label: 'Message Checked & Resolved', type: 'boolean', required: true, defaultValue: false }
                 ]
               },
               settings: {
                 title: "Website Configuration",
                 description: "Manage global company identity parameters in Supabase.",
                 fields: [
-                  { name: 'companyName', label: 'Company Enterprise Name', type: 'text', required: true },
-                  { name: 'logo', label: 'Branding Logo URL', type: 'image', required: true },
-                  { name: 'favicon', label: 'Favicon Icon (32x32) URL', type: 'image', required: true },
-                  { name: 'email', label: 'Corporate Support Email', type: 'text', required: true },
-                  { name: 'phone', label: 'Helpdesk Call Number', type: 'text', required: true },
+                  { name: 'company_name', label: 'Company Enterprise Name', type: 'text', required: true },
+                  { name: 'logo_url', label: 'Branding Logo URL', type: 'image', required: true },
+                  { name: 'favicon_url', label: 'Favicon Icon (32x32) URL', type: 'image', required: true },
+                  { name: 'contact_email', label: 'Corporate Support Email', type: 'text', required: true },
+                  { name: 'whatsapp_number', label: 'Whatsapp Call Number', type: 'text', required: true },
                   { name: 'address', label: 'Physical Corporate Headquarters Address', type: 'textarea', required: true }
                 ]
               }
@@ -1475,8 +1516,9 @@ export default function AdminManage() {
                         toast(`Module changes persistent saved!`, 'success');
                         handleCloseForm();
                         loadData();
-                      } catch (err) {
-                        toast('Error submitting data values.', 'error');
+                      } catch (err: any) {
+                        console.error('Submit failed:', err);
+                        toast(`Save failed: ${err?.message || err}`, 'error');
                       }
                     }} 
                     className="space-y-5"
