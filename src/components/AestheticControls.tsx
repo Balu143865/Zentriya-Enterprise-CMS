@@ -397,7 +397,7 @@ export default function AestheticControls() {
       {/* 3. CAPSULE FLOATING ACTION BUTTON */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-40 flex items-center justify-center bg-[#059669] hover:bg-[#10b981] text-white p-3.5 rounded-full shadow-lg shadow-[#10b981]/20 hover:scale-[1.04] active:scale-95 transition-all duration-300"
+        className="fixed bottom-6 right-24 z-40 flex items-center justify-center bg-[#059669] hover:bg-[#10b981] text-white p-3.5 rounded-full shadow-lg shadow-[#10b981]/20 hover:scale-[1.04] active:scale-95 transition-all duration-300"
         style={{ backgroundColor: accentColor }}
         id="trigger-aesthetic-customizer-btn"
         aria-label="Customize Aesthetics"
